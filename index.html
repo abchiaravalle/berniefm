@@ -79,49 +79,13 @@
       .volume-slider,.progress-wrap{width:150px}
     }
     
-    .button-26 {
-        margin-left: auto!important;
-        margin-right: auto;
-    }
-    
-    .player img {
-        height: 100px;
-    /*     width: 100%; */
-        aspect-ratio: 1/1;
-        object-fit: contain;
-        background-color: white;
-        margin-bottom: 20px;
-        border-radius: 500px;
-    /*     padding-top: 20px; */
-    /*     padding-bottom: 20px; */
-    
-    }
-    
-    .player {
-        border: 1px solid #e6e6e6;
-        max-width: 100%!important;
-        border-radius: 0;
-    
-    }
-    
-    
-    .player p {
-        font-size: 10px;
-        margin-bottom: 20px
-    }
-    
-    .player .title {
-        margin-bottom: 0
-    }
-    
-    .progress-wrap {
-        width: 100%
-    }
-    
-    .player {
-        width: 600px;
-    
-    }
+    .button-26{margin-left:auto!important;margin-right:auto}
+    .player img{height:100px;aspect-ratio:1/1;object-fit:contain;background:#fff;margin-bottom:20px;border-radius:500px}
+    .player{border:1px solid #e6e6e6;max-width:100%!important;border-radius:0}
+    .player p{font-size:10px;margin-bottom:20px}
+    .player .title{margin-bottom:0}
+    .progress-wrap{width:100%}
+    .player{width:600px}
   </style>
 </head>
 
@@ -136,9 +100,8 @@
   <div class="player" id="player">
     <img src="home_color-281w.webp" />
     <div class="title" id="track-title"></div>
-    <p style="letter-spacing: 3px; font-weight: 600">BERNIE CHIARAVALLE</p>
+    <p style="letter-spacing:3px;font-weight:600">BERNIE CHIARAVALLE</p>
 
-    <!-- reverted button -->
     <button class="button-26" id="playpause" aria-label="Play / Pause">
       <div class="button-26__content">
         <i class="fa-solid fa-play" id="btn-icon"></i>
@@ -155,101 +118,107 @@
   </div>
 
   <script>
-    /* ---------- playlist ---------- */
-   const base = "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/";
-   
-   const audioFiles = [
-     `${base}Driven%20By%20Desire/01%20Miss%20That%20Train%20%28Catch%20That%20Dream%29.m4a`,
-     `${base}Driven%20By%20Desire/02%20Writing%20a%20Romance.m4a`,
-     `${base}Driven%20By%20Desire/03%20Man%20Who%20Would%20Be%20King.m4a`,
-     `${base}Driven%20By%20Desire/04%20Down%20Down%20Down.m4a`,
-     `${base}Driven%20By%20Desire/05%20It%20Was%20Only%20Love.m4a`,
-     `${base}Driven%20By%20Desire/06%20All%20Things%20Considered.m4a`,
-     `${base}Driven%20By%20Desire/07%20Not%20Without%20a%20Fight.m4a`,
-     `${base}Driven%20By%20Desire/08%20Someone%20to%20Hold.m4a`,
-     `${base}Driven%20By%20Desire/09%20Let%20Me%20Be%20the%20One.m4a`,
-     `${base}Driven%20By%20Desire/10%20From%20Now%20On.m4a`,
-   
-     `${base}Hideaway%20Tales/01%20Lonely%20Too%20Long.m4a`,
-     `${base}Hideaway%20Tales/02%20Don%27t%20Know%20What%20You%20Want.m4a`,
-     `${base}Hideaway%20Tales/03%20Darker%20Days.m4a`,
-     `${base}Hideaway%20Tales/04%20In%20My%20Heart.m4a`,
-     `${base}Hideaway%20Tales/05%20One%20On%20One.m4a`,
-     `${base}Hideaway%20Tales/06%20It%27s%20You.m4a`,
-     `${base}Hideaway%20Tales/07%20Never%20Fade%20Away.m4a`,
-     `${base}Hideaway%20Tales/08%20Love%20Waits%20for%20You.m4a`,
-     `${base}Hideaway%20Tales/09%20Make%20It%20Alright.m4a`,
-     `${base}Hideaway%20Tales/10%20Through%20Every%20Window.m4a`,
-     `${base}Hideaway%20Tales/11%20Living%20the%20Dream.m4a`,
-     `${base}Hideaway%20Tales/12%20Let%20You%20Walk%20Away.m4a`,
-     `${base}Hideaway%20Tales/13%20Two%20Goodbyes%20Away%20%28Revisited%29.m4a`,
-   
-     `${base}Life%20As%20We%20Know%20It/01%20The%20Love%20You%20Want.m4a`,
-     `${base}Life%20As%20We%20Know%20It/02%20The%20Way%20to%20My%20Heart.m4a`,
-     `${base}Life%20As%20We%20Know%20It/03%20Two%20Goodbyes%20Away.m4a`,
-     `${base}Life%20As%20We%20Know%20It/04%20You%20Alone.m4a`,
-     `${base}Life%20As%20We%20Know%20It/05%20Life%20As%20We%20Know%20It.m4a`,
-     `${base}Life%20As%20We%20Know%20It/06%20Where%27%20You%20Runnin%27.m4a`,
-     `${base}Life%20As%20We%20Know%20It/07%20Someday%20You%20Will.m4a`,
-     `${base}Life%20As%20We%20Know%20It/08%20The%20Way%20It%20Looks%20from%20Here.m4a`,
-     `${base}Life%20As%20We%20Know%20It/09%20Then%20Again%2C%20Maybe%20Not.m4a`,
-     `${base}Life%20As%20We%20Know%20It/10%20Only%20So%20Much.m4a`,
-     `${base}Life%20As%20We%20Know%20It/11%20My%20Only%20Chance.m4a`,
-   
-     `${base}Make%20Some%20Sense%20of%20This/01%20Peace%20of%20Mind.m4a`,
-     `${base}Make%20Some%20Sense%20of%20This/02%20I%20Choose%20Love.m4a`,
-     `${base}Make%20Some%20Sense%20of%20This/03%20Make%20Some%20Sense%20of%20This.m4a`,
-     `${base}Make%20Some%20Sense%20of%20This/04%20Ever%20Changing%20World.m4a`,
-     `${base}Make%20Some%20Sense%20of%20This/05%20See%20the%20Light.m4a`,
-     `${base}Make%20Some%20Sense%20of%20This/06%20Say%20What%20You%20Will.m4a`,
-     `${base}Make%20Some%20Sense%20of%20This/07%20Castle%20to%20the%20Sky.m4a`,
-     `${base}Make%20Some%20Sense%20of%20This/08%20Follow%20Your%20Heart.m4a`,
-     `${base}Make%20Some%20Sense%20of%20This/09%20Now%20or%20Never.m4a`,
-     `${base}Make%20Some%20Sense%20of%20This/10%20Real%20World.m4a`,
-   
-     `${base}Mystery%20of%20Love/01%20Father%20and%20Child.m4a`,
-     `${base}Mystery%20of%20Love/02%20Mystery%20of%20Love.m4a`,
-     `${base}Mystery%20of%20Love/03%20Tell%20Me%20What%20You%20Want.m4a`,
-     `${base}Mystery%20of%20Love/04%20Lead%20Us%20Back%20to%20Love.m4a`,
-     `${base}Mystery%20of%20Love/05%20I%27ve%20Got%20My%20Reasons.m4a`,
-     `${base}Mystery%20of%20Love/06%20Ready%20for%20Nothin%27.m4a`,
-     `${base}Mystery%20of%20Love/07%20Sad%20As%20It%20Seems.m4a`,
-     `${base}Mystery%20of%20Love/08%20Standing%20In%20the%20Light.m4a`,
-     `${base}Mystery%20of%20Love/09%20Next%20to%20You.m4a`,
-     `${base}Mystery%20of%20Love/10%20Soulfire.m4a`,
-   
-     `${base}One%20Bright%20Moment/01%20All%20Good%20Things.m4a`,
-     `${base}One%20Bright%20Moment/02%20Will%20and%20a%20Way.m4a`,
-     `${base}One%20Bright%20Moment/03%20Right%20Where%20They%20Want%20You.m4a`,
-     `${base}One%20Bright%20Moment/04%20You%20Said%20It%20All.m4a`,
-     `${base}One%20Bright%20Moment/05%20Nobody%27s%20Business.m4a`,
-     `${base}One%20Bright%20Moment/06%20One%20Bright%20Moment.m4a`,
-     `${base}One%20Bright%20Moment/07%20Man%20out%20to%20Please.m4a`,
-     `${base}One%20Bright%20Moment/08%20Worst%20of%20Times.m4a`,
-     `${base}One%20Bright%20Moment/09%20Just%20Goes%20to%20Proove.m4a`,
-     `${base}One%20Bright%20Moment/10%20Till%20I%20Found%20You.m4a`,
-     `${base}One%20Bright%20Moment/11%20Let%20Me%20Believe.m4a`,
-   
-     `${base}The%20World%20Around%20Me/01%20No%20Way%20Out.m4a`,
-     `${base}The%20World%20Around%20Me/02%20Only%20Game%20In%20Town.m4a`,
-     `${base}The%20World%20Around%20Me/03%20You%20Got%20Nothin%27%20On%20Me.m4a`,
-     `${base}The%20World%20Around%20Me/04%20The%20World%20Has%20Let%20You%20Down.m4a`,
-     `${base}The%20World%20Around%20Me/05%20Long%20Haul.m4a`,
-     `${base}The%20World%20Around%20Me/06%20The%20World%20Around%20Me.m4a`,
-     `${base}The%20World%20Around%20Me/07%20What%20I%20Knew%20Before.m4a`,
-     `${base}The%20World%20Around%20Me/08%20For%20a%20Little%20While.m4a`,
-     `${base}The%20World%20Around%20Me/09%20No%20Longer%20In%20My%20Dreams.m4a`,
-     `${base}The%20World%20Around%20Me/10%20White%20Lies.m4a`,
-     `${base}The%20World%20Around%20Me/11%20Nothin%27%20Left%20To%20Believe%20In.m4a`,
-     `${base}The%20World%20Around%20Me/12%20Let%20the%20Night%20Unwind.m4a`
-   ];
+    /* ---------- playlist URLs (S3) ---------- */
+const base = "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/";
+    
+    const audioFiles = [
+      `${base}Driven%20By%20Desire/01%20Miss%20That%20Train%20%28Catch%20That%20Dream%29.m4a`,
+      `${base}Driven%20By%20Desire/02%20Writing%20a%20Romance.m4a`,
+      `${base}Driven%20By%20Desire/03%20Man%20Who%20Would%20Be%20King.m4a`,
+      `${base}Driven%20By%20Desire/04%20Down%20Down%20Down.m4a`,
+      `${base}Driven%20By%20Desire/05%20It%20Was%20Only%20Love.m4a`,
+      `${base}Driven%20By%20Desire/06%20All%20Things%20Considered.m4a`,
+      `${base}Driven%20By%20Desire/07%20Not%20Without%20a%20Fight.m4a`,
+      `${base}Driven%20By%20Desire/08%20Someone%20to%20Hold.m4a`,
+      `${base}Driven%20By%20Desire/09%20Let%20Me%20Be%20the%20One.m4a`,
+      `${base}Driven%20By%20Desire/10%20From%20Now%20On.m4a`,
+    
+      `${base}Hideaway%20Tales/01%20Lonely%20Too%20Long.m4a`,
+      `${base}Hideaway%20Tales/02%20Don%27t%20Know%20What%20You%20Want.m4a`,
+      `${base}Hideaway%20Tales/03%20Darker%20Days.m4a`,
+      `${base}Hideaway%20Tales/04%20In%20My%20Heart.m4a`,
+      `${base}Hideaway%20Tales/05%20One%20On%20One.m4a`,
+      `${base}Hideaway%20Tales/06%20It%27s%20You.m4a`,
+      `${base}Hideaway%20Tales/07%20Never%20Fade%20Away.m4a`,
+      `${base}Hideaway%20Tales/08%20Love%20Waits%20for%20You.m4a`,
+      `${base}Hideaway%20Tales/09%20Make%20It%20Alright.m4a`,
+      `${base}Hideaway%20Tales/10%20Through%20Every%20Window.m4a`,
+      `${base}Hideaway%20Tales/11%20Living%20the%20Dream.m4a`,
+      `${base}Hideaway%20Tales/12%20Let%20You%20Walk%20Away.m4a`,
+      `${base}Hideaway%20Tales/13%20Two%20Goodbyes%20Away%20%28Revisited%29.m4a`,
+    
+      `${base}Life%20As%20We%20Know%20It/01%20The%20Love%20You%20Want.m4a`,
+      `${base}Life%20As%20We%20Know%20It/02%20The%20Way%20to%20My%20Heart.m4a`,
+      `${base}Life%20As%20We%20Know%20It/03%20Two%20Goodbyes%20Away.m4a`,
+      `${base}Life%20As%20We%20Know%20It/04%20You%20Alone.m4a`,
+      `${base}Life%20As%20We%20Know%20It/05%20Life%20As%20We%20Know%20It.m4a`,
+      `${base}Life%20As%20We%20Know%20It/06%20Where%27%20You%20Runnin%27.m4a`,
+      `${base}Life%20As%20We%20Know%20It/07%20Someday%20You%20Will.m4a`,
+      `${base}Life%20As%20We%20Know%20It/08%20The%20Way%20It%20Looks%20from%20Here.m4a`,
+      `${base}Life%20As%20We%20Know%20It/09%20Then%20Again%2C%20Maybe%20Not.m4a`,
+      `${base}Life%20As%20We%20Know%20It/10%20Only%20So%20Much.m4a`,
+      `${base}Life%20As%20We%20Know%20It/11%20My%20Only%20Chance.m4a`,
+    
+      `${base}Make%20Some%20Sense%20of%20This/01%20Peace%20of%20Mind.m4a`,
+      `${base}Make%20Some%20Sense%20of%20This/02%20I%20Choose%20Love.m4a`,
+      `${base}Make%20Some%20Sense%20of%20This/03%20Make%20Some%20Sense%20of%20This.m4a`,
+      `${base}Make%20Some%20Sense%20of%20This/04%20Ever%20Changing%20World.m4a`,
+      `${base}Make%20Some%20Sense%20of%20This/05%20See%20the%20Light.m4a`,
+      `${base}Make%20Some%20Sense%20of%20This/06%20Say%20What%20You%20Will.m4a`,
+      `${base}Make%20Some%20Sense%20of%20This/07%20Castle%20to%20the%20Sky.m4a`,
+      `${base}Make%20Some%20Sense%20of%20This/08%20Follow%20Your%20Heart.m4a`,
+      `${base}Make%20Some%20Sense%20of%20This/09%20Now%20or%20Never.m4a`,
+      `${base}Make%20Some%20Sense%20of%20This/10%20Real%20World.m4a`,
+    
+      `${base}Mystery%20of%20Love/01%20Father%20and%20Child.m4a`,
+      `${base}Mystery%20of%20Love/02%20Mystery%20of%20Love.m4a`,
+      `${base}Mystery%20of%20Love/03%20Tell%20Me%20What%20You%20Want.m4a`,
+      `${base}Mystery%20of%20Love/04%20Lead%20Us%20Back%20to%20Love.m4a`,
+      `${base}Mystery%20of%20Love/05%20I%27ve%20Got%20My%20Reasons.m4a`,
+      `${base}Mystery%20of%20Love/06%20Ready%20for%20Nothin%27.m4a`,
+      `${base}Mystery%20of%20Love/07%20Sad%20As%20It%20Seems.m4a`,
+      `${base}Mystery%20of%20Love/08%20Standing%20In%20the%20Light.m4a`,
+      `${base}Mystery%20of%20Love/09%20Next%20to%20You.m4a`,
+      `${base}Mystery%20of%20Love/10%20Soulfire.m4a`,
+    
+      `${base}One%20Bright%20Moment/01%20All%20Good%20Things.m4a`,
+      `${base}One%20Bright%20Moment/02%20Will%20and%20a%20Way.m4a`,
+      `${base}One%20Bright%20Moment/03%20Right%20Where%20They%20Want%20You.m4a`,
+      `${base}One%20Bright%20Moment/04%20You%20Said%20It%20All.m4a`,
+      `${base}One%20Bright%20Moment/05%20Nobody%27s%20Business.m4a`,
+      `${base}One%20Bright%20Moment/06%20One%20Bright%20Moment.m4a`,
+      `${base}One%20Bright%20Moment/07%20Man%20out%20to%20Please.m4a`,
+      `${base}One%20Bright%20Moment/08%20Worst%20of%20Times.m4a`,
+      `${base}One%20Bright%20Moment/09%20Just%20Goes%20to%20Proove.m4a`,
+      `${base}One%20Bright%20Moment/10%20Till%20I%20Found%20You.m4a`,
+      `${base}One%20Bright%20Moment/11%20Let%20Me%20Believe.m4a`,
+    
+      `${base}The%20World%20Around%20Me/01%20No%20Way%20Out.m4a`,
+      `${base}The%20World%20Around%20Me/02%20Only%20Game%20In%20Town.m4a`,
+      `${base}The%20World%20Around%20Me/03%20You%20Got%20Nothin%27%20On%20Me.m4a`,
+      `${base}The%20World%20Around%20Me/04%20The%20World%20Has%20Let%20You%20Down.m4a`,
+      `${base}The%20World%20Around%20Me/05%20Long%20Haul.m4a`,
+      `${base}The%20World%20Around%20Me/06%20The%20World%20Around%20Me.m4a`,
+      `${base}The%20World%20Around%20Me/07%20What%20I%20Knew%20Before.m4a`,
+      `${base}The%20World%20Around%20Me/08%20For%20a%20Little%20While.m4a`,
+      `${base}The%20World%20Around%20Me/09%20No%20Longer%20In%20My%20Dreams.m4a`,
+      `${base}The%20World%20Around%20Me/10%20White%20Lies.m4a`,
+      `${base}The%20World%20Around%20Me/11%20Nothin%27%20Left%20To%20Believe%20In.m4a`,
+      `${base}The%20World%20Around%20Me/12%20Let%20the%20Night%20Unwind.m4a`
+    ];
     const shuffle=a=>a.sort(()=>Math.random()-.5);
     let playlist=shuffle([...audioFiles]),idx=0,sound,started=false,progRAF;
 
     /* ---------- helpers ---------- */
-    const tidy=f=>f.split('/').pop().replace(/\.[^.]+$/,'').replace(/^\d{2}\s+/,'').replace(/[_-]/g,' ');
+    function tidy(path){
+      let name=decodeURIComponent(path.split('/').pop());          // %20 → space, etc.
+      name=name.replace(/\.[^.]+$/,'')                             // strip extension
+               .replace(/^\d{2}\s+/,'')                            // drop leading "01 "
+               .replace(/[_-]/g,' ');                              // underscores/dashes → space
+      return name;
+    }
     const $=id=>document.getElementById(id);
-    const fmt=s=>{const m=Math.floor(s/60),sec=Math.floor(s%60).toString().padStart(2,'0');return`${m}:${sec}`}
+    const fmt=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
 
     /* ---------- elements ---------- */
     const playBtn=$('playpause'),label=$('play-label'),icon=$('btn-icon'),
@@ -259,39 +228,38 @@
 
     const setBtn=(txt,ico)=>{label.textContent=txt;icon.className=`fa-solid fa-${ico}`};
 
-    const updateQueue=()=>{
-      const nxt=[];for(let i=1;i<=3;i++)nxt.push(tidy(playlist[(idx+i)%playlist.length]));
+    function updateQueue(){
+      const n=[];for(let i=1;i<=3;i++)n.push(tidy(playlist[(idx+i)%playlist.length]));
       queueEl.style.animation='none';void queueEl.offsetWidth;
-      queueEl.innerHTML="<strong>Next up:</strong><br>"+nxt.join("<br>");
+      queueEl.innerHTML=`<strong>Next up:</strong><br>${n.join('<br>')}`;
       queueEl.style.animation='fadeIn .4s forwards';
-    };
+    }
 
-    const fadeTitle=t=>{
+    function fadeTitle(txt){
       titleEl.style.animation='none';void titleEl.offsetWidth;
-      titleEl.textContent=t;titleEl.style.animation='fadeIn .4s forwards';
-    };
+      titleEl.textContent=txt;titleEl.style.animation='fadeIn .4s forwards';
+    }
 
-    const updateProgress=()=>{
+    function updateProgress(){
       if(sound&&sound.playing()){
         const cur=sound.seek(),dur=sound.duration();
         progressEl.style.width=`${(cur/dur)*100}%`;
         tPlayed.textContent=fmt(cur);tLeft.textContent=fmt(dur-cur);
       }
       progRAF=requestAnimationFrame(updateProgress);
-    };
+    }
 
-    const playTrack=()=>{
+    function playTrack(){
       if(sound) sound.unload();cancelAnimationFrame(progRAF);
       const src=playlist[idx];
       sound=new Howl({src:[src],html5:true,onend:()=>{idx=(idx+1)%playlist.length;playTrack();}});
       fadeTitle(tidy(src));sound.play();setBtn('PAUSE','pause');updateQueue();updateProgress();
-    };
+    }
 
     /* ---------- events ---------- */
     playBtn.addEventListener('click',()=>{
       if(!started){started=true;playTrack();return;}
-      if(sound.playing()){sound.pause();setBtn('PLAY','play');}
-      else{sound.play();setBtn('PAUSE','pause');}
+      sound.playing()? (sound.pause(),setBtn('PLAY','play')) : (sound.play(),setBtn('PAUSE','pause'));
     });
 
     document.addEventListener('keydown',e=>{
@@ -305,4 +273,4 @@
     let rTO;window.addEventListener('resize',()=>{player.classList.add('resize');clearTimeout(rTO);rTO=setTimeout(()=>player.classList.remove('resize'),300);});
   </script>
 </body>
-</html> 
+</html>
