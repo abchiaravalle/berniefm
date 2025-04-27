@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BC Radio</title>
+
+  <!-- libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    /* smooth everything */
+    *{transition:all .4s ease}
+
+    /* === blurred YouTube background === */
+    .bg-video{position:fixed;inset:0;z-index:-3;overflow:hidden}
+    .bg-video iframe{width:100%;height:100%;pointer-events:none;filter:blur(25px) brightness(.35)}
+
+    /* === animated overlay === */
+    body{
+      margin:0;height:100vh;
+      background:linear-gradient(135deg,#B50DF5,#F876D5,#EDC3FD,#FACDF2);
+      background-size:400% 400%;animation:gradientShift 15s ease infinite;
+      display:flex;align-items:center;justify-content:center;
+      font-family:'Instrument Sans',sans-serif;color:#fff;
+    }
+    @keyframes gradientShift{0%{background-position:0 50%}50%{background-position:100% 50%}100%{background-position:0 50%}}
+
+    /* === player === */
+    .player{
+      background:rgba(0,0,0,.7);padding:40px;border-radius:24px;
+      box-shadow:0 12px 30px rgba(0,0,0,.5);text-align:center;
+      backdrop-filter:blur(12px);max-width:92%;z-index:10
+    }
+    .player.resize{transform:scale(.97)}
+    .title{font-size:1.6rem;margin:0 0 22px;font-weight:700;opacity:0;animation:fadeIn .4s forwards}
+    @keyframes fadeIn{to{opacity:1}}
+
+    /* === ORIGINAL button-26 === */
+    .button-26{
+      background:#fff;border:2px solid #888;font-size:18px;cursor:pointer;
+      border-radius:10px;outline:none;padding:0;
+      box-shadow:0 2px 10px rgba(0,0,0,.15),5px 14px 20px rgba(0,0,0,.15);
+      display:flex;align-items:center
+    }
+    .button-26__content{
+      padding:24px 40px;border-radius:8px;
+      box-shadow:inset 0 -6px #d5d7de,0 -2px #ffffff;
+      display:flex;align-items:center;gap:10px
+    }
+    .button-26__text{color:#888;font-weight:600;transform:translateY(-4px)}
+    .button-26 i{color:#000;font-size:20px;transform:translateY(-4px)}
+    .button-26:active{box-shadow:none}
+    .button-26:active .button-26__content{box-shadow:none}
+    .button-26:active .button-26__text,.button-26:active i{transform:translateY(0)}
+
+    /* === sliders & progress === */
+    .volume-slider{
+      appearance:none;width:180px;height:6px;border-radius:5px;background:#fff;
+      outline:none;margin-top:24px;cursor:pointer
+    }
+    .volume-slider::-webkit-slider-thumb{
+      appearance:none;width:18px;height:18px;background:#2F28CE;border-radius:50%;cursor:pointer
+    }
+
+    .progress-wrap{width:180px;height:6px;background:rgba(255,255,255,.25);border-radius:5px;margin:18px auto 4px;pointer-events:none}
+    .progress{height:100%;width:0%;background:#2F28CE;border-radius:5px}
+
+    .time-info{font-size:.85rem;opacity:.85}
+
+    /* === queue === */
+    #upcoming{margin-top:26px;font-size:.95rem;line-height:1.5;opacity:0;animation:fadeIn .4s .05s forwards}
+
+    /* === mobile tweaks === */
+    @media(max-width:600px){
+      .player{width:88%;padding:32px}
+      .volume-slider,.progress-wrap{width:150px}
+    }
+    
+    .button-26 {
+        margin-left: auto!important;
+        margin-right: auto;
+    }
+    
+    .player img {
+        height: 100px;
+    /*     width: 100%; */
+        aspect-ratio: 1/1;
+        object-fit: contain;
+        background-color: white;
+        margin-bottom: 20px;
+        border-radius: 500px;
+    /*     padding-top: 20px; */
+    /*     padding-bottom: 20px; */
+    
+    }
+    
+    .player {
+        border: 1px solid #e6e6e6;
+        max-width: 100%!important;
+        border-radius: 0;
+    
+    }
+    
+    
+    .player p {
+        font-size: 10px;
+        margin-bottom: 20px
+    }
+    
+    .player .title {
+        margin-bottom: 0
+    }
+    
+    .progress-wrap {
+        width: 100%
+    }
+    
+    .player {
+        width: 600px;
+    
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- blurred looping YouTube playlist -->
+  <div class="bg-video">
+    <iframe src="https://www.youtube.com/embed/CDk0noCPUQs?autoplay=1&controls=0&showinfo=0&modestbranding=1&loop=1&mute=1&playsinline=1&playlist=CDk0noCPUQs"
+            title="lofi" allow="autoplay; encrypted-media" frameborder="0"></iframe>
+  </div>
+
+  <div class="player" id="player">
+    <img src="home_color-281w.webp" />
+    <div class="title" id="track-title"></div>
+    <p style="letter-spacing: 3px; font-weight: 600">BERNIE CHIARAVALLE</p>
+
+    <!-- reverted button -->
+    <button class="button-26" id="playpause" aria-label="Play / Pause">
+      <div class="button-26__content">
+        <i class="fa-solid fa-play" id="btn-icon"></i>
+        <span class="button-26__text" id="play-label">START&nbsp;RADIO</span>
+      </div>
+    </button>
+
+    <input type="range" id="volume" class="volume-slider" min="0" max="1" step="0.01" value="1">
+
+    <div class="progress-wrap"><div class="progress" id="progress"></div></div>
+    <div class="time-info"><span id="time-played">0:00</span> / <span id="time-left">0:00</span></div>
+
+    <div id="upcoming"></div>
+  </div>
+
+  <script>
+    /* ---------- playlist ---------- */
+    const audioFolder = "";
+    const audioFiles = [
+      "Bernie Chiaravalle/Driven By Desire/01 Miss That Train (Catch That Dream).m4a",
+      "Bernie Chiaravalle/Driven By Desire/02 Writing a Romance.m4a",
+      "Bernie Chiaravalle/Driven By Desire/03 Man Who Would Be King.m4a",
+      "Bernie Chiaravalle/Driven By Desire/04 Down Down Down.m4a",
+      "Bernie Chiaravalle/Driven By Desire/05 It Was Only Love.m4a",
+      "Bernie Chiaravalle/Driven By Desire/06 All Things Considered.m4a",
+      "Bernie Chiaravalle/Driven By Desire/07 Not Without a Fight.m4a",
+      "Bernie Chiaravalle/Driven By Desire/08 Someone to Hold.m4a",
+      "Bernie Chiaravalle/Driven By Desire/09 Let Me Be the One.m4a",
+      "Bernie Chiaravalle/Driven By Desire/10 From Now On.m4a",
+      
+      "Bernie Chiaravalle/Hideaway Tales/01 Lonely Too Long.m4a",
+      "Bernie Chiaravalle/Hideaway Tales/02 Don't Know What You Want.m4a",
+      "Bernie Chiaravalle/Hideaway Tales/03 Darker Days.m4a",
+      "Bernie Chiaravalle/Hideaway Tales/04 In My Heart.m4a",
+      "Bernie Chiaravalle/Hideaway Tales/05 One On One.m4a",
+      "Bernie Chiaravalle/Hideaway Tales/06 It's You.m4a",
+      "Bernie Chiaravalle/Hideaway Tales/07 Never Fade Away.m4a",
+      "Bernie Chiaravalle/Hideaway Tales/08 Love Waits for You.m4a",
+      "Bernie Chiaravalle/Hideaway Tales/09 Make It Alright.m4a",
+      "Bernie Chiaravalle/Hideaway Tales/10 Through Every Window.m4a",
+      "Bernie Chiaravalle/Hideaway Tales/11 Living the Dream.m4a",
+      "Bernie Chiaravalle/Hideaway Tales/12 Let You Walk Away.m4a",
+      "Bernie Chiaravalle/Hideaway Tales/13 Two Goodbyes Away (Revisited).m4a",
+      
+      "Bernie Chiaravalle/Life As We Know It/01 The Love You Want.m4a",
+      "Bernie Chiaravalle/Life As We Know It/02 The Way to My Heart.m4a",
+      "Bernie Chiaravalle/Life As We Know It/03 Two Goodbyes Away.m4a",
+      "Bernie Chiaravalle/Life As We Know It/04 You Alone.m4a",
+      "Bernie Chiaravalle/Life As We Know It/05 Life As We Know It.m4a",
+      "Bernie Chiaravalle/Life As We Know It/06 Where' You Runnin'.m4a",
+      "Bernie Chiaravalle/Life As We Know It/07 Someday You Will.m4a",
+      "Bernie Chiaravalle/Life As We Know It/08 The Way It Looks from Here.m4a",
+      "Bernie Chiaravalle/Life As We Know It/09 Then Again, Maybe Not.m4a",
+      "Bernie Chiaravalle/Life As We Know It/10 Only So Much.m4a",
+      "Bernie Chiaravalle/Life As We Know It/11 My Only Chance.m4a",
+      
+      "Bernie Chiaravalle/Make Some Sense of This/01 Peace of Mind.m4a",
+      "Bernie Chiaravalle/Make Some Sense of This/02 I Choose Love.m4a",
+      "Bernie Chiaravalle/Make Some Sense of This/03 Make Some Sense of This.m4a",
+      "Bernie Chiaravalle/Make Some Sense of This/04 Ever Changing World.m4a",
+      "Bernie Chiaravalle/Make Some Sense of This/05 See the Light.m4a",
+      "Bernie Chiaravalle/Make Some Sense of This/06 Say What You Will.m4a",
+      "Bernie Chiaravalle/Make Some Sense of This/07 Castle to the Sky.m4a",
+      "Bernie Chiaravalle/Make Some Sense of This/08 Follow Your Heart.m4a",
+      "Bernie Chiaravalle/Make Some Sense of This/09 Now or Never.m4a",
+      "Bernie Chiaravalle/Make Some Sense of This/10 Real World.m4a",
+      
+      "Bernie Chiaravalle/Mystery of Love/01 Father and Child.m4a",
+      "Bernie Chiaravalle/Mystery of Love/02 Mystery of Love.m4a",
+      "Bernie Chiaravalle/Mystery of Love/03 Tell Me What You Want.m4a",
+      "Bernie Chiaravalle/Mystery of Love/04 Lead Us Back to Love.m4a",
+      "Bernie Chiaravalle/Mystery of Love/05 I've Got My Reasons.m4a",
+      "Bernie Chiaravalle/Mystery of Love/06 Ready for Nothin'.m4a",
+      "Bernie Chiaravalle/Mystery of Love/07 Sad As It Seems.m4a",
+      "Bernie Chiaravalle/Mystery of Love/08 Standing In the Light.m4a",
+      "Bernie Chiaravalle/Mystery of Love/09 Next to You.m4a",
+      "Bernie Chiaravalle/Mystery of Love/10 Soulfire.m4a",
+      
+      "Bernie Chiaravalle/One Bright Moment/01 All Good Things.m4a",
+      "Bernie Chiaravalle/One Bright Moment/02 Will and a Way.m4a",
+      "Bernie Chiaravalle/One Bright Moment/03 Right Where They Want You.m4a",
+      "Bernie Chiaravalle/One Bright Moment/04 You Said It All.m4a",
+      "Bernie Chiaravalle/One Bright Moment/05 Nobody's Business.m4a",
+      "Bernie Chiaravalle/One Bright Moment/06 One Bright Moment.m4a",
+      "Bernie Chiaravalle/One Bright Moment/07 Man out to Please.m4a",
+      "Bernie Chiaravalle/One Bright Moment/08 Worst of Times.m4a",
+      "Bernie Chiaravalle/One Bright Moment/09 Just Goes to Proove.m4a",
+      "Bernie Chiaravalle/One Bright Moment/10 Till I Found You.m4a",
+      "Bernie Chiaravalle/One Bright Moment/11 Let Me Believe.m4a",
+      
+      "Bernie Chiaravalle/The World Around Me/01 No Way Out.m4a",
+      "Bernie Chiaravalle/The World Around Me/02 Only Game In Town.m4a",
+      "Bernie Chiaravalle/The World Around Me/03 You Got Nothin' On Me.m4a",
+      "Bernie Chiaravalle/The World Around Me/04 The World Has Let You Down.m4a",
+      "Bernie Chiaravalle/The World Around Me/05 Long Haul.m4a",
+      "Bernie Chiaravalle/The World Around Me/06 The World Around Me.m4a",
+      "Bernie Chiaravalle/The World Around Me/07 What I Knew Before.m4a",
+      "Bernie Chiaravalle/The World Around Me/08 For a Little While.m4a",
+      "Bernie Chiaravalle/The World Around Me/09 No Longer In My Dreams.m4a",
+      "Bernie Chiaravalle/The World Around Me/10 White Lies.m4a",
+      "Bernie Chiaravalle/The World Around Me/11 Nothin' Left To Believe In.m4a",
+      "Bernie Chiaravalle/The World Around Me/12 Let the Night Unwind.m4a"
+    ];
+    const shuffle=a=>a.sort(()=>Math.random()-.5);
+    let playlist=shuffle([...audioFiles]),idx=0,sound,started=false,progRAF;
+
+    /* ---------- helpers ---------- */
+    const tidy=f=>f.split('/').pop().replace(/\.[^.]+$/,'').replace(/^\d{2}\s+/,'').replace(/[_-]/g,' ');
+    const $=id=>document.getElementById(id);
+    const fmt=s=>{const m=Math.floor(s/60),sec=Math.floor(s%60).toString().padStart(2,'0');return`${m}:${sec}`}
+
+    /* ---------- elements ---------- */
+    const playBtn=$('playpause'),label=$('play-label'),icon=$('btn-icon'),
+          vol=$('volume'),titleEl=$('track-title'),queueEl=$('upcoming'),
+          player=$('player'),progressEl=$('progress'),
+          tPlayed=$('time-played'),tLeft=$('time-left');
+
+    const setBtn=(txt,ico)=>{label.textContent=txt;icon.className=`fa-solid fa-${ico}`};
+
+    const updateQueue=()=>{
+      const nxt=[];for(let i=1;i<=3;i++)nxt.push(tidy(playlist[(idx+i)%playlist.length]));
+      queueEl.style.animation='none';void queueEl.offsetWidth;
+      queueEl.innerHTML="<strong>Next up:</strong><br>"+nxt.join("<br>");
+      queueEl.style.animation='fadeIn .4s forwards';
+    };
+
+    const fadeTitle=t=>{
+      titleEl.style.animation='none';void titleEl.offsetWidth;
+      titleEl.textContent=t;titleEl.style.animation='fadeIn .4s forwards';
+    };
+
+    const updateProgress=()=>{
+      if(sound&&sound.playing()){
+        const cur=sound.seek(),dur=sound.duration();
+        progressEl.style.width=`${(cur/dur)*100}%`;
+        tPlayed.textContent=fmt(cur);tLeft.textContent=fmt(dur-cur);
+      }
+      progRAF=requestAnimationFrame(updateProgress);
+    };
+
+    const playTrack=()=>{
+      if(sound) sound.unload();cancelAnimationFrame(progRAF);
+      const src=playlist[idx];
+      sound=new Howl({src:[src],html5:true,onend:()=>{idx=(idx+1)%playlist.length;playTrack();}});
+      fadeTitle(tidy(src));sound.play();setBtn('PAUSE','pause');updateQueue();updateProgress();
+    };
+
+    /* ---------- events ---------- */
+    playBtn.addEventListener('click',()=>{
+      if(!started){started=true;playTrack();return;}
+      if(sound.playing()){sound.pause();setBtn('PLAY','play');}
+      else{sound.play();setBtn('PAUSE','pause');}
+    });
+
+    document.addEventListener('keydown',e=>{
+      if(e.code==='Space'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){
+        e.preventDefault();playBtn.click();
+      }
+    });
+
+    vol.addEventListener('input',e=>Howler.volume(parseFloat(e.target.value)));
+
+    let rTO;window.addEventListener('resize',()=>{player.classList.add('resize');clearTimeout(rTO);rTO=setTimeout(()=>player.classList.remove('resize'),300);});
+  </script>
+</body>
+</html> 
