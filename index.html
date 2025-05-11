@@ -464,6 +464,11 @@
       </div>
     </button>
     
+    <button id="share-song-btn" title="Share this song" style="background:none;border:none;cursor:pointer;margin-top:10px;font-size:22px;color:#007aff;outline:none;display:none;">
+      <i class="fa-regular fa-share-nodes" style="font-weight:400;opacity:0.85;"></i>
+    </button>
+    <span id="share-copied-msg" style="display:none;font-size:13px;color:#007aff;margin-left:8px;vertical-align:middle;">Copied!</span>
+
     <div class="icon-row" style="display: flex; gap: 20px; justify-content: center; align-items: center; padding: 20px;">
         <a href="https://music.apple.com/us/artist/bernie-chiaravalle/80848772" target="_blank" style="text-decoration: none; color: inherit;">
             <i class="fab fa-apple "></i>
@@ -822,6 +827,7 @@
       setBtn('PAUSE','pause');
       updateQueue();
       updateProgress();
+      showShareBtn();
     }
     
     playBtn.addEventListener('click',()=>{
@@ -862,6 +868,27 @@
         playTrack();
       }
     });
+
+    // === On page load, check for ?song= param and queue that song first ===
+    (function(){
+      const params = new URLSearchParams(window.location.search);
+      const songParam = params.get('song');
+      function getCanonicalPath(url) {
+        const base = "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/";
+        return url.startsWith(base) ? url.slice(base.length) : url;
+      }
+      if (songParam) {
+        try {
+          const relPath = decodeURIComponent(songParam);
+          const foundIdx = playlist.findIndex(u => getCanonicalPath(u) === relPath);
+          if (foundIdx > -1) {
+            const [song] = playlist.splice(foundIdx, 1);
+            playlist.unshift(song);
+            idx = 0;
+          }
+        } catch(e) {}
+      }
+    })();
   </script>  
 <script>
   // Target the span
@@ -1142,4 +1169,64 @@
     if (e.key === 'Escape') closeQueueModal();
   });
 })();
+</script>
+
+<script>
+// === Share Song Button ===
+(function(){
+  const shareBtn = document.getElementById('share-song-btn');
+  const copiedMsg = document.getElementById('share-copied-msg');
+  function getCanonicalPath(url) {
+    const base = "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/";
+    return url.startsWith(base) ? url.slice(base.length) : url;
+  }
+  function getShareUrl() {
+    const url = new URL(window.location.href.split('?')[0]);
+    url.searchParams.set('song', encodeURIComponent(getCanonicalPath(playlist[idx])));
+    return url.toString();
+  }
+  shareBtn.onclick = function() {
+    const shareUrl = getShareUrl();
+    const message = 'Check out this song from BC Radio!\n\n' + shareUrl;
+    navigator.clipboard.writeText(message).then(function(){
+      copiedMsg.style.display = 'inline';
+      setTimeout(()=>{copiedMsg.style.display='none';}, 1200);
+    });
+  };
+})();
+
+// === On page load, check for ?song= param and queue that song first ===
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  const songParam = params.get('song');
+  if (songParam) {
+    try {
+      const relPath = decodeURIComponent(songParam);
+      const foundIdx = playlist.findIndex(u => getCanonicalPath(u) === relPath);
+      if (foundIdx > -1) {
+        const [song] = playlist.splice(foundIdx, 1);
+        playlist.unshift(song);
+        idx = 0;
+      }
+    } catch(e) {}
+  }
+})();
+</script>
+
+<script>
+// Show share button only after radio starts
+function showShareBtn() {
+  document.getElementById('share-song-btn').style.display = 'inline-block';
+}
+</script>
+
+<script>
+// Simple hash function for obscuring song URLs (djb2)
+function hashString(str) {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash) + str.charCodeAt(i);
+  }
+  return (hash >>> 0).toString(36); // unsigned, base36 for shortness
+}
 </script>
