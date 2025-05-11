@@ -370,6 +370,18 @@
 #current-time {
     line-height: 1.2em!important
 }
+
+@media screen and (max-width: 990px) {
+    .title a {
+        margin: 0!important;
+        max-width: unset!important;
+        margin-top: 10px!important;
+        margin-bottom: 15px!important
+
+    }
+}
+
+
   </style>
   
   <script type="module" src="https://cdn.jsdelivr.net/npm/@dotlottie/player-component@latest/dist/dotlottie-player.mjs"></script>
@@ -380,6 +392,14 @@
 
 <script src="https://kit.fontawesome.com/6f464c9e30.js" crossorigin="anonymous"></script>
 
+
+<script type="text/javascript">
+  (function(c,l,a,r,i,t,y){
+      c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+      t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+      y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+  })(window, document, "clarity", "script", "rbimvwhure");
+</script>
 </head>
 
 <body>
@@ -481,51 +501,197 @@
   <script>
     const base="https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/";
     const audioFiles = [
-      // === Driven By Desire ===
-      `${base}Driven%20By%20Desire/01%20Miss%20That%20Train%20%28Catch%20That%20Dream%29.m4a`,
-      `${base}Driven%20By%20Desire/02%20Writing%20a%20Romance.m4a`,
-      `${base}Driven%20By%20Desire/03%20Man%20Who%20Would%20Be%20King.m4a`,
-      `${base}Driven%20By%20Desire/04%20Down%20Down%20Down.m4a`,
-      `${base}Driven%20By%20Desire/05%20It%20Was%20Only%20Love.m4a`,
-      `${base}Driven%20By%20Desire/06%20All%20Things%20Considered.m4a`,
-      `${base}Driven%20By%20Desire/07%20Not%20Without%20a%20Fight.m4a`,
-      `${base}Driven%20By%20Desire/08%20Someone%20to%20Hold.m4a`,
-      `${base}Driven%20By%20Desire/09%20Let%20Me%20Be%20the%20One.m4a`,
-      `${base}Driven%20By%20Desire/10%20From%20Now%20On.m4a`,
-      // === Chiaro Destino mp3 version ===
-      `${base}Chiaro%20Destino%20mp3%20version/01%20Things%20We%20Said%20Today.mp3`,
-      `${base}Chiaro%20Destino%20mp3%20version/02%20My%20Back%20Pages.mp3`,
-      `${base}Chiaro%20Destino%20mp3%20version/03%20Isnt%20It%20A%20Pity.mp3`,
-      `${base}Chiaro%20Destino%20mp3%20version/04%20Dino%27s%20Song.mp3`,
-      `${base}Chiaro%20Destino%20mp3%20version/05%20You%27ve%20Got%20To%20Hide%20Your%20Love%20Away.mp3`,
-      `${base}Chiaro%20Destino%20mp3%20version/06%20All%20the%20Children%20Sing.mp3`,
-      `${base}Chiaro%20Destino%20mp3%20version/07%20Four%20Days%20Gone.mp3`,
-      `${base}Chiaro%20Destino%20mp3%20version/08%20Happier%20Than%20the%20Morning%20Sun.mp3`,
-      `${base}Chiaro%20Destino%20mp3%20version/09%20Long%20Long%20Time.mp3`,
-      `${base}Chiaro%20Destino%20mp3%20version/10%20Angel.mp3`,
-      `${base}Chiaro%20Destino%20mp3%20version/11%20Laughing.mp3`,
-      `${base}Chiaro%20Destino%20mp3%20version/12%20I%20Want%20To%20Tell%20You.mp3`,
-      `${base}Chiaro%20Destino%20mp3%20version/13%20Motor%20of%20Love.mp3`,
-      `${base}Chiaro%20Destino%20mp3%20version/14%20Love.mp3`,
-      // === Random mp3s (Unreleased) ===
-      `${base}Random%20mp3s/a%20loss%20for%20words_march5.mp3`,
-      `${base}Random%20mp3s/allnight_watchman_nov25mix.mp3`,
-      `${base}Random%20mp3s/BegYourForgiveness_march27mix.mp3`,
-      `${base}Random%20mp3s/ByHeart_RealLove.mp3`,
-      `${base}Random%20mp3s/Don%27t_Make_Promise_jan13mix.mp3`,
-      `${base}Random%20mp3s/I%27ll_Get_Back_To_You_april7mix_m.mp3`,
-      `${base}Random%20mp3s/KeepThisTrain.mp3`,
-      `${base}Random%20mp3s/looking_for_love2024_dec11mix.mp3`,
-      `${base}Random%20mp3s/obsession_blues_bc_april7mox.mp3`,
-      `${base}Random%20mp3s/What_We%27ve_Got.mp3`,
-      `${base}Random%20mp3s/whenitcomestolovesept24_emastered.mp3`,
-      // ... (add all other provided URLs in the same way, grouped by album/folder) ...
-      // === Here There and Everywhere ===
-      `${base}Here_There_and_Everywhere.m4a`,
-      // === Julian ===
-      `${base}Julian.m4a`,
-      // ... (continue for all other albums/folders as in your list) ...
-    ];
+  // === Driven By Desire ===
+  `${base}Driven%20By%20Desire/01%20Miss%20That%20Train%20%28Catch%20That%20Dream%29.m4a`,
+  `${base}Driven%20By%20Desire/02%20Writing%20a%20Romance.m4a`,
+  `${base}Driven%20By%20Desire/03%20Man%20Who%20Would%20Be%20King.m4a`,
+  `${base}Driven%20By%20Desire/04%20Down%20Down%20Down.m4a`,
+  `${base}Driven%20By%20Desire/05%20It%20Was%20Only%20Love.m4a`,
+  `${base}Driven%20By%20Desire/06%20All%20Things%20Considered.m4a`,
+  `${base}Driven%20By%20Desire/07%20Not%20Without%20a%20Fight.m4a`,
+  `${base}Driven%20By%20Desire/08%20Someone%20to%20Hold.m4a`,
+  `${base}Driven%20By%20Desire/09%20Let%20Me%20Be%20the%20One.m4a`,
+  `${base}Driven%20By%20Desire/10%20From%20Now%20On.m4a`,
+
+  // === Chiaro Destino mp3 version ===
+  `${base}Chiaro%20Destino%20mp3%20version/01%20Things%20We%20Said%20Today.mp3`,
+  `${base}Chiaro%20Destino%20mp3%20version/02%20My%20Back%20Pages.mp3`,
+  `${base}Chiaro%20Destino%20mp3%20version/03%20Isnt%20It%20A%20Pity.mp3`,
+  `${base}Chiaro%20Destino%20mp3%20version/04%20Dino%27s%20Song.mp3`,
+  `${base}Chiaro%20Destino%20mp3%20version/05%20You%27ve%20Got%20To%20Hide%20Your%20Love%20Away.mp3`,
+  `${base}Chiaro%20Destino%20mp3%20version/06%20All%20the%20Children%20Sing.mp3`,
+  `${base}Chiaro%20Destino%20mp3%20version/07%20Four%20Days%20Gone.mp3`,
+  `${base}Chiaro%20Destino%20mp3%20version/08%20Happier%20Than%20the%20Morning%20Sun.mp3`,
+  `${base}Chiaro%20Destino%20mp3%20version/09%20Long%20Long%20Time.mp3`,
+  `${base}Chiaro%20Destino%20mp3%20version/10%20Angel.mp3`,
+  `${base}Chiaro%20Destino%20mp3%20version/11%20Laughing.mp3`,
+  `${base}Chiaro%20Destino%20mp3%20version/12%20I%20Want%20To%20Tell%20You.mp3`,
+  `${base}Chiaro%20Destino%20mp3%20version/13%20Motor%20of%20Love.mp3`,
+  `${base}Chiaro%20Destino%20mp3%20version/14%20Love.mp3`,
+
+  // === Random mp3s (Unreleased) ===
+  `${base}Random%20mp3s/a%20loss%20for%20words_march5.mp3`,
+  `${base}Random%20mp3s/allnight_watchman_nov25mix.mp3`,
+  `${base}Random%20mp3s/BegYourForgiveness_march27mix.mp3`,
+  `${base}Random%20mp3s/ByHeart_RealLove.mp3`,
+  `${base}Random%20mp3s/Don%27t_Make_Promise_jan13mix.mp3`,
+  `${base}Random%20mp3s/I%27ll_Get_Back_To_You_april7mix_m.mp3`,
+  `${base}Random%20mp3s/KeepThisTrain.mp3`,
+  `${base}Random%20mp3s/looking_for_love2024_dec11mix.mp3`,
+  `${base}Random%20mp3s/obsession_blues_bc_april7mox.mp3`,
+  `${base}Random%20mp3s/What_We%27ve_Got.mp3`,
+  `${base}Random%20mp3s/whenitcomestolovesept24_emastered.mp3`,
+
+  // === Here There and Everywhere ===
+  `${base}Here_There_and_Everywhere.m4a`,
+
+  // === Julian ===
+  `${base}Julian.m4a`,
+
+  // === Hideaway Tales ===
+  `${base}Hideaway%20Tales/01%20Lonely%20Too%20Long.m4a`,
+  `${base}Hideaway%20Tales/02%20Don%27t%20Know%20What%20You%20Want.m4a`,
+  `${base}Hideaway%20Tales/03%20Darker%20Days.m4a`,
+  `${base}Hideaway%20Tales/04%20In%20My%20Heart.m4a`,
+  `${base}Hideaway%20Tales/05%20One%20On%20One.m4a`,
+  `${base}Hideaway%20Tales/06%20It%27s%20You.m4a`,
+  `${base}Hideaway%20Tales/07%20Never%20Fade%20Away.m4a`,
+  `${base}Hideaway%20Tales/08%20Love%20Waits%20for%20You.m4a`,
+  `${base}Hideaway%20Tales/09%20Make%20It%20Alright.m4a`,
+  `${base}Hideaway%20Tales/10%20Through%20Every%20Window.m4a`,
+  `${base}Hideaway%20Tales/11%20Living%20the%20Dream.m4a`,
+  `${base}Hideaway%20Tales/12%20Let%20You%20Walk%20Away.m4a`,
+  `${base}Hideaway%20Tales/13%20Two%20Goodbyes%20Away%20%28Revisited%29.m4a`,
+
+  // === Life As We Know It ===
+  `${base}Life%20As%20We%20Know%20It/01%20The%20Love%20You%20Want.m4a`,
+  `${base}Life%20As%20We%20Know%20It/02%20The%20Way%20to%20My%20Heart.m4a`,
+  `${base}Life%20As%20We%20Know%20It/03%20Two%20Goodbyes%20Away.m4a`,
+  `${base}Life%20As%20We%20Know%20It/04%20You%20Alone.m4a`,
+  `${base}Life%20As%20We%20Know%20It/05%20Life%20As%20We%20Know%20It.m4a`,
+  `${base}Life%20As%20We%20Know%20It/06%20Where%27%20You%20Runnin%27.m4a`,
+  `${base}Life%20As%20We%20Know%20It/07%20Someday%20You%20Will.m4a`,
+  `${base}Life%20As%20We%20Know%20It/08%20The%20Way%20It%20Looks%20from%20Here.m4a`,
+  `${base}Life%20As%20We%20Know%20It/09%20Then%20Again%2C%20Maybe%20Not.m4a`,
+  `${base}Life%20As%20We%20Know%20It/10%20Only%20So%20Much.m4a`,
+  `${base}Life%20As%20We%20Know%20It/11%20My%20Only%20Chance.m4a`,
+
+  // === Long Before I Knew You mp3s ===
+  `${base}Long%20Before%20I%20Knew%20You%20mp3s/01%20I%20Try%20To%20Please%20You.mp3`,
+  `${base}Long%20Before%20I%20Knew%20You%20mp3s/02%20Long%20Before%20I%20Knew%20You.mp3`,
+  `${base}Long%20Before%20I%20Knew%20You%20mp3s/03%20Could%20You%20Believe.mp3`,
+  `${base}Long%20Before%20I%20Knew%20You%20mp3s/04%20It%27s%20Your%20World.mp3`,
+  `${base}Long%20Before%20I%20Knew%20You%20mp3s/05%20Give%20Your%20Love%20To%20Me.mp3`,
+  `${base}Long%20Before%20I%20Knew%20You%20mp3s/06%20Somebody%20Show%20Me.mp3`,
+  `${base}Long%20Before%20I%20Knew%20You%20mp3s/07%20You%20and%20Me.mp3`,
+  `${base}Long%20Before%20I%20Knew%20You%20mp3s/08%20Swear%20Your%20Love.mp3`,
+  `${base}Long%20Before%20I%20Knew%20You%20mp3s/09%20Love%20Has%20Left%20You%20Alone.mp3`,
+  `${base}Long%20Before%20I%20Knew%20You%20mp3s/10%20Lover%27s%20Dream.mp3`,
+  `${base}Long%20Before%20I%20Knew%20You%20mp3s/11%20Dear%20To%20Me.mp3`,
+  `${base}Long%20Before%20I%20Knew%20You%20mp3s/12%20Dont%20Know%20Where%20To%20Begin.mp3`,
+  `${base}Long%20Before%20I%20Knew%20You%20mp3s/13%20Leave%20It%20To%20You.mp3`,
+  `${base}Long%20Before%20I%20Knew%20You%20mp3s/14%20If%20We%20Try.mp3`,
+  `${base}Long%20Before%20I%20Knew%20You%20mp3s/15%20Your%20Baby%27s%20Gone.mp3`,
+  `${base}Long%20Before%20I%20Knew%20You%20mp3s/16%20Your%20Love%20Shines.mp3`,
+  `${base}Long%20Before%20I%20Knew%20You%20mp3s/17%20Hell%20of%20A%20Fight.mp3`,
+
+  // === Make Some Sense of This ===
+  `${base}Make%20Some%20Sense%20of%20This/01%20Peace%20of%20Mind.m4a`,
+  `${base}Make%20Some%20Sense%20of%20This/02%20I%20Choose%20Love.m4a`,
+  `${base}Make%20Some%20Sense%20of%20This/03%20Make%20Some%20Sense%20of%20This.m4a`,
+  `${base}Make%20Some%20Sense%20of%20This/04%20Ever%20Changing%20World.m4a`,
+  `${base}Make%20Some%20Sense%20of%20This/05%20See%20the%20Light.m4a`,
+  `${base}Make%20Some%20Sense%20of%20This/06%20Say%20What%20You%20Will.m4a`,
+  `${base}Make%20Some%20Sense%20of%20This/07%20Castle%20to%20the%20Sky.m4a`,
+  `${base}Make%20Some%20Sense%20of%20This/08%20Follow%20Your%20Heart.m4a`,
+  `${base}Make%20Some%20Sense%20of%20This/09%20Now%20or%20Never.m4a`,
+  `${base}Make%20Some%20Sense%20of%20This/10%20Real%20World.m4a`,
+
+  // === More To This Life mp3 version ===
+  `${base}More%20To%20This%20Life%20mp3%20version/01%20So%20Far%20Back%20in%20Time.mp3`,
+  `${base}More%20To%20This%20Life%20mp3%20version/02%20More%20To%20This%20Life.mp3`,
+  `${base}More%20To%20This%20Life%20mp3%20version/03%20I%27m%20Givin%20My%20Heart.mp3`,
+  `${base}More%20To%20This%20Life%20mp3%20version/04%20Who%20We%20Long%20To%20Be.mp3`,
+  `${base}More%20To%20This%20Life%20mp3%20version/05%20The%20Art%20of%20Letting%20Go.mp3`,
+  `${base}More%20To%20This%20Life%20mp3%20version/06%20Nothings%27%20Sacred%20Anymore.mp3`,
+  `${base}More%20To%20This%20Life%20mp3%20version/07%20Keep%20On%20Lovin%27%20You.mp3`,
+  `${base}More%20To%20This%20Life%20mp3%20version/08%20Lay%20Down%20My%20Arms.mp3`,
+  `${base}More%20To%20This%20Life%20mp3%20version/09%20Tonight%20%28I%20Will%20Dance%20With%20You%29.mp3`,
+  `${base}More%20To%20This%20Life%20mp3%20version/10%20Hasn%27t%20Happened%20Yet.mp3`,
+  `${base}More%20To%20This%20Life%20mp3%20version/11%20What%20You%20Believe.mp3`,
+  `${base}More%20To%20This%20Life%20mp3%20version/12%20I%20Just%20Don%27t%20Get%20It.mp3`,
+  `${base}More%20To%20This%20Life%20mp3%20version/13%20If%20It%20Was%20You.mp3`,
+  `${base}More%20To%20This%20Life%20mp3%20version/14%20Winnie%27s%20Song.mp3`,
+
+  // === Mystery of Love ===
+  `${base}Mystery%20of%20Love/01%20Father%20and%20Child.m4a`,
+  `${base}Mystery%20of%20Love/02%20Mystery%20of%20Love.m4a`,
+  `${base}Mystery%20of%20Love/03%20Tell%20Me%20What%20You%20Want.m4a`,
+  `${base}Mystery%20of%20Love/04%20Lead%20Us%20Back%20to%20Love.m4a`,
+  `${base}Mystery%20of%20Love/05%20I%27ve%20Got%20My%20Reasons.m4a`,
+  `${base}Mystery%20of%20Love/06%20Ready%20for%20Nothin%27.m4a`,
+  `${base}Mystery%20of%20Love/07%20Sad%20As%20It%20Seems.m4a`,
+  `${base}Mystery%20of%20Love/08%20Standing%20In%20the%20Light.m4a`,
+  `${base}Mystery%20of%20Love/09%20Next%20to%20You.m4a`,
+  `${base}Mystery%20of%20Love/10%20Soulfire.m4a`,
+
+  // === One Bright Moment ===
+  `${base}One%20Bright%20Moment/01%20All%20Good%20Things.m4a`,
+  `${base}One%20Bright%20Moment/02%20Will%20and%20a%20Way.m4a`,
+  `${base}One%20Bright%20Moment/03%20Right%20Where%20They%20Want%20You.m4a`,
+  `${base}One%20Bright%20Moment/04%20You%20Said%20It%20All.m4a`,
+  `${base}One%20Bright%20Moment/05%20Nobody%27s%20Business.m4a`,
+  `${base}One%20Bright%20Moment/06%20One%20Bright%20Moment.m4a`,
+  `${base}One%20Bright%20Moment/07%20Man%20out%20to%20Please.m4a`,
+  `${base}One%20Bright%20Moment/08%20Worst%20of%20Times.m4a`,
+  `${base}One%20Bright%20Moment/09%20Just%20Goes%20to%20Proove.m4a`,
+  `${base}One%20Bright%20Moment/10%20Till%20I%20Found%20You.m4a`,
+  `${base}One%20Bright%20Moment/11%20Let%20Me%20Believe.m4a`,
+
+  // === Remnants mp3 version ===
+  `${base}Remnants%20mp3%20version/01%20Come%20A%20Long%20Way.mp3`,
+  `${base}Remnants%20mp3%20version/02%20Anytime%20I%20Think%20of%20You.mp3`,
+  `${base}Remnants%20mp3%20version/03%20Forever%20More.mp3`,
+  `${base}Remnants%20mp3%20version/04%20Can%27t%20Seem%20To%20Let%20You%20Go.mp3`,
+  `${base}Remnants%20mp3%20version/05%20Once%20A%20Lover.mp3`,
+  `${base}Remnants%20mp3%20version/06%20Corners%20of%20My%20Mind.mp3`,
+  `${base}Remnants%20mp3%20version/07%20Tell%20Me%20What%20You%20Want%202024.mp3`,
+  `${base}Remnants%20mp3%20version/08%20Legend%20in%20Her%20Mind.mp3`,
+  `${base}Remnants%20mp3%20version/09%20Open%20Up%20Your%20Heart.mp3`,
+  `${base}Remnants%20mp3%20version/10%20There%20She%20Goes.mp3`,
+  `${base}Remnants%20mp3%20version/11%20Roadsong.mp3`,
+  `${base}Remnants%20mp3%20version/12%20Bye%20Bye%20Misery.mp3`,
+
+  // === The World Around Me ===
+  `${base}The%20World%20Around%20Me/01%20No%20Way%20Out.m4a`,
+  `${base}The%20World%20Around%20Me/02%20Only%20Game%20In%20Town.m4a`,
+  `${base}The%20World%20Around%20Me/03%20You%20Got%20Nothin%27%20On%20Me.m4a`,
+  `${base}The%20World%20Around%20Me/04%20The%20World%20Has%20Let%20You%20Down.m4a`,
+  `${base}The%20World%20Around%20Me/05%20Long%20Haul.m4a`,
+  `${base}The%20World%20Around%20Me/06%20The%20World%20Around%20Me.m4a`,
+  `${base}The%20World%20Around%20Me/07%20What%20I%20Knew%20Before.m4a`,
+  `${base}The%20World%20Around%20Me/08%20For%20a%20Little%20While.m4a`,
+  `${base}The%20World%20Around%20Me/09%20No%20Longer%20In%20My%20Dreams.m4a`,
+  `${base}The%20World%20Around%20Me/10%20White%20Lies.m4a`,
+  `${base}The%20World%20Around%20Me/11%20Nothin%27%20Left%20To%20Believe%20In.m4a`,
+  `${base}The%20World%20Around%20Me/12%20Let%20the%20Night%20Unwind.m4a`,
+
+  // === Weddington Street ===
+  `${base}Weddington%20Street/02%20Forgive%20And%20Forget.m4a`,
+  `${base}Weddington%20Street/03%20Hold%20On%20Hold%20Out.m4a`,
+  `${base}Weddington%20Street/04%20Too%20Extreme.m4a`,
+  `${base}Weddington%20Street/05%20Somewhere%20In%20The%20Night.m4a`,
+  `${base}Weddington%20Street/06%20The%20Great%20Divide.m4a`,
+  `${base}Weddington%20Street/07%20You%20Were%20There%20Too.m4a`,
+  `${base}Weddington%20Street/08%20Anaka.m4a`,
+  `${base}Weddington%20Street/09%20To%20Live%20Within%20Her%20Love.m4a`,
+  `${base}Weddington%20Street/10%20Good%20Book.m4a`,
+  `${base}Weddington%20Street/11%20One%20More%20Word.m4a`,
+  `${base}Weddington%20Street/12%20All%20I%20Really%20Want.m4a`,
+
+  // === Winnie's Song ===
+  `${base}Winnie%27s%20Song.m4a`
+];
     
     /* ---------- util helpers ---------- */
     const shuffle=a=>a.sort(()=>Math.random()-.5);
@@ -641,7 +807,14 @@
       sound=new Howl({
         src:[src],
         html5:true,
-        onend:()=>{idx=(idx+1)%playlist.length;playTrack();}
+        onend: () => {
+          idx++;
+          if (idx >= playlist.length) {
+            playlist = shuffle([...audioFiles]);
+            idx = 0;
+          }
+          playTrack();
+        }
       });
       fadeTitle(tidy(src), src); // pass src for unreleased logic
       sound.play();
@@ -876,6 +1049,16 @@
   </script>
   
   <span id="current-weather" style="position:fixed;top:10px;right:10px;font-size:14px;font-weight:600;"></span>
+
+  <!-- Full Queue Modal -->
+  <div id="queue-modal" style="display:none;position:fixed;z-index:99999;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.75);backdrop-filter:blur(2px);align-items:center;justify-content:center;">
+    <div style="background:#fff;padding:32px 24px 24px 24px;border-radius:16px;max-width:90vw;max-height:80vh;overflow:auto;box-shadow:0 8px 32px rgba(0,0,0,0.25);position:relative;">
+      <button id="close-queue-modal" style="position:absolute;top:12px;right:16px;font-size:22px;background:none;border:none;cursor:pointer;color:#888">&times;</button>
+      <h2 style="margin-top:0;text-align:center;font-size:1.5em;">Full Queue</h2>
+      <ul id="queue-list" style="list-style:none;padding:0;margin:0;max-width:400px;"></ul>
+      <div style="font-size:13px;color:#888;text-align:center;margin-top:12px;">Double-click a song to play it instantly</div>
+    </div>
+  </div>
 </body>
 </html>
 
@@ -908,5 +1091,55 @@
   if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
     document.body.classList.add('ios-device');
   }
+})();
+</script>
+
+<script>
+// === EGG: Full Queue Modal ===
+(function(){
+  let eggBuffer = '';
+  document.addEventListener('keydown', function(e) {
+    if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) return;
+    if (e.key.length === 1) {
+      eggBuffer += e.key.toLowerCase();
+      if (eggBuffer.length > 3) eggBuffer = eggBuffer.slice(-3);
+      if (eggBuffer === 'egg') showQueueModal();
+    }
+  });
+
+  function showQueueModal() {
+    const modal = document.getElementById('queue-modal');
+    const list = document.getElementById('queue-list');
+    list.innerHTML = '';
+    playlist.forEach((src, i) => {
+      const li = document.createElement('li');
+      li.textContent = (i === idx ? '▶ ' : '') + tidy(src);
+      li.style.padding = '8px 0';
+      li.style.cursor = 'pointer';
+      li.style.fontWeight = i === idx ? 'bold' : 'normal';
+      li.style.color = i === idx ? '#2F28CE' : '#222';
+      li.ondblclick = function() {
+        idx = i;
+        playTrack();
+        closeQueueModal();
+      };
+      list.appendChild(li);
+    });
+    modal.style.display = 'flex';
+    setTimeout(()=>{
+      modal.focus();
+    }, 10);
+  }
+  function closeQueueModal() {
+    document.getElementById('queue-modal').style.display = 'none';
+    eggBuffer = '';
+  }
+  document.getElementById('close-queue-modal').onclick = closeQueueModal;
+  document.getElementById('queue-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeQueueModal();
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeQueueModal();
+  });
 })();
 </script>
