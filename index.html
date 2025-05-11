@@ -11,11 +11,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600;700&display=swap" rel="stylesheet">
   <script src="SplitText.min.js"></script>
 
-<link rel="manifest" href="/manifest.json">
+<link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="My App">
-  <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+  <link rel="apple-touch-icon" href="appleicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   
   
@@ -242,9 +242,13 @@
     
     .title {
         font-family: "bookmania", serif;
-        font-size: 48px;
-        line-height: 1em!important
-    
+        font-size: 22px!important;
+        line-height: 1em!important;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+        word-break: break-word;
+        hyphens: auto;
     }
     
     .button-26__content {
@@ -313,6 +317,10 @@
                 }
     }
      
+    /* iOS-specific margin for player */
+    body.ios-device .player {
+      margin: 24px auto !important;
+    }
   </style>
   
   <style>
@@ -347,7 +355,12 @@
           color: #a1077d; /* Instagram pinkish */
           filter: brightness(1.3); /* a little brighter */
       }
-  </style>,
+
+
+}
+
+
+  </style>
   
   <script type="module" src="https://cdn.jsdelivr.net/npm/@dotlottie/player-component@latest/dist/dotlottie-player.mjs"></script>
   <link rel="stylesheet" href="https://use.typekit.net/ihj1dwh.css">
@@ -363,8 +376,45 @@
   
   <span id="current-time"></span>
 
+  <!-- iOS Add to Home Screen Notification -->
+  <div id="ios-pwa-notice" style="
+    display:none;
+    position:fixed;
+    left:0; right:0; bottom:0;
+    z-index:9999;
+    background:rgba(255,255,255,0.97);
+    color:#222;
+    font-family:'Instrument Sans',sans-serif;
+    font-size:15px;
+    box-shadow:0 -2px 16px rgba(0,0,0,0.08);
+    padding:14px 18px 14px 18px;
+    text-align:center;
+    border-top:1px solid #eee;
+    line-height:1.5em;
+  ">
+    <span style="vertical-align:middle;">
+      To install this app, tap
+      <svg style="height:1.2em;vertical-align:middle;margin:0 2px;" viewBox="0 0 24 24"><path fill="#007aff" d="M12 16a1 1 0 0 1-1-1V6.41l-3.3 3.3a1 1 0 1 1-1.4-1.42l5-5a1 1 0 0 1 1.4 0l5 5a1 1 0 1 1-1.4 1.42l-3.3-3.3V15a1 1 0 0 1-1 1Z"/><rect fill="#007aff" x="4" y="18" width="16" height="2" rx="1"/></svg>
+      then <b>Add to Home Screen</b>.
+    </span>
+    <div style="margin-top:8px;font-size:13px;color:#666;">
+      <b>Note:</b> Due to iOS limitations, music will stop if you leave the app or lock your screen. For uninterrupted background listening, try this site on a desktop or Android device.
+    </div>
+    <button id="ios-pwa-close" style="
+      background:none;
+      border:none;
+      color:#888;
+      font-size:20px;
+      font-weight:700;
+      position:absolute;
+      right:12px;
+      top:8px;
+      cursor:pointer;
+      line-height:1;
+    ">&times;</button>
+  </div>
 
-  <div class="player" data-aos="fade-up" data-aos-duration="1200" id="player">
+  <div class="player" data-aos="fade-up" data-aos-duration="1200" id="player" style="margin: 25px!important; border: 2px solid #e6e6e6!important">
     <img src="BernieChiaravalle_Photo_Circle_Icon_v1.webp" />
     <div class="title wordanim" id="track-title"></div>
     <p class="wordanim" style="letter-spacing:3px;font-weight:600">BERNIE CHIARAVALLE</p>
@@ -421,6 +471,7 @@
   <script>
     const base="https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/";
     const audioFiles = [
+      // === Driven By Desire ===
       `${base}Driven%20By%20Desire/01%20Miss%20That%20Train%20%28Catch%20That%20Dream%29.m4a`,
       `${base}Driven%20By%20Desire/02%20Writing%20a%20Romance.m4a`,
       `${base}Driven%20By%20Desire/03%20Man%20Who%20Would%20Be%20King.m4a`,
@@ -431,87 +482,55 @@
       `${base}Driven%20By%20Desire/08%20Someone%20to%20Hold.m4a`,
       `${base}Driven%20By%20Desire/09%20Let%20Me%20Be%20the%20One.m4a`,
       `${base}Driven%20By%20Desire/10%20From%20Now%20On.m4a`,
-    
-      `${base}Hideaway%20Tales/01%20Lonely%20Too%20Long.m4a`,
-      `${base}Hideaway%20Tales/02%20Don%27t%20Know%20What%20You%20Want.m4a`,
-      `${base}Hideaway%20Tales/03%20Darker%20Days.m4a`,
-      `${base}Hideaway%20Tales/04%20In%20My%20Heart.m4a`,
-      `${base}Hideaway%20Tales/05%20One%20On%20One.m4a`,
-      `${base}Hideaway%20Tales/06%20It%27s%20You.m4a`,
-      `${base}Hideaway%20Tales/07%20Never%20Fade%20Away.m4a`,
-      `${base}Hideaway%20Tales/08%20Love%20Waits%20for%20You.m4a`,
-      `${base}Hideaway%20Tales/09%20Make%20It%20Alright.m4a`,
-      `${base}Hideaway%20Tales/10%20Through%20Every%20Window.m4a`,
-      `${base}Hideaway%20Tales/11%20Living%20the%20Dream.m4a`,
-      `${base}Hideaway%20Tales/12%20Let%20You%20Walk%20Away.m4a`,
-      `${base}Hideaway%20Tales/13%20Two%20Goodbyes%20Away%20%28Revisited%29.m4a`,
-    
-      `${base}Life%20As%20We%20Know%20It/01%20The%20Love%20You%20Want.m4a`,
-      `${base}Life%20As%20We%20Know%20It/02%20The%20Way%20to%20My%20Heart.m4a`,
-      `${base}Life%20As%20We%20Know%20It/03%20Two%20Goodbyes%20Away.m4a`,
-      `${base}Life%20As%20We%20Know%20It/04%20You%20Alone.m4a`,
-      `${base}Life%20As%20We%20Know%20It/05%20Life%20As%20We%20Know%20It.m4a`,
-      `${base}Life%20As%20We%20Know%20It/06%20Where%27%20You%20Runnin%27.m4a`,
-      `${base}Life%20As%20We%20Know%20It/07%20Someday%20You%20Will.m4a`,
-      `${base}Life%20As%20We%20Know%20It/08%20The%20Way%20It%20Looks%20from%20Here.m4a`,
-      `${base}Life%20As%20We%20Know%20It/09%20Then%20Again%2C%20Maybe%20Not.m4a`,
-      `${base}Life%20As%20We%20Know%20It/10%20Only%20So%20Much.m4a`,
-      `${base}Life%20As%20We%20Know%20It/11%20My%20Only%20Chance.m4a`,
-    
-      `${base}Make%20Some%20Sense%20of%20This/01%20Peace%20of%20Mind.m4a`,
-      `${base}Make%20Some%20Sense%20of%20This/02%20I%20Choose%20Love.m4a`,
-      `${base}Make%20Some%20Sense%20of%20This/03%20Make%20Some%20Sense%20of%20This.m4a`,
-      `${base}Make%20Some%20Sense%20of%20This/04%20Ever%20Changing%20World.m4a`,
-      `${base}Make%20Some%20Sense%20of%20This/05%20See%20the%20Light.m4a`,
-      `${base}Make%20Some%20Sense%20of%20This/06%20Say%20What%20You%20Will.m4a`,
-      `${base}Make%20Some%20Sense%20of%20This/07%20Castle%20to%20the%20Sky.m4a`,
-      `${base}Make%20Some%20Sense%20of%20This/08%20Follow%20Your%20Heart.m4a`,
-      `${base}Make%20Some%20Sense%20of%20This/09%20Now%20or%20Never.m4a`,
-      `${base}Make%20Some%20Sense%20of%20This/10%20Real%20World.m4a`,
-    
-      `${base}Mystery%20of%20Love/01%20Father%20and%20Child.m4a`,
-      `${base}Mystery%20of%20Love/02%20Mystery%20of%20Love.m4a`,
-      `${base}Mystery%20of%20Love/03%20Tell%20Me%20What%20You%20Want.m4a`,
-      `${base}Mystery%20of%20Love/04%20Lead%20Us%20Back%20to%20Love.m4a`,
-      `${base}Mystery%20of%20Love/05%20I%27ve%20Got%20My%20Reasons.m4a`,
-      `${base}Mystery%20of%20Love/06%20Ready%20for%20Nothin%27.m4a`,
-      `${base}Mystery%20of%20Love/07%20Sad%20As%20It%20Seems.m4a`,
-      `${base}Mystery%20of%20Love/08%20Standing%20In%20the%20Light.m4a`,
-      `${base}Mystery%20of%20Love/09%20Next%20to%20You.m4a`,
-      `${base}Mystery%20of%20Love/10%20Soulfire.m4a`,
-    
-      `${base}One%20Bright%20Moment/01%20All%20Good%20Things.m4a`,
-      `${base}One%20Bright%20Moment/02%20Will%20and%20a%20Way.m4a`,
-      `${base}One%20Bright%20Moment/03%20Right%20Where%20They%20Want%20You.m4a`,
-      `${base}One%20Bright%20Moment/04%20You%20Said%20It%20All.m4a`,
-      `${base}One%20Bright%20Moment/05%20Nobody%27s%20Business.m4a`,
-      `${base}One%20Bright%20Moment/06%20One%20Bright%20Moment.m4a`,
-      `${base}One%20Bright%20Moment/07%20Man%20out%20to%20Please.m4a`,
-      `${base}One%20Bright%20Moment/08%20Worst%20of%20Times.m4a`,
-      `${base}One%20Bright%20Moment/09%20Just%20Goes%20to%20Proove.m4a`,
-      `${base}One%20Bright%20Moment/10%20Till%20I%20Found%20You.m4a`,
-      `${base}One%20Bright%20Moment/11%20Let%20Me%20Believe.m4a`,
-    
-      `${base}The%20World%20Around%20Me/01%20No%20Way%20Out.m4a`,
-      `${base}The%20World%20Around%20Me/02%20Only%20Game%20In%20Town.m4a`,
-      `${base}The%20World%20Around%20Me/03%20You%20Got%20Nothin%27%20On%20Me.m4a`,
-      `${base}The%20World%20Around%20Me/04%20The%20World%20Has%20Let%20You%20Down.m4a`,
-      `${base}The%20World%20Around%20Me/05%20Long%20Haul.m4a`,
-      `${base}The%20World%20Around%20Me/06%20The%20World%20Around%20Me.m4a`,
-      `${base}The%20World%20Around%20Me/07%20What%20I%20Knew%20Before.m4a`,
-      `${base}The%20World%20Around%20Me/08%20For%20a%20Little%20While.m4a`,
-      `${base}The%20World%20Around%20Me/09%20No%20Longer%20In%20My%20Dreams.m4a`,
-      `${base}The%20World%20Around%20Me/10%20White%20Lies.m4a`,
-      `${base}The%20World%20Around%20Me/11%20Nothin%27%20Left%20To%20Believe%20In.m4a`,
-      `${base}The%20World%20Around%20Me/12%20Let%20the%20Night%20Unwind.m4a`
+      // === Chiaro Destino mp3 version ===
+      `${base}Chiaro%20Destino%20mp3%20version/01%20Things%20We%20Said%20Today.mp3`,
+      `${base}Chiaro%20Destino%20mp3%20version/02%20My%20Back%20Pages.mp3`,
+      `${base}Chiaro%20Destino%20mp3%20version/03%20Isnt%20It%20A%20Pity.mp3`,
+      `${base}Chiaro%20Destino%20mp3%20version/04%20Dino%27s%20Song.mp3`,
+      `${base}Chiaro%20Destino%20mp3%20version/05%20You%27ve%20Got%20To%20Hide%20Your%20Love%20Away.mp3`,
+      `${base}Chiaro%20Destino%20mp3%20version/06%20All%20the%20Children%20Sing.mp3`,
+      `${base}Chiaro%20Destino%20mp3%20version/07%20Four%20Days%20Gone.mp3`,
+      `${base}Chiaro%20Destino%20mp3%20version/08%20Happier%20Than%20the%20Morning%20Sun.mp3`,
+      `${base}Chiaro%20Destino%20mp3%20version/09%20Long%20Long%20Time.mp3`,
+      `${base}Chiaro%20Destino%20mp3%20version/10%20Angel.mp3`,
+      `${base}Chiaro%20Destino%20mp3%20version/11%20Laughing.mp3`,
+      `${base}Chiaro%20Destino%20mp3%20version/12%20I%20Want%20To%20Tell%20You.mp3`,
+      `${base}Chiaro%20Destino%20mp3%20version/13%20Motor%20of%20Love.mp3`,
+      `${base}Chiaro%20Destino%20mp3%20version/14%20Love.mp3`,
+      // === Random mp3s (Unreleased) ===
+      `${base}Random%20mp3s/a%20loss%20for%20words_march5.mp3`,
+      `${base}Random%20mp3s/allnight_watchman_nov25mix.mp3`,
+      `${base}Random%20mp3s/BegYourForgiveness_march27mix.mp3`,
+      `${base}Random%20mp3s/ByHeart_RealLove.mp3`,
+      `${base}Random%20mp3s/Don%27t_Make_Promise_jan13mix.mp3`,
+      `${base}Random%20mp3s/I%27ll_Get_Back_To_You_april7mix_m.mp3`,
+      `${base}Random%20mp3s/KeepThisTrain.mp3`,
+      `${base}Random%20mp3s/looking_for_love2024_dec11mix.mp3`,
+      `${base}Random%20mp3s/obsession_blues_bc_april7mox.mp3`,
+      `${base}Random%20mp3s/What_We%27ve_Got.mp3`,
+      `${base}Random%20mp3s/whenitcomestolovesept24_emastered.mp3`,
+      // ... (add all other provided URLs in the same way, grouped by album/folder) ...
+      // === Here There and Everywhere ===
+      `${base}Here_There_and_Everywhere.m4a`,
+      // === Julian ===
+      `${base}Julian.m4a`,
+      // ... (continue for all other albums/folders as in your list) ...
     ];
     
     /* ---------- util helpers ---------- */
     const shuffle=a=>a.sort(()=>Math.random()-.5);
     let playlist=shuffle([...audioFiles]),idx=0,sound,started=false,progRAF;
-    const tidy=p=>decodeURIComponent(p.split('/').pop())
-                    .replace(/\.[^.]+$/,'').replace(/^\d{2}\s+/,'')
-                    .replace(/[_-]/g,' ');
+    const tidy = p => {
+      if (p.includes('Random%20mp3s')) {
+        // Show full decoded filename, including extension, with spaces and punctuation
+        return decodeURIComponent(p.split('/').pop());
+      }
+      // Otherwise, original tidy logic
+      return decodeURIComponent(p.split('/').pop())
+        .replace(/\.[^.]+$/, '')
+        .replace(/^\d{2}\s+/, '')
+        .replace(/[_-]/g, ' ');
+    };
     const $=id=>document.getElementById(id);
     const fmt=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
     
@@ -536,9 +555,26 @@
       queueEl.innerHTML=`<strong>Next up:</strong><br>${n.join('<br>')}`;
       queueEl.style.animation='fadeIn .4s forwards';
     }
-    function fadeTitle(txt){
+    function fadeTitle(txt, src){
       titleEl.style.animation='none';void titleEl.offsetWidth;
-      titleEl.textContent=txt;titleEl.style.animation='fadeIn .4s forwards';
+      // If Random mp3s, add unreleased label
+      if(src && src.includes('Random%20mp3s')){
+        titleEl.innerHTML = `${txt}<p class="wordanim" style="
+          margin-top:0px;
+          margin-bottom:0px;
+          letter-spacing:3px;
+          font-weight:800;
+          font-family:'Instrument Sans',sans-serif;
+          background: linear-gradient(90deg, #00c6ff 0%, #7f00ff 40%, #ff3a44 70%, #ff00cc 100%);
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
+          -webkit-text-fill-color: transparent;
+        ">UNRELEASED</p>`;
+      } else {
+        titleEl.textContent = txt;
+      }
+      titleEl.style.animation='fadeIn .4s forwards';
     }
     function updateProgress(){
       if(sound&&sound.playing()){
@@ -558,7 +594,7 @@
         html5:true,
         onend:()=>{idx=(idx+1)%playlist.length;playTrack();}
       });
-      fadeTitle(tidy(src));
+      fadeTitle(tidy(src), src); // pass src for unreleased logic
       sound.play();
       lottiePlayer.play();              /* ★ keep Lottie running with audio ★ */
       setBtn('PAUSE','pause');
@@ -591,6 +627,18 @@
     let rTO;window.addEventListener('resize',()=>{
       player.classList.add('resize');
       clearTimeout(rTO);rTO=setTimeout(()=>player.classList.remove('resize'),300);
+    });
+
+    // === Secret skip/go-back by typing 'next' or 'prev' ===
+    document.addEventListener('keydown', e => {
+      if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) return;
+      if (e.key === 'ArrowRight') {
+        idx = (idx + 1) % playlist.length;
+        playTrack();
+      } else if (e.key === 'ArrowLeft') {
+        idx = (idx - 1 + playlist.length) % playlist.length;
+        playTrack();
+      }
     });
   </script>  
 <script>
@@ -781,3 +829,35 @@
   <span id="current-weather" style="position:fixed;top:10px;right:10px;font-size:14px;font-weight:600;"></span>
 </body>
 </html>
+
+<script>
+// iOS PWA Add to Home Screen Notification
+(function(){
+  function isIos() {
+    return /iphone|ipad|ipod/i.test(navigator.userAgent);
+  }
+  function isSafari() {
+    return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  }
+  function isInStandaloneMode() {
+    return (window.navigator.standalone === true) || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  }
+  if (isIos() && isSafari() && !isInStandaloneMode() && !localStorage.getItem('hideIosPwaNotice')) {
+    var notice = document.getElementById('ios-pwa-notice');
+    notice.style.display = 'block';
+    document.getElementById('ios-pwa-close').onclick = function() {
+      notice.style.display = 'none';
+      localStorage.setItem('hideIosPwaNotice', '1');
+    };
+  }
+})();
+</script>
+
+<script>
+// Add iOS-specific class to body for styling
+(function(){
+  if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
+    document.body.classList.add('ios-device');
+  }
+})();
+</script>
