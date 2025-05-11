@@ -357,9 +357,19 @@
       }
 
 
+
+.tick-date {
+    font-size: 64px!important
 }
 
+.tick-time { 
+    font-size: 32px!important;
+    line-height: 1em!important;
+}
 
+#current-time {
+    line-height: 1.2em!important
+}
   </style>
   
   <script type="module" src="https://cdn.jsdelivr.net/npm/@dotlottie/player-component@latest/dist/dotlottie-player.mjs"></script>
@@ -559,7 +569,7 @@
       titleEl.style.animation='none';void titleEl.offsetWidth;
       // If Random mp3s, add unreleased label
       if(src && src.includes('Random%20mp3s')){
-        titleEl.innerHTML = `${txt}<p class="wordanim" style="
+        titleEl.innerHTML = `${txt}<p class=\"wordanim\" style=\"
           margin-top:0px;
           margin-bottom:0px;
           letter-spacing:3px;
@@ -570,9 +580,48 @@
           background-clip: text;
           color: transparent;
           -webkit-text-fill-color: transparent;
-        ">UNRELEASED</p>`;
+        \">UNRELEASED</p>`;
       } else {
+        // Set the title only
         titleEl.textContent = txt;
+        // Now check iTunes API for a result
+        const query = encodeURIComponent(`bernie chiaravalle ${txt}`);
+        fetch(`https://itunes.apple.com/search?term=${query}&entity=song&limit=1`)
+          .then(r => r.json())
+          .then(data => {
+            if (data.resultCount > 0 && data.results[0].trackViewUrl) {
+              // Add the button below the title
+              const btn = document.createElement('a');
+              const webUrl = data.results[0].trackViewUrl;
+              const itmssUrl = webUrl.replace(/^https:/, 'itmss:');
+              btn.href = '#';
+              btn.innerHTML = `<i class='fa fa-music' style='margin-right:4px;'></i>Add or Purchase`;
+              btn.style.display = 'block';
+              btn.style.margin = '12px auto 0 auto';
+              btn.style.maxWidth = '200px';
+              btn.style.padding = '6px 0';
+              btn.style.fontSize = '13px';
+              btn.style.fontFamily = 'Instrument Sans,sans-serif';
+              btn.style.fontWeight = '600';
+              btn.style.borderRadius = '6px';
+              btn.style.background = '#f2f2f2';
+              btn.style.color = '#2F28CE';
+              btn.style.textDecoration = 'none';
+              btn.style.verticalAlign = 'middle';
+              btn.style.transition = 'background .2s';
+              btn.onclick = function(e) {
+                e.preventDefault();
+                // Try to open the Music app via itmss://, fallback to web
+                let opened = false;
+                const timeout = setTimeout(function() {
+                  if (!opened) window.open(webUrl, '_blank', 'noopener');
+                }, 800);
+                window.location = itmssUrl;
+                setTimeout(function() { opened = true; }, 100);
+              };
+              titleEl.appendChild(btn);
+            }
+          });
       }
       titleEl.style.animation='fadeIn .4s forwards';
     }
@@ -666,7 +715,7 @@
     // Set HTML
     currentTimeSpan.innerHTML = `
       <span class="tick-time">${hours}:${minutes}${ampm}</span><br>
-      <span class="tick-date">${day} ${date}</span>
+      <span class="tick-date">${day} ${month} ${date}</span>
     `;
   
     // Animate the new text each time it updates
