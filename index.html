@@ -4,1640 +4,496 @@
   <meta charset="UTF-8">
   <title>BC Radio</title>
 
-  <!-- libs -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+  <!-- Libs -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600;700&display=swap" rel="stylesheet">
   <script src="SplitText.min.js"></script>
 
-<link rel="manifest" href="manifest.json">
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="My App">
+  <meta name="apple-mobile-web-app-title" content="BernieFM">
   <link rel="apple-touch-icon" href="appleicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  
-  
+
   <script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js');
-  }
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(err => console.error('Service Worker registration failed:', err));
+    }
   </script>
-  
+
   <style>
-    *{transition:all .4s ease}
-
-    /* === light and dark mode === */
-    body{
-      margin:0;
-      height:100vh;
-      /* background:linear-gradient(135deg,#B50DF5,#F876D5,#EDC3FD,#FACDF2); */
-      background-size:400% 400%;
-      animation:gradientShift 15s ease infinite;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-family:'Instrument Sans',sans-serif;
-      color:#000;
+    :root {
+      --bg: #f0f2f5;
+      --card-bg: #ffffff;
+      --text-main: #1c1e21;
+      --text-secondary: #65676b;
+      --border-light: #e4e6eb;
+      --accent: #1877f2;
     }
-    /* @media (prefers-color-scheme: dark) {
-      body {
-        background:linear-gradient(135deg,#0c0c0c,#1a1a1a,#2a2a2a,#111);
-        color:#fff;
-      }
-      .player {
-        background:rgba(0,0,0,0.7);
-        border:1px solid #333;
-      }
-      .button-26 {
-        background:#111;
-        border:2px solid #555;
-      }
-      .button-26__content {
-        box-shadow:inset 0 -6px #333,0 -2px #111;
-      }
-      .button-26__text {
-        color:#ddd;
-      }
-      .button-26 i {
-        color:#fff;
-      }
-      .volume-slider::-webkit-slider-thumb {
-        background:#888;
-      }
-      .progress {
-        background:#888;
-      }
-    } */
-
-    @keyframes gradientShift{0%{background-position:0 50%}50%{background-position:100% 50%}100%{background-position:0 50%}}
-
-    /* === blurred YouTube background (if enabled) === */
-    .bg-video{position:fixed;inset:0;z-index:-3;overflow:hidden}
-    .bg-video iframe{width:100%;height:100%;pointer-events:none;filter:blur(25px) brightness(.35)}
-
-    /* === player === */
-    .player{
-      background:rgba(255,255,255,0.7);
-      padding:40px;
-      border:1px solid #e6e6e6;
-      max-width:600px;
-      width:100%;
-      border-radius:0;
-      box-shadow:0 12px 30px rgba(0,0,0,.5);
-      text-align:center;
-      backdrop-filter:blur(12px);
-      z-index:10;
+    * {
+      box-sizing: border-box;
     }
-    .player.resize{transform:scale(.97)}
-    .title{font-size:1.6rem;margin:0 0 22px;font-weight:700;opacity:0;animation:fadeIn .4s forwards}
-    @keyframes fadeIn{to{opacity:1}}
-
-    .button-26{
-      background:#fff;
-      border:2px solid #888;
-      font-size:18px;
-      cursor:pointer;
-      border-radius:10px;
-      outline:none;
-      padding:0;
-      box-shadow:0 2px 10px rgba(0,0,0,.15),5px 14px 20px rgba(0,0,0,.15);
-      display:flex;
-      align-items:center;
-      margin-left:auto!important;
-      margin-right:auto!important;
+    body {
+      font-family: 'Instrument Sans', sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
     }
-    .button-26__content{
-      padding:24px 40px;
-      border-radius:8px;
-      box-shadow:inset 0 -6px #d5d7de,0 -2px #ffffff;
-      display:flex;
-      align-items:center;
-      gap:10px;
-    }
-    .button-26__text{color:#888;font-weight:600;transform:translateY(-4px)}
-    .button-26 i{color:#000;font-size:20px;transform:translateY(-4px)}
-    .button-26:active{box-shadow:none}
-    .button-26:active .button-26__content{box-shadow:none}
-    .button-26:active .button-26__text,
-    .button-26:active i{transform:translateY(0)}
-
-    /* === sliders & progress === */
-    .volume-slider{
-      appearance:none;
-      width:180px;
-      height:6px;
-      border-radius:5px;
-      background:#fff;
-      outline:none;
-      margin-top:24px;
-      cursor:pointer;
-    }
-    .volume-slider::-webkit-slider-thumb{
-      appearance:none;
-      width:18px;
-      height:18px;
-      background:#2F28CE;
-      border-radius:50%;
-      cursor:pointer;
-    }
-    .progress-wrap{width:100%;height:6px;background:rgba(255,255,255,.25);border-radius:5px;margin:18px auto 4px;pointer-events:none}
-    .progress{height:100%;width:0%;background:#2F28CE;border-radius:5px}
-    .time-info{font-size:.85rem;opacity:.85}
-
-    /* === queue === */
-    #upcoming{margin-top:26px;font-size:.95rem;line-height:1.5;opacity:0;animation:fadeIn .4s .05s forwards}
-
-    /* === mobile tweaks === */
-    @media(max-width:600px){
-      .player{width:88%;padding:32px}
-      .volume-slider,.progress-wrap{width:150px}
-    }
-
-    .player img{height:100px;aspect-ratio:1/1;object-fit:contain;background:#fff;margin-bottom:20px;border-radius:500px}
-    .player p{font-size:10px;margin-bottom:20px}
-    .player .title{margin-bottom:0}
-    
-    .player {
+    #player {
+      position: relative;
+      display: flex;
+      flex-direction: row;
+      max-width: 900px;
       width: 100%;
-      max-width: 1200px;
-      background-color: white;
-      border: none!important;
-      box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px;
-      border-radius: 20px!important;
-      padding: 30px!important;
+      margin: auto;
+      padding: 40px;
+      padding-top: 100px; /* Added padding for top elements */
+      padding-bottom: 60px;
+      border-radius: 20px;
+      box-shadow: 0 12px 30px rgba(0,0,0,.1);
+      background-color: var(--card-bg);
+      text-align: left;
     }
-    
-    .left-column {
+    .left-column { 
+      flex: 0 0 250px; 
+      text-align: center; 
+      padding-right: 40px; 
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
     }
-    
-    .right-column {
-      display: flex;
-      flex-direction: column;
+    .right-column { 
+      flex: 1; 
+      display: flex; 
+      flex-direction: column; 
       justify-content: center;
+      position: relative;
     }
-    
-    .player img {
-      height: 300px;
-      width: 300px;
+    #cd-case {
+      perspective: 1200px;
+      margin-bottom: 20px;
+    }
+    #album-art {
+      width: 250px;
+      height: 250px;
+      border-radius: 8px;
       object-fit: cover;
-      border-radius: 50%;
+      box-shadow: 0 10px 25px rgba(0,0,0,.2);
+      transition: transform 0.8s;
+      transform-style: preserve-3d;
+      transform: rotateY(-10deg) rotateX(2deg);
     }
-    
-    .visualizer-container {
-      width: 100%;
-      height: 100px;
-      margin: 20px 0;
+    #cd-case:hover #album-art {
+      transform: rotateY(0deg) rotateX(0deg);
     }
-    
-    .title-container {
-      /* margin-bottom: 30px; */
+    #track-title {
+      font-size: 1.7em;
+      font-weight: 700;
+      margin: 0 0 5px 0;
+      line-height: 1.1;
+      display: inline-block;
     }
-    
-    .button-container {
-      margin: 20px 0;
+    #unreleased-tag {
+        display: none;
+        background: linear-gradient(to right, #b388ff, #ff80ab, #40c4ff);
+        color: white;
+        padding: 4px 9px;
+        border-radius: 7px;
+        font-size: 0.5em;
+        font-weight: 700;
+        margin-left: 12px;
+        vertical-align: middle;
+        text-transform: uppercase;
+        letter-spacing: 1px;
     }
+    #artist-name {
+      font-size: 1em;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      margin-bottom: 25px;
+    }
+    #upcoming { 
+        font-size: 1em; 
+        color: var(--text-secondary); 
+        margin-bottom: 25px;
+        line-height: 1.5;
+    }
+    #upcoming strong { color: var(--text-main); font-weight: 600; }
+    #upcoming .song-item { margin-top: 4px; }
+    #upcoming .song-title { color: var(--text-main); }
+    #upcoming .song-album { font-size: 0.9em; }
+
+    /* Play Button & Progress */
+    #play-pause-btn {
+    display: inline-block;
+    align-items: center;
+    background: #fff;
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    font-size: 1em;
+    font-weight: 600;
+    color: var(--text-main);
+    cursor: pointer;
+    padding: 12px 24px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease-in-out;
+    width: 200px;
+}
+
+    #play-pause-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 7px 14px rgba(0,0,0,0.07), 0 3px 6px rgba(0,0,0,0.05);
+    }
+    #play-pause-btn i { margin-right: 10px; }
+
+    #stream-duration-container {
+        margin-bottom: 20px;
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+
+    /* Weather & Time */
+    #current-time, #current-weather {
+        position: absolute;
+        top: 20px;
+        font-size: 13px;
+        font-weight: 600;
+        background: var(--bg);
+        padding: 5px 10px;
+        border-radius: 8px;
+        line-height: 1.3;
+    }
+    #current-time { left: 35px; text-align: right; }
+    #current-weather { right: 20px; }
+    .tick-time { font-size: 1.2em; }
     
-    @media screen and (max-width: 768px) {
-      .player {
-        padding: 20px!important;
+    .social-links { margin-top: 25px; font-size: 24px; display: flex; gap: 20px; justify-content: center; }
+    .social-links a { color: var(--text-secondary); transition: color .2s; }
+    .social-links a:hover { color: var(--accent); }
+
+    /* Live Indicator */
+    #live-indicator {
+       position: absolute;
+       top: -30px;
+       right: 0;
+       background: #fa383e;
+       color: white;
+       padding: 4px 10px;
+       border-radius: 6px;
+       font-size: 0.8em;
+       font-weight: 700;
+       display: flex;
+       align-items: center;
+       gap: 5px;
+     }
+     #live-indicator span {
+       width: 8px;
+       height: 8px;
+       background: white;
+       border-radius: 50%;
+       animation: blink 1.5s infinite ease-in-out;
+     }
+     @keyframes blink {
+       0%, 100% { opacity: 1; }
+       50% { opacity: 0.3; }
+     }
+
+    @media (max-width: 1200px) {
+      body {
+        padding: 20px;
       }
-      
+      #player {
+        flex-direction: column;
+        margin: 0;
+        width: 100%;
+        padding: 30px;
+        padding-top: 80px;
+      }    
+      .left-column {
+        padding-right: 0;
+        padding-bottom: 30px;
+        align-items: center;
+      }
       .right-column {
-        margin-top: 20px;
+        align-items: center;
+        text-align: center;
+      }
+      #live-indicator {
+        position: static;
+        transform: none;
+        margin-bottom: 20px;
+      }
+      #album-art {
+        width: 180px;
+        height: 180px;
+        transform: none; /* Disable 3D effect on mobile */
+      }
+      #track-title {
+        font-size: 1.3em;
+      }
+    }
+
+  </style>
+</head>
+<body>
+
+  <div id="player">
+    <span id="current-time"></span>
+    <span id="current-weather">Loading...</span>
+
+    <div class="left-column">
+      <div id="cd-case">
+        <img id="album-art" src="" alt="Album Art">
+      </div>
+      <div class="social-links">
+        <a href="https://open.spotify.com/artist/3Y6PS22sOf1n12v2qTu2Fm" target="_blank" aria-label="Spotify"><i class="fab fa-spotify"></i></a>
+        <a href="https://www.facebook.com/bernie.chiaravalle/" target="_blank" aria-label="Facebook"><i class="fab fa-facebook"></i></a>
+        <a href="https://www.instagram.com/berniechiaravalle/" target="_blank" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+        <a href="https://berniechiaravalle.com/" target="_blank" aria-label="Official Website"><i class="fas fa-link"></i></a>
+      </div>
+    </div>
+
+    <div class="right-column">
+      <div id="live-indicator"><span></span>LIVE</div>
+      <div>
+        <h1 id="track-title">Welcome to BC Radio</h1>
+        <span id="unreleased-tag">Unreleased</span>
+      </div>
+      <p id="artist-name">Music is loading...</p>
+      <button id="play-pause-btn" style="margin-bottom: 15px;">
+        <i id="btn-icon" class="fa-solid fa-play"></i>
+        <span id="play-label">Play</span>
+    </button>
+      <div id="upcoming">
+        <strong>On Deck</strong>
+        <div id="upcoming-list">Loading...</div>
+      </div>
+      <div id="stream-duration-container">
+          <span id="stream-duration">00:00:00</span>
+      </div>
+      
+    </div>
+  </div>
+  
+  <audio id="audio-stream" src="http://localhost:8000/stream" preload="metadata"></audio>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      AOS.init();
+      const audio = document.getElementById('audio-stream');
+      const playBtn = document.getElementById('play-pause-btn');
+      const playLabel = document.getElementById('play-label');
+      const playIcon = document.getElementById('btn-icon');
+      const titleEl = document.getElementById('track-title');
+      const artistEl = document.getElementById('artist-name');
+      const albumArtEl = document.getElementById('album-art');
+      const upcomingListEl = document.getElementById('upcoming-list');
+      const streamDurationEl = document.getElementById('stream-duration');
+      const unreleasedTag = document.getElementById('unreleased-tag');
+      
+      let isPlaying = false;
+      let streamSeconds = 0;
+      let streamInterval = null;
+
+      // --- Audio Controls ---
+      const togglePlay = () => {
+        if (isPlaying) {
+          audio.pause();
+        } else {
+          // The stream is continuous, so we just want to start playing it.
+          // We might need to reload it if it has been paused for a long time.
+          audio.load(); // Reload to get the latest part of the stream
+          audio.play().catch(e => console.error("Error playing audio:", e));
+        }
+      };
+
+      playBtn.addEventListener('click', togglePlay);
+      
+      audio.addEventListener('play', () => {
+        isPlaying = true;
+        playLabel.textContent = 'Pause';
+        playIcon.className = 'fa-solid fa-pause';
+        if (!streamInterval) {
+            streamInterval = setInterval(updateStreamDuration, 1000);
+        }
+      });
+
+      audio.addEventListener('pause', () => {
+        isPlaying = false;
+        playLabel.textContent = 'Play';
+        playIcon.className = 'fa-solid fa-play';
+        clearInterval(streamInterval);
+        streamInterval = null;
+      });
+      
+      // --- Playlist Fetching and UI Update ---
+      async function fetchAndUpdatePlaylist() {
+        try {
+          const response = await fetch('http://localhost:8001/playlist');
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+          const data = await response.json();
+          updateUI(data);
+        } catch (error) {
+          console.error("Could not fetch playlist:", error);
+          titleEl.textContent = "Stream Offline";
+          artistEl.textContent = "Please wait, attempting to reconnect...";
+        }
+      }
+
+      function updateUI(data) {
+        const { now_playing, upcoming } = data;
+        
+        upcomingListEl.innerHTML = ''; // Clear existing list to prevent duplicates
+
+        titleEl.textContent = now_playing.title;
+        artistEl.textContent = now_playing.artist;
+
+        if (now_playing.unreleased) {
+          unreleasedTag.style.display = 'inline-block';
+        } else {
+          unreleasedTag.style.display = 'none';
+        }
+        
+        if (albumArtEl.src !== now_playing.album_art_url) {
+            albumArtEl.src = now_playing.album_art_url || '';
+        }
+
+        let upcomingHTML = '';
+        upcoming.forEach(song => {
+          upcomingHTML += `<div class="song-item">
+                             <div class="song-title">${song.title}</div>
+                             <div class="song-album">${song.album}</div>
+                           </div>`;
+        });
+        upcomingListEl.innerHTML = upcomingHTML;
+      }
+
+      // --- Clock ---
+      const timeSpan = document.getElementById('current-time');
+      function updateTime() {
+          const now = new Date();
+          const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          const day = days[now.getDay()];
+          const date = now.getDate();
+          const month = months[now.getMonth()];
+          let hours = now.getHours();
+          const minutes = String(now.getMinutes()).padStart(2, '0');
+          const ampm = hours >= 12 ? 'p' : 'a';
+          hours = hours % 12;
+          hours = hours ? hours : 12;
+          timeSpan.innerHTML = `<span class="tick-time">${hours}:${minutes}${ampm}</span><br><span class="tick-date">${day} ${month} ${date}</span>`;
+      }
+
+      // --- Stream Duration Counter ---
+      function formatDuration(totalSeconds) {
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        return [hours, minutes, seconds]
+            .map(v => String(v).padStart(2, '0'))
+            .join(':');
+      }
+
+      function updateStreamDuration() {
+          streamSeconds++;
+          streamDurationEl.textContent = formatDuration(streamSeconds);
+      }
+
+      // --- Weather ---
+      async function fetchWeather() {
+          try {
+              const ipInfo = await fetch('https://ipapi.co/json/').then(r => r.json());
+              const { city, latitude, longitude } = ipInfo;
+              const weatherInfo = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&temperature_unit=fahrenheit`).then(r => r.json());
+              const { temperature, weathercode } = weatherInfo.current_weather;
+              const temp = Math.round(temperature);
+              
+              const weatherSpan = document.getElementById('current-weather');
+              let iconClass = "fa-cog"; // Default to a settings-like icon
+              if (weathercode === 0) iconClass = "fa-sun";
+              if (weathercode > 0 && weathercode < 4) iconClass = "fa-cloud-sun";
+              if (weathercode >= 51 && weathercode <= 67) iconClass = "fa-cloud-rain";
+              if (weathercode >= 71 && weathercode <= 77) iconClass = "fa-snowflake";
+              if (weathercode >= 95) iconClass = "fa-bolt";
+
+              weatherSpan.innerHTML = `<i class="fas ${iconClass}" style="margin-right:8px;"></i> ${city}, ${temp}°F`;
+          } catch (error) {
+              console.error('Weather fetch error:', error);
+              document.getElementById('current-weather').innerHTML = `<i class="fas fa-triangle-exclamation"></i> Weather unavailable`;
+          }
       }
       
-      .player img {
-        height: 200px;
-        width: 200px;
-      }
-    }
+      // --- Init and Intervals ---
+      audio.load();
+      fetchAndUpdatePlaylist();
+      setInterval(fetchAndUpdatePlaylist, 5000);
+      updateTime();
+      setInterval(updateTime, 30000);
+      fetchWeather();
+      setInterval(fetchWeather, 1000 * 60 * 15);
+
+    });
+  </script>
+
+<style>
+  @media screen and (max-width: 1200px) {
+    #album-art, #cd-case {
+    width: 100%!important;
+        height: auto!important;
+        aspect-ratio: 1/1!important;
+        max-width: unset!important;
+        margin-top: 10px;
+        border-radius: 5px
+
+}
     
-    /* Start invisible */
-    body {
-      opacity: 0;
-      transition: opacity 0.8s ease-in;
-    }
-    
-    /* Become visible when JS says so */
-    body.loaded {
-      opacity: 1;
-    }
-    
-    .player:hover {
-    /*     transform: scale(1.05); */
-    /*     transition: 1.5s ease  all!important */
-    }
-    
-    .button-26__content:hover {
-        box-shadow: inset 0 -3px #d5d7de, 0 -2px #ffffff;
-        transition: .2s ease all!important
-    }
     
     #current-time {
-        display: block!important;;
-        position: fixed;
-        bottom: 00px; left: 20px;
-        font-size: 48px;
-    /*     font-weight: 800 */
-        line-height: 1.2em
+        left: 30px;
+        text-align: left
     }
     
-    #current-time * {
-      line-height: 1em
+    #current-weather {
+        right: 30px;
+        top: 30px
     }
+}
     
-    .time, .tick-date { 
-        font-size: 8rem!important;
-        font-weight: 800;
-    }
-    
-    @media screen and (max-width: 990px) {
-    
-    .time, .tick-date { 
-        font-size: 4rem!important;
-    
-    }
-        
-        #current-time {
-                font-size: 32px;
-    
-        }
-    }
-    
-    .player dotlottie-player {
-        height: 25px!important;
-        margin-bottom: 25px;
-        opacity: .20;
-    
-    }
-    
-    #play-label {
-        color: black!important;
-        letter-spacing: 5px!important
-    }
-    
-    .title {
-        font-family: "bookmania", serif;
-        font-size: 22px!important;
-        line-height: 1em!important;
-        white-space: normal;
-        overflow: visible;
-        text-overflow: unset;
-        word-break: break-word;
-        hyphens: auto;
-    }
-    
-    .button-26__content {
-        min-width: 125px;
-        justify-content: center
-    }
-    
-    #upcoming strong {
-    /*     font-family: "bookmania", serif; */
-        text-transform: uppercase;
-        letter-spacing: 3px;
-        font-weight: 800!important;
-    }
-    
-    .tick-date {
-        font-family: "bookmania", serif;
-        font-weight: 600;
+    #upcoming-list {
+/*         background-color: #e6e6e6; */
+        padding: 25px 25px;
         margin-top: 10px;
-    /*     display: inline-block!important; */
-    }
-    
-    .player {
-            width: 800px;
-            max-width: unset;
-            background-color: white;
-            border: none!important;
-            box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px;
-            border-radius: 20px!important;
-        }
+        border-radius: 5px;
+        box-shadow: rgba(50, 50, 93, 0.25) 0px 10px 25px -12px inset, rgba(0, 0, 0, 0.3) 0px 8px 14px -8px inset;
+       }
 
 
-
+.song-album {
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 2px;
+    font-size: 10px!important;
+    margin-bottom: 10px
 }
 
-    
-    .title {
-        font-size: 40px
-    }
-    
-    * {
-        text-wrap: balance
-    }
-    
-    .fa-sharp fa-light:before {
-        color: rgba(0,0,0,.1);
-    }
-    
-    .fa-sharp fa-light:after {
-        color: #000000;
-        opacity: .3
-    }
-    
-    #current-weather div:first-of-type:not(div div){
-        line-height:2em;
-        font-size: 14px!important;
-        font-weight: 800;
-        /* font-family: 'bookmania'; */
-        margin-top: 
-    }
-    
-    #current-weather div:first-of-type:not(div div) i {
-        line-height: 1em;
-        transform: translatey(2.5px)
-    }
-            
-            @media screen and (max-width: 990px) {
-    
-                .player {
-                    max-width: 375px;
-                    padding: 25px
-                }
-    }
-     
-    /* iOS-specific margin for player */
-    body.ios-device .player {
-      margin: 24px auto !important;
-    }
-    
-    .album-art {
-      width: 300px;
-      height: 300px;
-      object-fit: cover;
-      border-radius: 50%;
-      transition: opacity 0.5s ease;
-    }
-    
-    .album-art.fade-out {
-      opacity: 0;
-    }
-    
-    .album-art.fade-in {
-      opacity: 1;
-    }
-    
-    .cd-case {
-      height: 320px;
-      width: 320px;
-      margin: 20px auto;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      /* border-radius: 3px; */
-      /* background: rgba(0,0,0,0);
-      box-shadow: 0px 2px 10px 1px rgba(0,0,0,0.6), 
-                  inset 0px 0px 20px 2px rgba(0,0,0,0.4), 
-                  inset 0px 0px 5px 1px rgba(255,255,255,0.6), 
-                  inset 0px 0px 0px 1px rgba(255,255,255,0.2); */
-      transform-style: preserve-3d;
-      transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-      position: relative;
-      /* overflow: hidden; */
-      /* Skeuomorphic 3D skew - opposite direction */
-      transform: perspective(800px) rotateY(18deg) skewY(2deg);
-      z-index: 1;
-    }
-    .cd-case::before {
-      content: '';
-      position: absolute;
-      left: 50%;
-      bottom: -18px;
-      width: 180px;
-      height: 38px;
-      background: radial-gradient(ellipse at center, rgba(0,0,0,0.22) 60%, rgba(0,0,0,0.05) 100%);
-      filter: blur(7px);
-      transform: translateX(-50%) skewX(22deg) rotate(-4deg);
-      opacity: 0.65;
-      z-index: 0;
-      pointer-events: none;
-    }
-    
-    .cd-case.flipping {
-      /* Keep the 3D skew during flip */
-      transform: perspective(800px) rotateY(198deg) skewY(2deg);
-    }
-    
-    .album-art {
-      height: 270px;
-      width: 270px;
-      border-radius: 3px;
-      /* background: rgba(0,0,0,0); */
-      /* box-shadow: 0px 0px 5px 1px rgba(0,0,0,0.5),
-                  inset 0px 0px 16px 2px rgba(0,0,0,0.1), 
-                  inset 0px 0px 0px 1px rgba(255,255,255,0.3); */
-      background-size: cover;
-      background-position: center;
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 1;
-      backface-visibility: hidden;
-      border:1px solid #e6e6e6
-    }
-    
-    .spine {
-      height: 120px;
-      width: 15px;
-      /* background: -webkit-linear-gradient(rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.07) 100%); */
-      /* box-shadow: 3px 0px 5px 0px rgba(0,0,0,0.23), 
-                  inset 0px 0px 7px 0px rgba(0,0,0,0.22), 
-                  inset 0px 0px 0px 1px rgba(255,255,255,0.22); */
-      position: absolute;
-      top: 43px;
-      left: 0;
-      border-radius: 0 50% 50% 0;
-      z-index: 0;
-    }
-    
-    .sup {
-      height: 10px;
-      width: 20px;
-      /* background: rgba(255,255,255,0.15); */
-      /* box-shadow: inset 0px 0px 6px 1px rgba(0,0,0,0.22), 
-                  inset 0px 0px 1px 1px rgba(255,255,255,0.17); */
-      position: absolute;
-      z-index: 2;
-    }
-    
-    .pos-tl { top: 0; left: 20px; border-radius: 0 0 5px 5px; }
-    .pos-tr { top: 0; left: 160px; border-radius: 0 0 5px 5px; }
-    .pos-bl { bottom: 0; left: 20px; border-radius: 5px 5px 0 0; }
-    .pos-br { bottom: 0; left: 160px; border-radius: 5px 5px 0 0; }
-  </style>
-  
-  <style>
-      .icon-row {
-          display: flex;
-          gap: 20px;
-          justify-content: center;
-          align-items: center;
-          padding: 20px;
-          padding-bottom: 0;
-      }
-      .icon-row a {
-          text-decoration: none;
-          color: inherit;
-          transition: color 0.3s ease;
-      }
-      .icon-row a:hover .fa-apple {
-          color: #FF4259; /* Apple black */
-      }
-      .icon-row a:hover .fa-spotify {
-          color: #1DB954!important; /* Spotify green */
-      }
-      .icon-row a:hover .fa-facebook {
-          color: #1877F2; /* Facebook blue original */
-          filter: brightness(1.3); /* a little brighter */
-      }
-      .icon-row a:hover .fa-instagram {
-          color: #E1306C; /* Instagram pinkish */
-          filter: brightness(1.3); /* a little brighter */
-      }
-      
-      .icon-row a:hover .fa-link {
-          color: #a1077d; /* Instagram pinkish */
-          filter: brightness(1.3); /* a little brighter */
-      }
-
-
-
-.tick-date {
-    font-size: 64px!important
+#artist-name {
+    font-size: 10px!important;
+    margin: 0;
+    margin-bottom: 25px;
 }
-
-.tick-time { 
-    font-size: 32px!important;
-    line-height: 1em!important;
-}
-
-#current-time {
-    line-height: 1.2em!important
-}
-
-@media screen and (max-width: 990px) {
-    .title a {
-        margin: 0!important;
-        max-width: unset!important;
-        margin-top: 10px!important;
-        margin-bottom: 15px!important
-
-    }
-}
-
-
-  </style>
-  
-  <script type="module" src="https://cdn.jsdelivr.net/npm/@dotlottie/player-component@latest/dist/dotlottie-player.mjs"></script>
-  <link rel="stylesheet" href="https://use.typekit.net/ihj1dwh.css">
-
-  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-
-<script src="https://kit.fontawesome.com/6f464c9e30.js" crossorigin="anonymous"></script>
-
-
-<script type="text/javascript">
-  (function(c,l,a,r,i,t,y){
-      c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-      t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-      y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-  })(window, document, "clarity", "script", "rbimvwhure");
-</script>
-
-<!-- Add Bootstrap CSS -->
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-
-<body>
-  
-  <span id="current-time"></span>
-
-  <!-- iOS Add to Home Screen Notification -->
-  <div id="ios-pwa-notice" style="
-    display:none;
-    position:fixed;
-    left:0; right:0; bottom:0;
-    z-index:9999;
-    background:rgba(255,255,255,0.97);
-    color:#222;
-    font-family:'Instrument Sans',sans-serif;
-    font-size:15px;
-    box-shadow:0 -2px 16px rgba(0,0,0,0.08);
-    padding:14px 18px 14px 18px;
-    text-align:center;
-    border-top:1px solid #eee;
-    line-height:1.5em;
-  ">
-    <span style="vertical-align:middle;">
-      To install this app, tap
-      <svg style="height:1.2em;vertical-align:middle;margin:0 2px;" viewBox="0 0 24 24"><path fill="#007aff" d="M12 16a1 1 0 0 1-1-1V6.41l-3.3 3.3a1 1 0 1 1-1.4-1.42l5-5a1 1 0 0 1 1.4 0l5 5a1 1 0 1 1-1.4 1.42l-3.3-3.3V15a1 1 0 0 1-1 1Z"/><rect fill="#007aff" x="4" y="18" width="16" height="2" rx="1"/></svg>
-      then <b>Add to Home Screen</b>.
-    </span>
-    <div style="margin-top:8px;font-size:13px;color:#666;">
-      <b>Note:</b> Due to iOS limitations, music will stop if you leave the app or lock your screen. For uninterrupted background listening, try this site on a desktop or Android device.
-    </div>
-    <button id="ios-pwa-close" style="
-      background:none;
-      border:none;
-      color:#888;
-      font-size:20px;
-      font-weight:700;
-      position:absolute;
-      right:12px;
-      top:8px;
-      cursor:pointer;
-      line-height:1;
-    ">&times;</button>
-  </div>
-
-  <div class="player" data-aos="fade-up" data-aos-duration="1200" id="player">
-    <div class="row">
-      <!-- Left Column -->
-      <div class="col-md-6 left-column">
-        <div class="cd-case" id="cd-case">
-          <div class="sup pos-tl"></div>
-          <div class="sup pos-tr"></div>
-          <div class="sup pos-bl"></div>
-          <div class="sup pos-br"></div>
-          <div class="spine"></div>
-          <div class="album-art" id="album-art"></div>
-        </div>
-        <div id="last-updated" style="color:#e6e6e6;font-size:13px;margin:8px 0 0 0;text-align:left;width:100%;"></div>
-        <p class="wordanim" style="letter-spacing:3px;font-weight:600;margin-top:20px;">BERNIE CHIARAVALLE</p>
-      </div>
-      
-      <!-- Right Column -->
-      <div class="col-md-6 right-column">
-        <div class="title-container">
-          <div class="title wordanim mb-4" id="track-title"></div>
-        </div>
-        
-        <div class="button-container my-0">
-          <button class="button-26" id="playpause" aria-label="Play / Pause">
-            <div class="button-26__content">
-              <i class="fa-solid fa-play" id="btn-icon"></i>
-              <span class="button-26__text" id="play-label">START&nbsp;RADIO</span>
-            </div>
-          </button>
-        </div>
-        
-        <div class="visualizer-container d-none">
-          <dotlottie-player
-            id="visLottie"
-            src="vis.lottie"
-            loop
-            speed="0.3"
-            style="width:100%;height:100%;display:none;">
-          </dotlottie-player>
-        </div>
-
-        <div id="upcoming"></div>
-        
-        <div class="icon-row" style="display: flex; gap: 20px; justify-content: center; align-items: center;">
-          <a href="https://music.apple.com/us/artist/bernie-chiaravalle/80848772" target="_blank" style="text-decoration: none; color: inherit;">
-            <i class="fab fa-apple"></i>
-          </a>
-          <a href="https://open.spotify.com/artist/4xt2hzGfXdXqKR2msI2gOj" target="_blank" style="text-decoration: none; color: inherit;">
-            <i class="fab fa-spotify"></i>
-          </a>
-          <a href="https://www.facebook.com/berniechiaravalle/" target="_blank" style="text-decoration: none; color: inherit;">
-            <i class="fab fa-facebook"></i>
-          </a>
-          <a href="https://www.instagram.com/bvchiaravalle/" target="_blank" style="text-decoration: none; color: inherit;">
-            <i class="fab fa-instagram"></i>
-          </a>
-          <a href="https://www.berniechiaravalle.com/" target="_blank" style="text-decoration: none; color: inherit;">
-            <i class="fa fa-link"></i>
-          </a>
-          <button id="share-song-btn" title="Share this song" style="background:none;border:none;cursor:pointer;font-size:22px;color:inherit;outline:none;display:none;padding:0;">
-            <i class="fa-regular fa-clipboard" id="share-icon"></i>
-          </button>
-        </div>
-        
-        
-      </div>
-    </div>
-  </div>
-  
-  <!-- <div style="margin-top:24px;text-align:center;">
-    <button id="toggle-theme" class="button-26" aria-label="Toggle Theme">
-      <div class="button-26__content">
-        <i class="fa-solid fa-circle-half-stroke"></i>
-        <span class="button-26__text">TOGGLE THEME</span>
-      </div>
-    </button>
-  </div> -->
-
-<!-- 🎧 + 🪄 Lottie-sync patch ─ replace your entire JS block (from `const base=` down) with this version -->
-  <script>
-    const base="https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/";
-    const audioFiles = [
-  // === Driven By Desire ===
-  `${base}Driven%20By%20Desire/01%20Miss%20That%20Train%20%28Catch%20That%20Dream%29.m4a`,
-  `${base}Driven%20By%20Desire/02%20Writing%20a%20Romance.m4a`,
-  `${base}Driven%20By%20Desire/03%20Man%20Who%20Would%20Be%20King.m4a`,
-  `${base}Driven%20By%20Desire/04%20Down%20Down%20Down.m4a`,
-  `${base}Driven%20By%20Desire/05%20It%20Was%20Only%20Love.m4a`,
-  `${base}Driven%20By%20Desire/06%20All%20Things%20Considered.m4a`,
-  `${base}Driven%20By%20Desire/07%20Not%20Without%20a%20Fight.m4a`,
-  `${base}Driven%20By%20Desire/08%20Someone%20to%20Hold.m4a`,
-  `${base}Driven%20By%20Desire/09%20Let%20Me%20Be%20the%20One.m4a`,
-  `${base}Driven%20By%20Desire/10%20From%20Now%20On.m4a`,
-
-  // === Chiaro Destino mp3 version ===
-  `${base}Chiaro%20Destino%20mp3%20version/01%20Things%20We%20Said%20Today.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/02%20My%20Back%20Pages.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/03%20Isnt%20It%20A%20Pity.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/04%20Dino%27s%20Song.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/05%20You%27ve%20Got%20To%20Hide%20Your%20Love%20Away.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/06%20All%20the%20Children%20Sing.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/07%20Four%20Days%20Gone.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/08%20Happier%20Than%20the%20Morning%20Sun.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/09%20Long%20Long%20Time.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/10%20Angel.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/11%20Laughing.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/12%20I%20Want%20To%20Tell%20You.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/13%20Motor%20of%20Love.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/14%20Love.mp3`,
-
-  // === Random mp3s (Unreleased) ===
-  `${base}Random%20mp3s/a%20loss%20for%20words_march5.mp3`,
-  `${base}Random%20mp3s/allnight_watchman_nov25mix.mp3`,
-  `${base}Random%20mp3s/BegYourForgiveness_march27mix.mp3`,
-  `${base}Random%20mp3s/ByHeart_RealLove.mp3`,
-  `${base}Random%20mp3s/Don%27t_Make_Promise_jan13mix.mp3`,
-  `${base}Random%20mp3s/I%27ll_Get_Back_To_You_april7mix_m.mp3`,
-  `${base}Random%20mp3s/KeepThisTrain.mp3`,
-  `${base}Random%20mp3s/looking_for_love2024_dec11mix.mp3`,
-  `${base}Random%20mp3s/obsession_blues_bc_april7mox.mp3`,
-  `${base}Random%20mp3s/What_We%27ve_Got.mp3`,
-  `${base}Random%20mp3s/whenitcomestolovesept24_emastered.mp3`,
-  `${base}Random%20mp3s/2%20Hearts%20N%27%20Limbo-Silent%20Partner.mp3`,
-  `${base}Random%20mp3s/All%20I%20Believe%20In.mp3`,
-  `${base}Random%20mp3s/Anytime%20%28is%20the%20right%20time%29.mp3`,
-  `${base}Random%20mp3s/Anytime%20Soon%20demo.mp3`,
-  `${base}Random%20mp3s/Around%20the%20World.mp3`,
-  `${base}Random%20mp3s/Art%20of%20Letting%20Go%20%28version2%29.mp3`,
-  `${base}Random%20mp3s/bapa%20ba.mp3`,
-  `${base}Random%20mp3s/Be%20A%20Better%20Man.mp3`,
-  `${base}Random%20mp3s/BegYourForgiveness_march27mix.mp3`,
-  `${base}Random%20mp3s/Breakout.mp3`,
-  `${base}Random%20mp3s/ByHeart_RealLove.mp3`,
-  `${base}Random%20mp3s/Cicada%20Shuffle.mp3`,
-  `${base}Random%20mp3s/Destiny.mp3`,
-  `${base}Random%20mp3s/Don%27t_Make_Promise_jan13mix.mp3`,
-  `${base}Random%20mp3s/Enough%20is%20Enough.mp3`,
-  `${base}Random%20mp3s/Every%20Word.mp3`,
-  `${base}Random%20mp3s/Everybody%20Wants%20To%20Be%20Your%20Friend.mp3`,
-  `${base}Random%20mp3s/Flash%20Theme.mp3`,
-  `${base}Random%20mp3s/For%20What%20It%27s%20Worth.mp3`,
-  `${base}Random%20mp3s/Forever%20and%20Ever-with%20Chris%20Comet.mp3`,
-  `${base}Random%20mp3s/Forgive%20and%20Forget-2024version.mp3`,
-  `${base}Random%20mp3s/Forgive%20Me%20Love.mp3`,
-  `${base}Random%20mp3s/Friends.mp3`,
-  `${base}Random%20mp3s/From%20A%20Glance.mp3`,
-  `${base}Random%20mp3s/Give%20Your%20Love%20To%20Me-Logos.mp3`,
-  `${base}Random%20mp3s/Happy%20Birthday%20My%20Love.mp3`,
-  `${base}Random%20mp3s/Hate%20Love%20A%20Little-Amy%20Holland.mp3`,
-  `${base}Random%20mp3s/Have%20Faith%20in%20Us.mp3`,
-  `${base}Random%20mp3s/Heart%20of%20Mind.mp3`,
-  `${base}Random%20mp3s/I%20Want%20You%20Back.mp3`,
-  `${base}Random%20mp3s/I%20Will%20Follow.mp3`,
-  `${base}Random%20mp3s/I%20Will.mp3`,
-  `${base}Random%20mp3s/I%27ll%20See%20You%20In%20My%20Dreams.mp3`,
-  `${base}Random%20mp3s/I%27ll_Get_Back_To_You_april7mix_m.mp3`,
-  `${base}Random%20mp3s/Impossible%20Love-Amy%20Holland.mp3`,
-  `${base}Random%20mp3s/In%20Enough%20Trouble%20%28original%20demo%29.mp3`,
-  `${base}Random%20mp3s/it%27s%20Your%20Kiss-demo.mp3`,
-  `${base}Random%20mp3s/KeepThisTrain.mp3`,
-  `${base}Random%20mp3s/Let%20Her%20Go-Silent%20Partner.mp3`,
-  `${base}Random%20mp3s/Let%20Me%20Know.mp3`,
-  `${base}Random%20mp3s/Let%20The%20Night%20Unwind.mp3`,
-  `${base}Random%20mp3s/Let%27s%20Go%20Fly%20a%20Kite.mp3`,
-  `${base}Random%20mp3s/Light%20On%20My%20Path-Amy%20Holland.mp3`,
-  `${base}Random%20mp3s/Little%20Pink%20Hand-Michael%20Dinga.mp3`,
-  `${base}Random%20mp3s/Long%20Hard%20Look.mp3`,
-  `${base}Random%20mp3s/looking_for_love2024_dec11mix.mp3`,
-  `${base}Random%20mp3s/Love%20Will%20Deliver%20%28original%20demo%29.mp3`,
-  `${base}Random%20mp3s/Love%20You%20More.mp3`,
-  `${base}Random%20mp3s/Love%20you%20want%20Euro.mp3`,
-  `${base}Random%20mp3s/Make%20Love%20Strong-Logos.mp3`,
-  `${base}Random%20mp3s/Miracle%20River-Amy%20Holland.mp3`,
-  `${base}Random%20mp3s/More%20Than%20We%20Need.mp3`,
-  `${base}Random%20mp3s/Mountains%20at%20Midnight-Amy%20Holland.mp3`,
-  `${base}Random%20mp3s/Must%20Be%20Love-Page%20One.mp3`,
-  `${base}Random%20mp3s/My%20Heart%20Goes%20Out%20To%20You.mp3`,
-  `${base}Random%20mp3s/Obsession%20Blues-original%20demo.mp3`,
-  `${base}Random%20mp3s/obsession_blues_bc_april7mox.mp3`,
-  `${base}Random%20mp3s/Oh%20Darling-Logos.mp3`,
-  `${base}Random%20mp3s/On%20this%20Night.mp3`,
-  `${base}Random%20mp3s/One%20%26%20Only-Silent%20Partner.mp3`,
-  `${base}Random%20mp3s/Peaceful%20Theme.mp3`,
-  `${base}Random%20mp3s/Perfect%20World-Michael%20Dinga.mp3`,
-  `${base}Random%20mp3s/Ready%20For%20Nothing%20%28original%20demo%20with%20Mike%20McDonald%29.mp3`,
-  `${base}Random%20mp3s/Saintly-Michael%20Dinga.mp3`,
-  `${base}Random%20mp3s/Save%20Your%20Love.mp3`,
-  `${base}Random%20mp3s/Shadows.mp3`,
-  `${base}Random%20mp3s/So%20Good-with%20Genna%20Ferguson.mp3`,
-  `${base}Random%20mp3s/Stories.mp3`,
-  `${base}Random%20mp3s/sun%20for%20winnie.mp3`,
-  `${base}Random%20mp3s/Tell%20Me%20True-Silent%20Partner.mp3`,
-  `${base}Random%20mp3s/Till%20I%20Found%20You%20%28original%20demo%29.mp3`,
-  `${base}Random%20mp3s/Timasana.mp3`,
-  `${base}Random%20mp3s/Way%20of%20Life.mp3`,
-  `${base}Random%20mp3s/We%20Had%20It%20Made.mp3`,
-  `${base}Random%20mp3s/What_We%27ve_Got.mp3`,
-  `${base}Random%20mp3s/whenitcomestolovesept24_emastered.mp3`,
-  `${base}Random%20mp3s/Where%20Forever%20Starts-with%20Joel%20Fry.mp3`,
-  `${base}Random%20mp3s/Witness-Amy%20Holland.mp3`,
-  `${base}Random%20mp3s/Woody%27s%20Got%20A%20Hat.mp3`,
-  `${base}Random%20mp3s/You%20Move%20Me%20That%20Way-Amy%20Holland.mp3`,
-
-  // === Here There and Everywhere ===
-  `${base}Here_There_and_Everywhere.m4a`,
-
-  // === Julian ===
-  `${base}Julian.m4a`,
-
-  // === Hideaway Tales ===
-  `${base}Hideaway%20Tales/01%20Lonely%20Too%20Long.m4a`,
-  `${base}Hideaway%20Tales/02%20Don%27t%20Know%20What%20You%20Want.m4a`,
-  `${base}Hideaway%20Tales/03%20Darker%20Days.m4a`,
-  `${base}Hideaway%20Tales/04%20In%20My%20Heart.m4a`,
-  `${base}Hideaway%20Tales/05%20One%20On%20One.m4a`,
-  `${base}Hideaway%20Tales/06%20It%27s%20You.m4a`,
-  `${base}Hideaway%20Tales/07%20Never%20Fade%20Away.m4a`,
-  `${base}Hideaway%20Tales/08%20Love%20Waits%20for%20You.m4a`,
-  `${base}Hideaway%20Tales/09%20Make%20It%20Alright.m4a`,
-  `${base}Hideaway%20Tales/10%20Through%20Every%20Window.m4a`,
-  `${base}Hideaway%20Tales/11%20Living%20the%20Dream.m4a`,
-  `${base}Hideaway%20Tales/12%20Let%20You%20Walk%20Away.m4a`,
-  `${base}Hideaway%20Tales/13%20Two%20Goodbyes%20Away%20%28Revisited%29.m4a`,
-
-  // === Life As We Know It ===
-  `${base}Life%20As%20We%20Know%20It/01%20The%20Love%20You%20Want.m4a`,
-  `${base}Life%20As%20We%20Know%20It/02%20The%20Way%20to%20My%20Heart.m4a`,
-  `${base}Life%20As%20We%20Know%20It/03%20Two%20Goodbyes%20Away.m4a`,
-  `${base}Life%20As%20We%20Know%20It/04%20You%20Alone.m4a`,
-  `${base}Life%20As%20We%20Know%20It/05%20Life%20As%20We%20Know%20It.m4a`,
-  `${base}Life%20As%20We%20Know%20It/06%20Where%27%20You%20Runnin%27.m4a`,
-  `${base}Life%20As%20We%20Know%20It/07%20Someday%20You%20Will.m4a`,
-  `${base}Life%20As%20We%20Know%20It/08%20The%20Way%20It%20Looks%20from%20Here.m4a`,
-  `${base}Life%20As%20We%20Know%20It/09%20Then%20Again%2C%20Maybe%20Not.m4a`,
-  `${base}Life%20As%20We%20Know%20It/10%20Only%20So%20Much.m4a`,
-  `${base}Life%20As%20We%20Know%20It/11%20My%20Only%20Chance.m4a`,
-
-  // === Long Before I Knew You mp3s ===
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/01%20I%20Try%20To%20Please%20You.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/02%20Long%20Before%20I%20Knew%20You.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/03%20Could%20You%20Believe.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/04%20It%27s%20Your%20World.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/05%20Give%20Your%20Love%20To%20Me.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/06%20Somebody%20Show%20Me.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/07%20You%20and%20Me.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/08%20Swear%20Your%20Love.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/09%20Love%20Has%20Left%20You%20Alone.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/10%20Lover%27s%20Dream.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/11%20Dear%20To%20Me.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/12%20Dont%20Know%20Where%20To%20Begin.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/13%20Leave%20It%20To%20You.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/14%20If%20We%20Try.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/15%20Your%20Baby%27s%20Gone.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/16%20Your%20Love%20Shines.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/17%20Hell%20of%20A%20Fight.mp3`,
-
-  // === Make Some Sense of This ===
-  `${base}Make%20Some%20Sense%20of%20This/01%20Peace%20of%20Mind.m4a`,
-  `${base}Make%20Some%20Sense%20of%20This/02%20I%20Choose%20Love.m4a`,
-  `${base}Make%20Some%20Sense%20of%20This/03%20Make%20Some%20Sense%20of%20This.m4a`,
-  `${base}Make%20Some%20Sense%20of%20This/04%20Ever%20Changing%20World.m4a`,
-  `${base}Make%20Some%20Sense%20of%20This/05%20See%20the%20Light.m4a`,
-  `${base}Make%20Some%20Sense%20of%20This/06%20Say%20What%20You%20Will.m4a`,
-  `${base}Make%20Some%20Sense%20of%20This/07%20Castle%20to%20the%20Sky.m4a`,
-  `${base}Make%20Some%20Sense%20of%20This/08%20Follow%20Your%20Heart.m4a`,
-  `${base}Make%20Some%20Sense%20of%20This/09%20Now%20or%20Never.m4a`,
-  `${base}Make%20Some%20Sense%20of%20This/10%20Real%20World.m4a`,
-
-  // === More To This Life mp3 version ===
-  `${base}More%20To%20This%20Life%20mp3%20version/01%20So%20Far%20Back%20in%20Time.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/02%20More%20To%20This%20Life.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/03%20I%27m%20Givin%20My%20Heart.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/04%20Who%20We%20Long%20To%20Be.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/05%20The%20Art%20of%20Letting%20Go.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/06%20Nothings%27%20Sacred%20Anymore.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/07%20Keep%20On%20Lovin%27%20You.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/08%20Lay%20Down%20My%20Arms.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/09%20Tonight%20%28I%20Will%20Dance%20With%20You%29.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/10%20Hasn%27t%20Happened%20Yet.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/11%20What%20You%20Believe.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/12%20I%20Just%20Don%27t%20Get%20It.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/13%20If%20It%20Was%20You.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/14%20Winnie%27s%20Song.mp3`,
-
-  // === Mystery of Love ===
-  `${base}Mystery%20of%20Love/01%20Father%20and%20Child.m4a`,
-  `${base}Mystery%20of%20Love/02%20Mystery%20of%20Love.m4a`,
-  `${base}Mystery%20of%20Love/03%20Tell%20Me%20What%20You%20Want.m4a`,
-  `${base}Mystery%20of%20Love/04%20Lead%20Us%20Back%20to%20Love.m4a`,
-  `${base}Mystery%20of%20Love/05%20I%27ve%20Got%20My%20Reasons.m4a`,
-  `${base}Mystery%20of%20Love/06%20Ready%20for%20Nothin%27.m4a`,
-  `${base}Mystery%20of%20Love/07%20Sad%20As%20It%20Seems.m4a`,
-  `${base}Mystery%20of%20Love/08%20Standing%20In%20the%20Light.m4a`,
-  `${base}Mystery%20of%20Love/09%20Next%20to%20You.m4a`,
-  `${base}Mystery%20of%20Love/10%20Soulfire.m4a`,
-
-  // === One Bright Moment ===
-  `${base}One%20Bright%20Moment/01%20All%20Good%20Things.m4a`,
-  `${base}One%20Bright%20Moment/02%20Will%20and%20a%20Way.m4a`,
-  `${base}One%20Bright%20Moment/03%20Right%20Where%20They%20Want%20You.m4a`,
-  `${base}One%20Bright%20Moment/04%20You%20Said%20It%20All.m4a`,
-  `${base}One%20Bright%20Moment/05%20Nobody%27s%20Business.m4a`,
-  `${base}One%20Bright%20Moment/06%20One%20Bright%20Moment.m4a`,
-  `${base}One%20Bright%20Moment/07%20Man%20out%20to%20Please.m4a`,
-  `${base}One%20Bright%20Moment/08%20Worst%20of%20Times.m4a`,
-  `${base}One%20Bright%20Moment/09%20Just%20Goes%20to%20Proove.m4a`,
-  `${base}One%20Bright%20Moment/10%20Till%20I%20Found%20You.m4a`,
-  `${base}One%20Bright%20Moment/11%20Let%20Me%20Believe.m4a`,
-
-  // === Remnants mp3 version ===
-  `${base}Remnants%20mp3%20version/01%20Come%20A%20Long%20Way.mp3`,
-  `${base}Remnants%20mp3%20version/02%20Anytime%20I%20Think%20of%20You.mp3`,
-  `${base}Remnants%20mp3%20version/03%20Forever%20More.mp3`,
-  `${base}Remnants%20mp3%20version/04%20Can%27t%20Seem%20To%20Let%20You%20Go.mp3`,
-  `${base}Remnants%20mp3%20version/05%20Once%20A%20Lover.mp3`,
-  `${base}Remnants%20mp3%20version/06%20Corners%20of%20My%20Mind.mp3`,
-  `${base}Remnants%20mp3%20version/07%20Tell%20Me%20What%20You%20Want%202024.mp3`,
-  `${base}Remnants%20mp3%20version/08%20Legend%20in%20Her%20Mind.mp3`,
-  `${base}Remnants%20mp3%20version/09%20Open%20Up%20Your%20Heart.mp3`,
-  `${base}Remnants%20mp3%20version/10%20There%20She%20Goes.mp3`,
-  `${base}Remnants%20mp3%20version/11%20Roadsong.mp3`,
-  `${base}Remnants%20mp3%20version/12%20Bye%20Bye%20Misery.mp3`,
-
-  // === The World Around Me ===
-  `${base}The%20World%20Around%20Me/01%20No%20Way%20Out.m4a`,
-  `${base}The%20World%20Around%20Me/02%20Only%20Game%20In%20Town.m4a`,
-  `${base}The%20World%20Around%20Me/03%20You%20Got%20Nothin%27%20On%20Me.m4a`,
-  `${base}The%20World%20Around%20Me/04%20The%20World%20Has%20Let%20You%20Down.m4a`,
-  `${base}The%20World%20Around%20Me/05%20Long%20Haul.m4a`,
-  `${base}The%20World%20Around%20Me/06%20The%20World%20Around%20Me.m4a`,
-  `${base}The%20World%20Around%20Me/07%20What%20I%20Knew%20Before.m4a`,
-  `${base}The%20World%20Around%20Me/08%20For%20a%20Little%20While.m4a`,
-  `${base}The%20World%20Around%20Me/09%20No%20Longer%20In%20My%20Dreams.m4a`,
-  `${base}The%20World%20Around%20Me/10%20White%20Lies.m4a`,
-  `${base}The%20World%20Around%20Me/11%20Nothin%27%20Left%20To%20Believe%20In.m4a`,
-  `${base}The%20World%20Around%20Me/12%20Let%20the%20Night%20Unwind.m4a`,
-
-  // === Weddington Street ===
-  `${base}Weddington%20Street/02%20Forgive%20And%20Forget.m4a`,
-  `${base}Weddington%20Street/03%20Hold%20On%20Hold%20Out.m4a`,
-  `${base}Weddington%20Street/04%20Too%20Extreme.m4a`,
-  `${base}Weddington%20Street/05%20Somewhere%20In%20The%20Night.m4a`,
-  `${base}Weddington%20Street/06%20The%20Great%20Divide.m4a`,
-  `${base}Weddington%20Street/07%20You%20Were%20There%20Too.m4a`,
-  `${base}Weddington%20Street/08%20Anaka.m4a`,
-  `${base}Weddington%20Street/09%20To%20Live%20Within%20Her%20Love.m4a`,
-  `${base}Weddington%20Street/10%20Good%20Book.m4a`,
-  `${base}Weddington%20Street/11%20One%20More%20Word.m4a`,
-  `${base}Weddington%20Street/12%20All%20I%20Really%20Want.m4a`,
-
-  // === Winnie's Song ===
-  `${base}Winnie%27s%20Song.m4a`,
-
-  // === Affair mp3 version ===
-  `${base}Affair_mp3Version/01%20Only%20Love%20Can%20Save%20Us.mp3`,
-  `${base}Affair_mp3Version/02%20Her.mp3`,
-  `${base}Affair_mp3Version/03%20Hail%20To%20Magic.mp3`,
-  `${base}Affair_mp3Version/04%20It%27s%20Not%20Up%20To%20Me.mp3`,
-  `${base}Affair_mp3Version/05%20Critics.mp3`,
-  `${base}Affair_mp3Version/06%20Affair%20of%20the%20Heart.mp3`,
-  `${base}Affair_mp3Version/07%20I%20Believe.mp3`,
-  `${base}Affair_mp3Version/08%20Autograph%20Show.mp3`,
-  `${base}Affair_mp3Version/09%20One%20and%20Only.mp3`,
-  `${base}Affair_mp3Version/10%20Mindface.mp3`,
-  `${base}Affair_mp3Version/11%20Sideman.mp3`,
-  `${base}Affair_mp3Version/12%20Rely%20On%20Your%20Grace.mp3`,
-
-  // === All in Your Mind ===
-  `${base}All%20in%20Your%20Mind/01%20Give%20Me%20Something.mp3`,
-  `${base}All%20in%20Your%20Mind/02%20All%20in%20Your%20Mind.mp3`,
-  `${base}All%20in%20Your%20Mind/03%20We%20Owe%20That%20Much%20To%20Ourselves.mp3`,
-  `${base}All%20in%20Your%20Mind/04%20Mon%20Cher.mp3`,
-  `${base}All%20in%20Your%20Mind/05%20A%20Wanting%20in%20Me.mp3`,
-  `${base}All%20in%20Your%20Mind/06%20Agree%202%20Disagree.mp3`,
-  `${base}All%20in%20Your%20Mind/07%20Without%20You.mp3`,
-
-  // === BC Radio Rarities ===
-  // Removed songs that were moved to Random mp3s
-
-  // === Miracle River ===
-  `${base}Miracle%20River.m4a`
-];
-    
-    /* ---------- util helpers ---------- */
-    const shuffle=a=>a.sort(()=>Math.random()-.5);
-    let playlist=shuffle([...audioFiles]),idx=0,sound,started=false,progRAF;
-    const tidy = p => {
-      if (p.includes('Random%20mp3s')) {
-        // Show full decoded filename, including extension, with spaces and punctuation
-        return decodeURIComponent(p.split('/').pop());
-      }
-      // Otherwise, original tidy logic
-      return decodeURIComponent(p.split('/').pop())
-        .replace(/\.[^.]+$/, '')
-        .replace(/^\d{2}\s+/, '')
-        .replace(/[_-]/g, ' ');
-    };
-    const $=id=>document.getElementById(id);
-    const fmt=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
-    
-    /* ---------- dom refs ---------- */
-    const playBtn=$('playpause'),
-          label=$('play-label'),
-          icon=$('btn-icon'),
-          titleEl=$('track-title'),
-          queueEl=$('upcoming'),
-          player=$('player'),
-          progressEl=$('progress'),
-          tPlayed=$('time-played'),
-          tLeft=$('time-left'),
-          lottiePlayer=$('visLottie');   /* ★ NEW ★ */
-    
-    const setBtn=(txt,ico)=>{label.textContent=txt;icon.className=`fa-solid fa-${ico}`};
-    
-    /* ---------- UI helpers ---------- */
-    function updateQueue(){
-      const n=[];for(let i=1;i<=3;i++)n.push(tidy(playlist[(idx+i)%playlist.length]));
-      queueEl.style.animation='none';void queueEl.offsetWidth;
-      queueEl.innerHTML=`<strong>Next up:</strong><br>${n.join('<br>')}`;
-      queueEl.style.animation='fadeIn .4s forwards';
-    }
-    function fadeTitle(txt, src){
-      titleEl.style.animation='none';void titleEl.offsetWidth;
-      // If Random mp3s, add unreleased label
-      if(src && src.includes('Random%20mp3s')){
-        titleEl.innerHTML = `${txt}<p class=\"wordanim\" style=\"
-          margin-top:0px;
-          margin-bottom:0px;
-          letter-spacing:3px;
-          font-weight:800;
-          font-family:'Instrument Sans',sans-serif;
-          background: linear-gradient(90deg, #00c6ff 0%, #7f00ff 40%, #ff3a44 70%, #ff00cc 100%);
-          -webkit-background-clip: text;
-          background-clip: text;
-          color: transparent;
-          -webkit-text-fill-color: transparent;
-        \">UNRELEASED</p>`;
-      } else {
-        // Set the title only
-        titleEl.textContent = txt;
-        // Now check iTunes API for a result
-        const query = encodeURIComponent(`bernie chiaravalle ${txt}`);
-        fetch(`https://itunes.apple.com/search?term=${query}&entity=song&limit=1`)
-          .then(r => r.json())
-          .then(data => {
-            if (data.resultCount > 0 && data.results[0].trackViewUrl) {
-              // Add the button below the artist name in the left column
-              const btn = document.createElement('a');
-              const webUrl = data.results[0].trackViewUrl;
-              const itmssUrl = webUrl.replace(/^https:/, 'itmss:');
-              btn.href = '#';
-              btn.innerHTML = `<i class='fa fa-music' style='margin-right:4px;'></i>Add or Purchase`;
-              btn.style.display = 'block';
-              btn.style.margin = '18px auto 0 auto';
-              btn.style.maxWidth = '325px';
-              btn.style.padding = '8px 0';
-              btn.style.fontSize = '15px';
-              btn.style.fontFamily = 'Instrument Sans,sans-serif';
-              btn.style.fontWeight = '600';
-              btn.style.borderRadius = '6px';
-              btn.style.color = '#2F28CE';
-              btn.style.textDecoration = 'none';
-              btn.style.verticalAlign = 'middle';
-              btn.style.transition = 'background .2s';
-              btn.onclick = function(e) {
-                e.preventDefault();
-                // Try to open the Music app via itmss://, fallback to web
-                let opened = false;
-                const timeout = setTimeout(function() {
-                  if (!opened) window.open(webUrl, '_blank', 'noopener');
-                }, 800);
-                window.location = itmssUrl;
-                setTimeout(function() { opened = true; }, 100);
-              };
-              // Remove any previous button
-              const leftCol = document.querySelector('.left-column');
-              if (leftCol) {
-                const prevBtn = leftCol.querySelector('.itunes-btn');
-                if (prevBtn) prevBtn.remove();
-                // Insert after the .wordanim paragraph
-                const artistTag = leftCol.querySelector('.wordanim');
-                if (artistTag) {
-                  btn.classList.add('itunes-btn');
-                  artistTag.insertAdjacentElement('afterend', btn);
-                }
-              }
-            }
-          });
-      }
-      titleEl.style.animation='fadeIn .4s forwards';
-    }
-    function updateProgress(){
-      if(sound&&sound.playing()){
-        const cur=sound.seek(),dur=sound.duration();
-        progressEl.style.width=`${(cur/dur)*100}%`;
-        tPlayed.textContent=fmt(cur);tLeft.textContent=fmt(dur-cur);
-      }
-      progRAF=requestAnimationFrame(updateProgress);
-    }
-    
-    /* ---------- playback ---------- */
-    function playTrack(){
-      if(sound) sound.unload();cancelAnimationFrame(progRAF);
-      const src=playlist[idx];
-      
-      // Update album art with flip effect
-      const cdCase = document.getElementById('cd-case');
-      const albumArt = document.getElementById('album-art');
-      
-      if (cdCase && albumArt) {
-        // Animate left fully offscreen, minimal fade/scale
-        gsap.to(cdCase, {
-          x: -window.innerWidth * 0.7,
-          opacity: 0.5,
-          scale: 0.95,
-          duration: 0.5,
-          ease: 'power2.in',
-          onComplete: () => {
-            // Change the album art
-            const artUrl = getAlbumArt(src);
-            albumArt.style.backgroundImage = `linear-gradient(rgba(255,255,255,0.15),rgba(255,255,255,0)), url('${artUrl}')`;
-            // Instantly move to right, reset scale/opacity
-            gsap.set(cdCase, { x: window.innerWidth * 0.7, opacity: 0.5, scale: 0.95 });
-            // Animate in from right, fade/scale in
-            gsap.to(cdCase, {
-              x: 0,
-              opacity: 1,
-              scale: 1,
-              duration: 0.7,
-              ease: 'power2.out'
-            });
-          }
-        });
-      }
-      
-      sound=new Howl({
-        src:[src],
-        html5:true,
-        onend: () => {
-          idx++;
-          if (idx >= playlist.length) {
-            playlist = shuffle([...audioFiles]);
-            idx = 0;
-          }
-          playTrack();
-        }
-      });
-      fadeTitle(tidy(src), src);
-      sound.play();
-      lottiePlayer.play();
-      setBtn('PAUSE','pause');
-      updateQueue();
-      updateProgress();
-      showShareBtn();
-    }
-    
-    playBtn.addEventListener('click',()=>{
-      if(!started){started=true;playTrack();return;}
-      
-      if(sound.playing()){
-        sound.pause();
-        lottiePlayer.pause();           /* ★ pause Lottie when audio pauses ★ */
-        setBtn('PLAY','play');
-      }else{
-        sound.play();
-        lottiePlayer.play();            /* ★ resume Lottie with audio ★ */
-        setBtn('PAUSE','pause');
-      }
-    });
-    
-    /* space-bar hotkey */
-    document.addEventListener('keydown',e=>{
-      if(e.code==='Space'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){
-        e.preventDefault();playBtn.click();
-      }
-    });
-    
-    /* resize micro-fx */
-    let rTO;window.addEventListener('resize',()=>{
-      player.classList.add('resize');
-      clearTimeout(rTO);rTO=setTimeout(()=>player.classList.remove('resize'),300);
-    });
-
-    // === Secret skip/go-back by typing 'next' or 'prev' ===
-    document.addEventListener('keydown', e => {
-      if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) return;
-      if (e.key === 'ArrowRight') {
-        idx = (idx + 1) % playlist.length;
-        playTrack();
-      } else if (e.key === 'ArrowLeft') {
-        idx = (idx - 1 + playlist.length) % playlist.length;
-        playTrack();
-      }
-    });
-
-    // === On page load, check for ?song= param and queue that song first ===
-    (function(){
-      const params = new URLSearchParams(window.location.search);
-      const songParam = params.get('song');
-      function getCanonicalPath(url) {
-        const base = "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/";
-        return url.startsWith(base) ? url.slice(base.length) : url;
-      }
-      if (songParam) {
-        try {
-          const relPath = decodeURIComponent(songParam);
-          const foundIdx = playlist.findIndex(u => getCanonicalPath(u) === relPath);
-          if (foundIdx > -1) {
-            const [song] = playlist.splice(foundIdx, 1);
-            playlist.unshift(song);
-            idx = 0;
-          }
-        } catch(e) {}
-      }
-    })();
-  </script>  
-<script>
-  // Target the span
-  const currentTimeSpan = document.getElementById('current-time');
-  
-  // Function to update time
-  function updateTime() {
-    const now = new Date();
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  
-    const day = days[now.getDay()];
-    const date = now.getDate();
-    const month = months[now.getMonth()];
-    const year = now.getFullYear();
-    
-    let hours = now.getHours();
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const ampm = hours >= 12 ? 'p' : 'a';
-    hours = hours % 12;
-    hours = hours ? hours : 12; // the hour '0' should be '12'
-  
-    // Set HTML
-    currentTimeSpan.innerHTML = `
-      <span class="tick-time">${hours}:${minutes}${ampm}</span><br>
-      <span class="tick-date">${day} ${month} ${date}</span>
-    `;
-  
-    // Animate the new text each time it updates
-    gsap.fromTo(".tick-time", 
-      { opacity: 1, y: 10 }, 
-      { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }
-    );
-    gsap.fromTo(".tick-date", 
-      { opacity: 1, y: 10 }, 
-      { opacity: 1, y: 0, duration: 0.4, ease: "power2.out", delay: 0.1 }
-    );
-  
-    // Little "tick" animation every second
-    gsap.fromTo(currentTimeSpan, 
-      { scale: 1 }, 
-      { scale: 1, duration: 0.15, yoyo: true, repeat: 1, ease: "power1.inOut" }
-    );
-  }
-  
-  // Initial call
-  updateTime();
-  
-  // Update every second
-  setInterval(updateTime, 1000);
-  </script>
-  
-  
-  
-  
-<script>
-  // === Weather by IP - Full Current + 6-Hour Forecast ===
-  async function fetchWeather() {
-    try {
-      const ipInfo = await fetch('https://ipapi.co/json/').then(r => r.json());
-      const city = ipInfo.city;
-      const lat = ipInfo.latitude;
-      const lon = ipInfo.longitude;
-  
-      const weatherInfo = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,weathercode&temperature_unit=fahrenheit&timezone=auto`)
-        .then(r => r.json());
-  
-      const weatherSpan = document.getElementById('current-weather');
-      const temp = Math.round(weatherInfo.current_weather.temperature);
-      const desc = weatherInfo.current_weather.weathercode;
-  
-      const hourlyTimes = weatherInfo.hourly.time;
-      const hourlyTemps = weatherInfo.hourly.temperature_2m;
-      const hourlyCodes = weatherInfo.hourly.weathercode;
-  
-      const now = new Date();
-      const currentHour = now.getHours();
-  
-      // Main current weather
-      let descText = "";
-      let iconClass = "";
-  
-      switch (desc) {
-        case 0: descText = "Clear Sky"; iconClass = "fa-sharp fa-light fa-brightness"; break;
-        case 1: case 2: case 3: descText = "Partly Cloudy"; iconClass = "fa-sharp fa-light fa-cloud-sun"; break;
-        case 45: case 48: descText = "Foggy"; iconClass = "fa-sharp fa-light fa-smog"; break;
-        case 51: case 53: case 55: descText = "Drizzle"; iconClass = "fa-sharp fa-light fa-cloud-drizzle"; break;
-        case 61: case 63: case 65: descText = "Rain"; iconClass = "fa-sharp fa-light fa-cloud-showers-heavy"; break;
-        case 66: case 67: descText = "Freezing Rain"; iconClass = "fa-sharp fa-light fa-cloud-meatball"; break;
-        case 71: case 73: case 75: descText = "Snow"; iconClass = "fa-sharp fa-light fa-snowflake"; break;
-        case 80: case 81: case 82: descText = "Showers"; iconClass = "fa-sharp fa-light fa-cloud-rain"; break;
-        case 95: descText = "Thunderstorm"; iconClass = "fa-sharp fa-light fa-bolt"; break;
-        default: descText = "Weird Weather"; iconClass = "fa-sharp fa-light fa-question";
-      }
-  
-      let mainHTML = `
-        <div style="margin-bottom:10px; text-align: right " >
-          <i class="${iconClass}" style="font-size:20px;margin-right:8px;"></i>
-          ${city}, ${descText}, ${temp}°F
-        </div>
-        <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:10px;">
-      `;
-  
-      // Grab next 6 hours starting from now
-      for (let i = 0; i < 6; i++) {
-        const forecastIndex = i + weatherInfo.hourly.time.findIndex(t => {
-          const date = new Date(t);
-          return date.getHours() === currentHour;
-        });
-  
-        const hourTime = new Date(hourlyTimes[forecastIndex]);
-        const hour = hourTime.getHours();
-        const formattedHour = hour === 0 ? "12a" : hour < 12 ? `${hour}a` : hour === 12 ? "12p" : `${hour-12}p`;
-  
-        const tempF = Math.round(hourlyTemps[forecastIndex]);
-        const code = hourlyCodes[forecastIndex];
-  
-        let hourIcon = "";
-        switch (code) {
-          case 0: hourIcon = "fa-sharp fa-light fa-brightness"; break;
-          case 1: case 2: case 3: hourIcon = "fa-sharp fa-light fa-cloud-sun"; break;
-          case 45: case 48: hourIcon = "fa-sharp fa-light fa-smog"; break;
-          case 51: case 53: case 55: hourIcon = "fa-sharp fa-light fa-cloud-drizzle"; break;
-          case 61: case 63: case 65: hourIcon = "fa-sharp fa-light fa-cloud-showers-heavy"; break;
-          case 66: case 67: hourIcon = "fa-sharp fa-light fa-cloud-meatball"; break;
-          case 71: case 73: case 75: hourIcon = "fa-sharp fa-light fa-snowflake"; break;
-          case 80: case 81: case 82: hourIcon = "fa-sharp fa-light fa-cloud-rain"; break;
-          case 95: hourIcon = "fa-sharp fa-light fa-bolt"; break;
-          default: hourIcon = "fa-sharp fa-light fa-question";
-        }
-  
-        mainHTML += `
-          <div style="text-align:center;font-size:12px;">
-            <div style="font-weight:600;">${formattedHour}</div>
-            <i class="${hourIcon}" style="font-size:18px;margin:4px 0;"></i>
-          </div>
-        `;
-      }
-  
-      mainHTML += `</div>`;
-  
-      weatherSpan.innerHTML = mainHTML;
-  
-    } catch (error) {
-      console.error('Weather fetch error:', error);
-      document.getElementById('current-weather').innerHTML = `
-        <i class="fa-sharp fa-light fa-triangle-exclamation" style="font-size:20px;margin-right:8px;"></i>
-        Weather unavailable
-      `;
-    }
-  }
-  
-  document.addEventListener('DOMContentLoaded', fetchWeather);
-  </script>  
-  <script>
-    gsap.registerPlugin(SplitText);
-  
-    // loop through every .wordanim element on the page
-    document.querySelectorAll('.wordanim').forEach(target=>{
-      const split = new SplitText(target,{type:"words,chars"});
-      gsap.set(split.chars,{opacity:0,y:10});
-      gsap.to(split.chars,{
-        opacity:1,
-        y:0,
-        duration:.5,
-        ease:"power3.out",
-        stagger:0.01,
-        delay: 2
-        
-      });
-    });
-  </script>
-  
-  
-  <script>
-    AOS.init();
-  </script>
-  
-    <script>
-    // Wait until the DOM tree is built, then reveal everything
-    document.addEventListener('DOMContentLoaded', function () {
-      document.body.classList.add('loaded');
-    });
-  </script>
-  
-  <span id="current-weather" style="position:fixed;top:10px;right:10px;font-size:14px;font-weight:600;"></span>
-
-  <!-- Full Queue Modal -->
-  <div id="queue-modal" style="display:none;position:fixed;z-index:99999;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.75);backdrop-filter:blur(2px);align-items:center;justify-content:center;">
-    <div style="background:#fff;padding:32px 24px 24px 24px;border-radius:16px;max-width:90vw;max-height:80vh;overflow:auto;box-shadow:0 8px 32px rgba(0,0,0,0.25);position:relative;">
-      <button id="close-queue-modal" style="position:absolute;top:12px;right:16px;font-size:22px;background:none;border:none;cursor:pointer;color:#888">&times;</button>
-      <h2 style="margin-top:0;text-align:center;font-size:1.5em;">Full Queue</h2>
-      <ul id="queue-list" style="list-style:none;padding:0;margin:0;max-width:400px;"></ul>
-      <div style="font-size:13px;color:#888;text-align:center;margin-top:12px;">Double-click a song to play it instantly</div>
-    </div>
-  </div>
-
-  <!-- Add Bootstrap JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</style>
 </body>
 </html>
-
-<script>
-// iOS PWA Add to Home Screen Notification
-(function(){
-  function isIos() {
-    return /iphone|ipad|ipod/i.test(navigator.userAgent);
-  }
-  function isSafari() {
-    return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-  }
-  function isInStandaloneMode() {
-    return (window.navigator.standalone === true) || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-  }
-  if (isIos() && isSafari() && !isInStandaloneMode() && !localStorage.getItem('hideIosPwaNotice')) {
-    var notice = document.getElementById('ios-pwa-notice');
-    notice.style.display = 'block';
-    document.getElementById('ios-pwa-close').onclick = function() {
-      notice.style.display = 'none';
-      localStorage.setItem('hideIosPwaNotice', '1');
-    };
-  }
-})();
-</script>
-
-<script>
-// Add iOS-specific class to body for styling
-(function(){
-  if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
-    document.body.classList.add('ios-device');
-  }
-})();
-</script>
-
-<script>
-// === EGG: Full Queue Modal ===
-(function(){
-  let eggBuffer = '';
-  document.addEventListener('keydown', function(e) {
-    if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) return;
-    if (e.key.length === 1) {
-      eggBuffer += e.key.toLowerCase();
-      if (eggBuffer.length > 3) eggBuffer = eggBuffer.slice(-3);
-      if (eggBuffer === 'egg') showQueueModal();
-    }
-  });
-
-  function showQueueModal() {
-    const modal = document.getElementById('queue-modal');
-    const list = document.getElementById('queue-list');
-    list.innerHTML = '';
-    playlist.forEach((src, i) => {
-      const li = document.createElement('li');
-      li.textContent = (i === idx ? '▶ ' : '') + tidy(src);
-      li.style.padding = '8px 0';
-      li.style.cursor = 'pointer';
-      li.style.fontWeight = i === idx ? 'bold' : 'normal';
-      li.style.color = i === idx ? '#2F28CE' : '#222';
-      li.ondblclick = function() {
-        idx = i;
-        playTrack();
-        closeQueueModal();
-      };
-      list.appendChild(li);
-    });
-    modal.style.display = 'flex';
-    setTimeout(()=>{
-      modal.focus();
-    }, 10);
-  }
-  function closeQueueModal() {
-    document.getElementById('queue-modal').style.display = 'none';
-    eggBuffer = '';
-  }
-  document.getElementById('close-queue-modal').onclick = closeQueueModal;
-  document.getElementById('queue-modal').addEventListener('click', function(e) {
-    if (e.target === this) closeQueueModal();
-  });
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeQueueModal();
-  });
-})();
-</script>
-
-<script>
-// === Share Song Button ===
-(function(){
-  const shareBtn = document.getElementById('share-song-btn');
-  const shareIcon = document.getElementById('share-icon');
-  
-  function getCanonicalPath(url) {
-    const base = "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/";
-    return url.startsWith(base) ? url.slice(base.length) : url;
-  }
-  
-  function getShareUrl() {
-    const url = new URL(window.location.href.split('?')[0]);
-    url.searchParams.set('song', encodeURIComponent(getCanonicalPath(playlist[idx])));
-    return url.toString();
-  }
-  
-  shareBtn.onclick = function() {
-    const shareUrl = getShareUrl();
-    const message = 'Check out this song from BC Radio!\n\n' + shareUrl;
-    
-    navigator.clipboard.writeText(message).then(function(){
-      // Animate to checkmark
-      shareIcon.className = 'fa-solid fa-check';
-      shareIcon.style.color = '#28a745';
-      
-      // Animate the checkmark
-      gsap.fromTo(shareIcon, 
-        { scale: 0.8, opacity: 0.5 },
-        { scale: 1, opacity: 1, duration: 0.3, ease: "back.out(1.7)" }
-      );
-      
-      // Return to clipboard after 2 seconds
-      setTimeout(() => {
-        gsap.to(shareIcon, {
-          scale: 0.8,
-          opacity: 0.5,
-          duration: 0.2,
-          onComplete: () => {
-            shareIcon.className = 'fa-regular fa-clipboard';
-            shareIcon.style.color = '#007aff';
-            gsap.to(shareIcon, {
-              scale: 1,
-              opacity: 1,
-              duration: 0.2
-            });
-          }
-        });
-      }, 2000);
-    });
-  };
-})();
-
-// === On page load, check for ?song= param and queue that song first ===
-(function(){
-  const params = new URLSearchParams(window.location.search);
-  const songParam = params.get('song');
-  if (songParam) {
-    try {
-      const relPath = decodeURIComponent(songParam);
-      const foundIdx = playlist.findIndex(u => getCanonicalPath(u) === relPath);
-      if (foundIdx > -1) {
-        const [song] = playlist.splice(foundIdx, 1);
-        playlist.unshift(song);
-        idx = 0;
-      }
-    } catch(e) {}
-  }
-})();
-</script>
-
-<script>
-// Show share button only after radio starts
-function showShareBtn() {
-  document.getElementById('share-song-btn').style.display = 'inline-block';
-}
-</script>
-
-<script>
-// Simple hash function for obscuring song URLs (djb2)
-function hashString(str) {
-  let hash = 5381;
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) + hash) + str.charCodeAt(i);
-  }
-  return (hash >>> 0).toString(36); // unsigned, base36 for shortness
-}
-</script>
-
-<script>
-  // Album artwork mapping
-  const albumArtMap = {
-    'Driven%20By%20Desire': 'Driven%20by%20Desire.jpg',
-    'Chiaro%20Destino%20mp3%20version': 'Chiaro%20Destino.jpg',
-    'Random%20mp3s': 'All%20or%20Nothing.jpg', // Default for unreleased tracks
-    'Here_There_and_Everywhere': 'Here%20There%20and%20Everywhere.jpg',
-    'Julian': 'Julian.jpg',
-    'Hideaway%20Tales': 'Hideaway%20Tales.jpg',
-    'Life%20As%20We%20Know%20It': 'Life%20As%20We%20Know%20It.jpg',
-    'Long%20Before%20I%20Knew%20You%20mp3s': 'Long%20Before%20I%20Knew%20You.png',
-    'Make%20Some%20Sense%20of%20This': 'Make%20Some%20Sense%20of%20This.jpg',
-    'More%20To%20This%20Life%20mp3%20version': 'More%20To%20This%20Life.jpg',
-    'Mystery%20of%20Love': 'Mystery%20of%20Love.jpg',
-    'One%20Bright%20Moment': 'One%20Bright%20Moment.jpg',
-    'Remnants%20mp3%20version': 'Remnants.jpg',
-    'The%20World%20Around%20Me': 'This%20Is%20What%20I%20See.jpg',
-    'Weddington%20Street': 'Page%20One.jpg',
-    'Winnie%27s%20Song': 'Winnie%27s%20Song.jpg',
-    'Affair_mp3Version': 'Affair%20of%20the%20Heart.jpg',
-    'All%20in%20Your%20Mind': 'All%20in%20Your%20Mind.jpg',
-    'Miracle%20River': 'Miracle%20River.jpg'
-  };
-  
-  // Function to get album art for a song
-  function getAlbumArt(songPath) {
-    const baseUrl = 'https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/cd%20covers/';
-    const fallbackArt = 'https://web-assets-acwebdev.s3.amazonaws.com/bcradioSquare.jpeg';
-    // If in Random mp3s, always use fallback
-    if (songPath.includes('Random%20mp3s')) {
-      return fallbackArt;
-    }
-    // Extract album name from path
-    const pathParts = songPath.split('/');
-    const albumName = pathParts[pathParts.length - 2];
-    // Get the artwork filename from the mapping
-    const artworkFile = albumArtMap[albumName];
-    if (artworkFile) {
-      return baseUrl + artworkFile;
-    } else {
-      return fallbackArt; // Use fallback if not found or ambiguous
-    }
-  }
-  // On DOMContentLoaded, set fallback art before anything plays
-  window.addEventListener('DOMContentLoaded', function() {
-    const albumArt = document.getElementById('album-art');
-    if (albumArt) {
-      albumArt.style.backgroundImage = `linear-gradient(rgba(255,255,255,0.15),rgba(255,255,255,0)), url('https://web-assets-acwebdev.s3.amazonaws.com/bcradioSquare.jpeg')`;
-    }
-  });
-</script>
-
