@@ -13,6 +13,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     libmp3lame-dev \
     supervisor \
+    opam \
+    m4 \
+    git \
+    wget \
+    ca-certificates \
+    libfaad2 \
+    libvorbis0a \
+    libogg0 \
+    libopus0 \
+    libmad0 \
+    libflac8 \
+    libmp3lame0 \
+    libtag1v5 \
+    libtag1v5-vanilla \
+    libssl-dev \
+    libao-common \
+    libao4 \
+    liquidsoap \
     && rm -rf /var/lib/apt/lists/*
 
 # Create a user for icecast, ensuring not to fail if group/user already exists

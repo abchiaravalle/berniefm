@@ -9,6 +9,7 @@ from typing import List, Optional
 from urllib.parse import unquote
 
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, ForeignKey
@@ -260,28 +261,41 @@ def get_current_playlist(db: Session = Depends(get_db)):
     Get the current playlist, including the currently playing song and the list of upcoming songs.
     """
     now_playing_entry = db.query(PlaylistEntry).filter(PlaylistEntry.is_playing == True).first()
-    
     if not now_playing_entry:
-         # If nothing is marked as playing, try to start the playlist from the beginning
-        now_playing_entry = db.query(PlaylistEntry).order_by(PlaylistEntry.play_order).first()
-        if now_playing_entry:
-            now_playing_entry.is_playing = True
-            db.commit()
-        else:
-            # If there's no playlist at all, generate one.
-            generate_new_playlist(db)
-            now_playing_entry = db.query(PlaylistEntry).filter(PlaylistEntry.is_playing == True).first()
-            if not now_playing_entry:
-                 raise HTTPException(status_code=404, detail="Playlist is empty and could not be generated.")
+        # If nothing is playing, regenerate the playlist
+        generate_new_playlist(db)
+        now_playing_entry = db.query(PlaylistEntry).filter(PlaylistEntry.is_playing == True).first()
+        if not now_playing_entry:
+            raise HTTPException(status_code=404, detail="Playlist is empty.")
 
+    now_playing_song = now_playing_entry.song
+    
     upcoming_entries = db.query(PlaylistEntry).filter(
         PlaylistEntry.play_order > now_playing_entry.play_order
     ).order_by(PlaylistEntry.play_order).limit(5).all()
 
-    return {
-        "now_playing": SongResponse.from_orm(now_playing_entry.song),
-        "upcoming": [SongResponse.from_orm(entry.song) for entry in upcoming_entries]
-    }
+    # If not enough upcoming, wrap around
+    if len(upcoming_entries) < 5:
+        remaining_limit = 5 - len(upcoming_entries)
+        wrap_around_entries = db.query(PlaylistEntry).order_by(PlaylistEntry.play_order).limit(remaining_limit).all()
+        upcoming_entries.extend(wrap_around_entries)
+
+    upcoming_songs = [entry.song for entry in upcoming_entries]
+
+    return PlaylistResponse(now_playing=now_playing_song, upcoming=upcoming_songs)
+
+@app.get("/playlist.txt", response_class=PlainTextResponse)
+def get_playlist_text(db: Session = Depends(get_db)):
+    playlist_entries = db.query(PlaylistEntry).order_by(PlaylistEntry.play_order).all()
+    if not playlist_entries:
+        generate_new_playlist(db)
+        playlist_entries = db.query(PlaylistEntry).order_by(PlaylistEntry.play_order).all()
+
+    # Get all song file paths from the playlist
+    song_urls = [entry.song.file_path for entry in playlist_entries]
+    
+    # Return as a plain text response with each URL on a new line
+    return "\n".join(song_urls)
 
 @app.post("/next_song", response_model=SongResponse)
 def advance_to_next_song(db: Session = Depends(get_db)):

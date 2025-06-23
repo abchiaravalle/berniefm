@@ -11,6 +11,7 @@ import tempfile
 import os
 import sys
 import json
+import random
 from urllib.parse import urlparse
 import threading
 from datetime import datetime
@@ -22,45 +23,104 @@ icecast_url = "http://localhost:8000/stream"
 icecast_password = "hackme"
 
 API_URL = "http://localhost:8001"
-ICECAST_URL = "icecast://source:hackme@localhost:8000/stream"
+ICECAST_URL = "icecast://source:hackme@100.100.9.95:8000/stream"
 
-def download_song(url, temp_dir):
-    """Download a song from S3 to temporary file"""
+def validate_song_url(url):
+    """Validate that a song URL is accessible before attempting to stream."""
     try:
-        print(f"Downloading: {url}")
-        response = requests.get(url, stream=True)
-        response.raise_for_status()
+        print(f"STREAMER: Validating URL: {url}")
+        # Use HEAD request to check if the file is accessible without downloading
+        response = requests.head(url, timeout=10)
         
-        # Create temporary file
-        filename = os.path.basename(urlparse(url).path)
-        temp_file = os.path.join(temp_dir, filename)
-        
-        with open(temp_file, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-        
-        print(f"Downloaded: {temp_file}")
-        return temp_file
+        if response.status_code == 200:
+            print(f"STREAMER: URL validation successful (Status: {response.status_code})")
+            return True
+        else:
+            print(f"STREAMER: URL validation failed - Status: {response.status_code}")
+            return False
+            
+    except requests.RequestException as e:
+        print(f"STREAMER: URL validation failed - Request error: {e}")
+        return False
     except Exception as e:
-        print(f"Error downloading {url}: {e}")
-        return None
+        print(f"STREAMER: URL validation failed - Unexpected error: {e}")
+        return False
 
-def stream_song(song):
-    """Stream a single song to Icecast using ffmpeg."""
-    # The 'song' object is now a dictionary from our API, not just a URL
+def get_all_songs():
+    """Get all available songs from the API."""
+    try:
+        response = requests.get(f"{API_URL}/songs")  # Assuming there's an endpoint to get all songs
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException:
+        # Fallback: try to get songs from playlist and expand
+        try:
+            response = requests.get(f"{API_URL}/playlist")
+            response.raise_for_status()
+            playlist_data = response.json()
+            
+            songs = []
+            if playlist_data.get('now_playing'):
+                songs.append(playlist_data['now_playing'])
+            if playlist_data.get('upcoming'):
+                songs.extend(playlist_data['upcoming'])
+            
+            # Try to get more songs by requesting next songs multiple times
+            for _ in range(5):  # Get more songs to build a larger pool
+                try:
+                    response = requests.post(f"{API_URL}/next_song")
+                    if response.status_code == 200:
+                        new_playlist = requests.get(f"{API_URL}/playlist").json()
+                        if new_playlist.get('now_playing') and new_playlist['now_playing'] not in songs:
+                            songs.append(new_playlist['now_playing'])
+                except:
+                    break
+            
+            return songs
+        except requests.RequestException as e:
+            print(f"STREAMER: Error fetching songs: {e}")
+            return []
+
+def create_shuffled_playlist():
+    """Create a new shuffled playlist of valid songs."""
+    all_songs = get_all_songs()
+    if not all_songs:
+        print("STREAMER: No songs available")
+        return []
+    
+    # Filter valid songs
+    valid_songs = []
+    for song in all_songs:
+        if validate_song_url(song.get('file_path')):
+            valid_songs.append(song)
+        else:
+            print(f"STREAMER: Skipping '{song.get('title', 'Unknown')}' - URL validation failed")
+    
+    if not valid_songs:
+        print("STREAMER: No valid songs found")
+        return []
+    
+    # Shuffle the playlist
+    random.shuffle(valid_songs)
+    print(f"STREAMER: Created shuffled playlist with {len(valid_songs)} songs")
+    
+    return valid_songs
+
+def stream_song_seamlessly(song):
+    """Stream a single song seamlessly to Icecast."""
     title = song.get('title', 'Unknown Title')
     artist = song.get('artist', 'Unknown Artist')
     url = song.get('file_path')
 
     if not url:
         print("STREAMER: ERROR - Song object does not contain a 'file_path'. Skipping.")
-        return
+        return False
 
     print(f"STREAMER: Now playing: {title} by {artist}")
     
-    # Update Icecast metadata. Note: this is a best-effort call.
+    # Update Icecast metadata
     try:
-        metadata_url = f"http://localhost:8000/admin/metadata?mount=/stream&mode=updinfo&song={title.replace('&', '%26')}"
+        metadata_url = f"http://100.100.9.95:8000/admin/metadata?mount=/stream&mode=updinfo&song={title.replace('&', '%26')}"
         requests.get(metadata_url, auth=('admin', 'hackme'), timeout=2)
     except requests.RequestException as e:
         print(f"STREAMER: INFO - Could not update metadata: {e}")
@@ -80,18 +140,48 @@ def stream_song(song):
         '-content_type', 'audio/mpeg',
         ICECAST_URL
     ]
-        
+    
+    print(f"STREAMER: Starting ffmpeg stream for '{title}'")
     process = subprocess.Popen(ffmpeg_command, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-        
-    # Let the song play
+    
+    print(f"STREAMER: ffmpeg process started with PID: {process.pid}")
+    
+    # Wait for the song to finish
     process.wait()
-
+    
     stderr_output = process.stderr.read().decode()
     if process.returncode != 0:
         if "pipe:1: End of file" not in stderr_output:
-             print(f"STREAMER: ffmpeg error for song {title}:\n{stderr_output}")
-   
-    print(f"STREAMER: Finished streaming {title}.")
+            print(f"STREAMER: ffmpeg error for song {title}:\n{stderr_output}")
+            return False
+    
+    print(f"STREAMER: Finished streaming {title}")
+    return True
+
+def stream_continuously():
+    """Stream continuously with new shuffled playlists after each song."""
+    print("STREAMER: Starting continuous seamless stream")
+    
+    while True:
+        # Create new shuffled playlist
+        playlist = create_shuffled_playlist()
+        if not playlist:
+            print("STREAMER: No songs available, waiting...")
+            time.sleep(10)
+            continue
+        
+        print(f"STREAMER: Starting new shuffled playlist with {len(playlist)} songs")
+        
+        # Stream each song in the shuffled playlist
+        for song in playlist:
+            success = stream_song_seamlessly(song)
+            if not success:
+                print(f"STREAMER: Failed to stream song, continuing to next...")
+                continue
+            
+            # After each song, create a new shuffled playlist for variety
+            print("STREAMER: Song completed, creating new shuffled playlist...")
+            break  # Exit the playlist loop to create a new shuffled playlist
 
 def wait_for_api():
     """Wait for the FastAPI server to be ready."""
@@ -114,40 +204,13 @@ def wait_for_api():
     print("STREAMER: ERROR - API server did not become ready in time.")
     return False
 
-def get_playlist():
-    """Get the current playlist from the API."""
-    try:
-        # This endpoint now returns a JSON object with 'now_playing' and 'upcoming'
-        response = requests.get(f"{API_URL}/playlist")
-        response.raise_for_status()
-        playlist_data = response.json()
-        return playlist_data.get('now_playing')
-    except requests.RequestException as e:
-        print(f"STREAMER: Error fetching playlist: {e}")
-        return None
-
-def advance_to_next_song():
-    """Tell the API to advance to the next song."""
-    try:
-        response = requests.post(f"{API_URL}/next_song")
-        response.raise_for_status()
-        print("STREAMER: Advanced to next song in playlist on API.")
-    except requests.RequestException as e:
-        print(f"STREAMER: Could not advance to next song: {e}")
-
 def main():
     """Main streaming loop."""
     if not wait_for_api():
         return
 
-    while True:
-        current_song = get_playlist()
-        if current_song:
-            stream_song(current_song)
-            advance_to_next_song()
-        else:
-            print("STREAMER: Playlist is empty or unavailable. Waiting...")
-            time.sleep(10)
+    # Start continuous streaming
+    stream_continuously()
 
 if __name__ == "__main__":
     main() 
