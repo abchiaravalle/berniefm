@@ -534,27 +534,31 @@ DEPLOY_SCRIPT
     print_success "BC Radio deployed successfully!"
 }
 
-# Configure DigitalOcean DNS (optional)
-configure_do_dns() {
-    print_status "DigitalOcean DNS Configuration"
+# Configure DNS (offer DigitalOcean option but focus on external DNS)
+configure_dns() {
+    print_status "DNS Configuration"
     
     DOMAIN=$(jq -r '.domain' "$DO_CONFIG_FILE")
     DROPLET_IP=$(jq -r '.droplet.reserved_ip // .droplet.ip' "$DO_CONFIG_FILE")
     
     echo ""
-    echo "Would you like to automatically configure DNS using DigitalOcean?"
-    echo "This will:"
-    echo "• Add your domain to DigitalOcean DNS"
-    echo "• Create A record pointing to your droplet"
-    echo "• Create CNAME record for www subdomain"
+    echo "🌐 DNS Setup Options"
+    echo "==================="
     echo ""
-    echo "Note: This only works if your domain is managed by DigitalOcean"
-    echo "or if you plan to change your nameservers to DigitalOcean."
+    echo "Most users have their domain with providers like:"
+    echo "• Cloudflare, Namecheap, GoDaddy, Domain.com, etc."
     echo ""
-    read -p "Configure DigitalOcean DNS automatically? (y/N): " -n 1 -r
+    echo "Choose your DNS setup:"
+    echo "1) I'll configure DNS at my domain provider (Recommended)"
+    echo "2) Use DigitalOcean DNS (requires nameserver change)"
+    echo ""
+    read -p "Enter your choice (1 or 2): " -n 1 -r
+    echo
     echo
     
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    if [[ $REPLY == "2" ]]; then
+        print_status "Setting up DigitalOcean DNS..."
+        
         print_api "Creating DigitalOcean DNS zone..."
         
         # Create domain
@@ -590,78 +594,125 @@ configure_do_dns() {
         
         print_success "DigitalOcean DNS configured!"
         echo ""
-        echo "📋 DigitalOcean Nameservers (if needed):"
+        echo "� IMPORTANT: Update your domain's nameservers"
+        echo "=============================================="
+        echo ""
+        echo "At your domain registrar, change nameservers to:"
         echo "• ns1.digitalocean.com"
         echo "• ns2.digitalocean.com"
         echo "• ns3.digitalocean.com"
         echo ""
-        echo "If your domain is registered elsewhere, update your nameservers"
-        echo "to point to DigitalOcean's nameservers above."
+        echo "This change may take 24-48 hours to propagate."
         echo ""
     else
-        print_status "Skipping automatic DNS configuration"
+        print_status "You'll configure DNS at your domain provider"
+        echo ""
+        echo "✅ DNS records are ready to be shown after deployment"
     fi
 }
 
 # Setup DNS instructions
 show_dns_instructions() {
-    print_status "DNS Configuration Required"
+    print_status "DNS Configuration Instructions"
     
     DOMAIN=$(jq -r '.domain' "$DO_CONFIG_FILE")
     DROPLET_IP=$(jq -r '.droplet.reserved_ip // .droplet.ip' "$DO_CONFIG_FILE")
     
     echo ""
-    echo "🌐 DNS Configuration Required"
-    echo "============================="
+    echo "🌐 DNS Configuration Instructions"
+    echo "================================="
     echo ""
     echo "🎯 Your BC Radio server is ready at IP: $DROPLET_IP"
     echo "📡 Domain: $DOMAIN"
     echo ""
-    echo "⚠️  IMPORTANT: You must configure DNS before your site will be accessible!"
+    echo "⚠️  IMPORTANT: Configure these DNS records at your domain provider!"
     echo ""
+    
+    # Show records in a clear table format
     echo "📋 DNS Records to Add:"
     echo "====================="
     echo ""
-    echo "1️⃣  A Record (Required):"
-    echo "   Type: A"
-    echo "   Name: @ (or leave blank for root domain)"
-    echo "   Value: $DROPLET_IP"
-    echo "   TTL: 300 (5 minutes)"
+    printf "%-8s %-12s %-20s %-15s %s\n" "Type" "Name" "Value" "TTL" "Purpose"
+    printf "%-8s %-12s %-20s %-15s %s\n" "----" "----" "-----" "---" "-------"
+    printf "%-8s %-12s %-20s %-15s %s\n" "A" "@" "$DROPLET_IP" "300" "Main domain"
+    printf "%-8s %-12s %-20s %-15s %s\n" "CNAME" "www" "$DOMAIN" "300" "WWW subdomain"
+    printf "%-8s %-12s %-20s %-15s %s\n" "CNAME" "stream" "$DOMAIN" "300" "Stream subdomain"
     echo ""
-    echo "2️⃣  CNAME Record (Optional, for www subdomain):"
-    echo "   Type: CNAME"
-    echo "   Name: www"
-    echo "   Value: $DOMAIN"
-    echo "   TTL: 300 (5 minutes)"
+    
+    echo "🔧 Provider-Specific Instructions:"
+    echo "=================================="
     echo ""
-    echo "3️⃣  CNAME Record (Required, for stream subdomain):"
-    echo "   Type: CNAME"
-    echo "   Name: stream"
-    echo "   Value: $DOMAIN"
-    echo "   TTL: 300 (5 minutes)"
+    echo "🟦 Cloudflare:"
+    echo "   1. Go to cloudflare.com → Your domain → DNS → Records"
+    echo "   2. Add the records above"
+    echo "   3. Set Proxy status to 'DNS only' (gray cloud) for best compatibility"
     echo ""
-    echo "🔧 Where to Add These Records:"
-    echo "• If domain is with DigitalOcean: Use DigitalOcean DNS"
-    echo "• If domain is elsewhere: Use your domain registrar's DNS panel"
-    echo "• Common providers: Cloudflare, Namecheap, GoDaddy, etc."
+    echo "🟨 Namecheap:"
+    echo "   1. Go to namecheap.com → Domain List → Manage → Advanced DNS"
+    echo "   2. Add the records above"
+    echo "   3. For @ record, use 'A Record' with Host '@'"
     echo ""
-    echo "⏱️  DNS Propagation:"
-    echo "• Usually takes 5-30 minutes"
-    echo "• Can take up to 24 hours in some cases"
-    echo "• Test with: dig $DOMAIN or nslookup $DOMAIN"
+    echo "🟩 GoDaddy:"
+    echo "   1. Go to godaddy.com → My Products → DNS → Manage Zones"
+    echo "   2. Add the records above"
+    echo "   3. Use '@' for root domain A record"
+    echo ""
+    echo "🟪 Domain.com:"
+    echo "   1. Go to domain.com → My Account → DNS → Manage"
+    echo "   2. Add the records above"
+    echo ""
+    echo "🔵 Google Domains:"
+    echo "   1. Go to domains.google.com → Your domain → DNS"
+    echo "   2. Add custom resource records"
+    echo ""
+    echo "📱 Copy-Paste Ready Records:"
+    echo "==========================="
+    echo ""
+    echo "A Record:"
+    echo "Name: @"
+    echo "Value: $DROPLET_IP"
+    echo "TTL: 300"
+    echo ""
+    echo "CNAME Record (www):"
+    echo "Name: www"
+    echo "Value: $DOMAIN"
+    echo "TTL: 300"
+    echo ""
+    echo "CNAME Record (stream):"
+    echo "Name: stream"
+    echo "Value: $DOMAIN"
+    echo "TTL: 300"
+    echo ""
+    echo "⏱️  DNS Propagation Timeline:"
+    echo "• Cloudflare: 2-5 minutes"
+    echo "• Namecheap: 5-30 minutes"
+    echo "• GoDaddy: 10-60 minutes"
+    echo "• Others: Up to 24 hours"
     echo ""
     echo "✅ After DNS propagation, your BC Radio will be available at:"
-    echo "🎵 https://$DOMAIN"
+    echo "🎵 Main Site: https://$DOMAIN"
     echo "🔧 Admin: https://$DOMAIN/admin"
     echo "📻 Stream: https://stream.$DOMAIN/listen"
     echo "🔌 API: https://$DOMAIN/api/nowplaying"
     echo ""
-    echo "💡 Quick DNS Test Commands:"
-    echo "dig $DOMAIN                    # Check A record"
-    echo "dig stream.$DOMAIN             # Check stream subdomain"
-    echo "curl -I https://$DOMAIN        # Test HTTPS"
-    echo "curl https://$DOMAIN/api/nowplaying  # Test API"
-    echo "curl -I https://stream.$DOMAIN/listen  # Test stream"
+    echo "🧪 Test Your DNS Setup:"
+    echo "======================"
+    echo ""
+    echo "# Check if DNS is working:"
+    echo "dig $DOMAIN"
+    echo "dig stream.$DOMAIN"
+    echo ""
+    echo "# Test your site (after DNS propagation):"
+    echo "curl -I https://$DOMAIN"
+    echo "curl https://$DOMAIN/api/nowplaying"
+    echo "curl -I https://stream.$DOMAIN/listen"
+    echo ""
+    echo "🆘 Troubleshooting:"
+    echo "=================="
+    echo "• If DNS doesn't resolve: Wait longer, DNS can take time"
+    echo "• If HTTPS doesn't work: DNS must resolve first for SSL"
+    echo "• If stream doesn't work: Check stream subdomain DNS"
+    echo "• Need help? Run: python3 do-manage.py status"
     echo ""
 }
 
@@ -712,6 +763,11 @@ show_summary() {
     echo "3. Access https://$DOMAIN to configure AzuraCast"
     echo "4. Follow AZURACAST_CONFIGURATION.md for detailed setup"
     echo ""
+    echo "💡 Helpful Commands:"
+    echo "• Generate DNS instructions: python3 configure-dns.py $DOMAIN $DROPLET_IP"
+    echo "• Check deployment status: python3 do-manage.py status"
+    echo "• View logs: python3 do-manage.py logs"
+    echo ""
     echo "🎵 Enjoy your BC Radio livestream! 🎵"
 }
 
@@ -757,7 +813,7 @@ main() {
     deploy_bc_radio
     
     # Configure DNS
-    configure_do_dns
+    configure_dns
     
     # Show DNS instructions
     show_dns_instructions

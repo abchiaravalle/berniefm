@@ -368,6 +368,7 @@ For detailed AzuraCast setup, see `AZURACAST_CONFIGURATION.md`. Key points:
 | `troubleshoot.py` | Diagnose and fix issues | `python3 troubleshoot.py` |
 | `backup_config.py` | Backup/restore configuration | `python3 backup_config.py create` |
 | `do-manage.py` | **DigitalOcean management** | `python3 do-manage.py status` |
+| `configure-dns.py` | **Generate DNS instructions** | `python3 configure-dns.py domain.com 1.2.3.4` |
 
 ### Build System Commands
 
@@ -453,12 +454,31 @@ curl -I https://yourdomain.com
 openssl s_client -connect yourdomain.com:443
 ```
 
+### DNS Configuration Help
+
+Need DNS instructions for your domain provider?
+
+```bash
+# Generate DNS instructions for any domain/IP
+python3 configure-dns.py radio.example.com 1.2.3.4
+
+# Save instructions to file for sharing
+python3 configure-dns.py radio.example.com 1.2.3.4 --save dns-instructions.txt
+```
+
+This tool provides:
+- ✅ **Provider-specific instructions** (Cloudflare, Namecheap, GoDaddy, etc.)
+- ✅ **Copy-paste ready DNS records**
+- ✅ **Propagation timelines** by provider
+- ✅ **Testing commands** to verify setup
+
 ### Getting Help
 
 1. **Run diagnostics**: `python3 troubleshoot.py`
 2. **Check documentation**: See `POTENTIAL_ISSUES_AND_FIXES.md`
 3. **Validate setup**: `python3 check_setup.py`
-4. **Review logs**: Check Docker and Caddy logs
+4. **Generate DNS instructions**: `python3 configure-dns.py yourdomain.com server-ip`
+5. **Review logs**: Check Docker and Caddy logs
 
 ## 📱 Features and Compatibility
 
