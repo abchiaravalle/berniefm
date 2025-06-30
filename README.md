@@ -171,12 +171,18 @@ python3 do-manage.py destroy
 - **Performance Setup (s-4vcpu-8gb)**: ~$58/month
 - **High-End Setup (s-8vcpu-16gb)**: ~$115/month
 
+#### Architecture Overview
+The setup uses a clean subdomain architecture:
+- **yourdomain.com**: BC Radio frontend (Caddy serves static files)
+- **yourdomain.com/admin**: AzuraCast admin (proxied to port 8080)
+- **yourdomain.com/api**: AzuraCast API (proxied to port 8000)
+- **stream.yourdomain.com**: Dedicated streaming subdomain (proxied to port 8000)
+
 #### Port Configuration
-The setup automatically configures ports to avoid conflicts:
 - **Port 80**: Caddy web server (serves BC Radio frontend)
 - **Port 443**: Caddy HTTPS (automatic SSL)
-- **Port 8080**: AzuraCast admin interface (proxied via `/admin`)
-- **Port 8000**: AzuraCast streaming (proxied via `/stream`)
+- **Port 8080**: AzuraCast admin interface
+- **Port 8000**: AzuraCast streaming
 - **Port 22**: SSH access
 
 ### 🌐 Production Deployment with Caddy (Manual Server)
@@ -268,9 +274,10 @@ Perfect for deploying the frontend to Netlify, Vercel, or any static host while 
    Edit `build.config.json`:
    ```json
    {
-     "stream_url": "https://your-stream-server.com",
+     "stream_url": "https://your-frontend-domain.com",
+     "stream_domain": "stream.your-stream-server.com",
      "api_endpoint": "/api/nowplaying",
-     "stream_endpoint": "/stream/listen",
+     "stream_endpoint": "/listen",
      "title": "BC Radio - Live Stream",
      "domain": "your-frontend-domain.com",
      "enable_analytics": true,
@@ -302,8 +309,9 @@ Perfect for deploying the frontend to Netlify, Vercel, or any static host while 
 ```json
 {
   "stream_url": "https://yourdomain.com",
+  "stream_domain": "stream.yourdomain.com",
   "api_endpoint": "/api/nowplaying",
-  "stream_endpoint": "/stream/listen",
+  "stream_endpoint": "/listen",
   "title": "BC Radio - Live Stream",
   "description": "Bernie Chiaravalle Live Stream",
   "domain": "yourdomain.com",
@@ -519,7 +527,7 @@ openssl s_client -connect yourdomain.com:443
 ### Health Checks
 ```bash
 # Stream health
-curl -I https://yourdomain.com/stream/listen
+curl -I https://stream.yourdomain.com/listen
 
 # API health
 curl https://yourdomain.com/api/nowplaying
@@ -680,7 +688,7 @@ python3 check_setup.py
 - **Local Development**: http://localhost
 - **Production**: https://yourdomain.com
 - **Admin Interface**: https://yourdomain.com/admin
-- **Stream URL**: https://yourdomain.com/stream/listen
+- **Stream URL**: https://stream.yourdomain.com/listen
 - **API**: https://yourdomain.com/api/nowplaying
 
 ### Support Resources

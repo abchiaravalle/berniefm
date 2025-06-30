@@ -129,7 +129,7 @@ def main():
     
     print(f"• BC Radio will be available at: https://{domain}")
     print(f"• Admin interface: https://{domain}/admin")
-    print(f"• Stream URL: https://{domain}/stream/listen")
+    print(f"• Stream URL: https://stream.{domain}/listen")
     print(f"• API endpoint: https://{domain}/api/nowplaying")
     
     # Alternative suggestions if there are issues

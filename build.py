@@ -15,8 +15,9 @@ def load_config(config_file="build.config.json"):
     """Load build configuration"""
     default_config = {
         "stream_url": "https://yourdomain.com",
+        "stream_domain": "stream.yourdomain.com",
         "api_endpoint": "/api/nowplaying",
-        "stream_endpoint": "/stream/listen",
+        "stream_endpoint": "/listen",
         "title": "BC Radio - Live Stream",
         "description": "Bernie Chiaravalle Live Stream",
         "domain": "yourdomain.com",
@@ -73,9 +74,7 @@ def build_html(config, output_dir="dist"):
     
     # Replace configuration values
     replacements = {
-        # URLs
-        'http://localhost:8000': config['stream_url'],
-        '/listen': config['stream_endpoint'],
+        # URLs - Note: stream URL will be handled in JavaScript config
         '/api/nowplaying': config['api_endpoint'],
         
         # Meta tags
@@ -99,6 +98,7 @@ def build_html(config, output_dir="dist"):
     // Build configuration
     const BUILD_CONFIG = {{
         streamUrl: '{config['stream_url']}',
+        streamDomain: '{config['stream_domain']}',
         apiEndpoint: '{config['api_endpoint']}',
         streamEndpoint: '{config['stream_endpoint']}',
         domain: '{config['domain']}',
@@ -115,7 +115,14 @@ def build_html(config, output_dir="dist"):
         return BUILD_CONFIG.streamUrl;
     }};
     
-    const STREAM_URL = `${{getBaseUrl()}}${{BUILD_CONFIG.streamEndpoint}}`;
+    const getStreamUrl = () => {{
+        if (window.location.protocol === 'file:') {{
+            return 'http://localhost:8000';
+        }}
+        return `https://${{BUILD_CONFIG.streamDomain}}`;
+    }};
+    
+    const STREAM_URL = `${{getStreamUrl()}}${{BUILD_CONFIG.streamEndpoint}}`;
     const API_URL = `${{getBaseUrl()}}${{BUILD_CONFIG.apiEndpoint}}`;
     """
     

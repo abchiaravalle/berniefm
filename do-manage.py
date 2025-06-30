@@ -135,7 +135,7 @@ class DOManager:
             (f"https://{domain}", "Web Interface"),
             (f"https://{domain}/admin", "Admin Panel"),
             (f"https://{domain}/api/nowplaying", "API"),
-            (f"https://{domain}/stream/listen", "Stream")
+            (f"https://stream.{domain}/listen", "Stream")
         ]
         
         for url, name in endpoints:

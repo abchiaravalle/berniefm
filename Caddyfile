@@ -28,16 +28,6 @@ yourdomain.com {
 		}
 	}
 	
-	# Stream endpoint - proxy to AzuraCast streaming
-	handle /stream* {
-		reverse_proxy localhost:8000 {
-			header_up Host {upstream_hostport}
-			header_up X-Real-IP {remote_host}
-			header_up X-Forwarded-For {remote_host}
-			header_up X-Forwarded-Proto {scheme}
-		}
-	}
-	
 	# API endpoints - proxy to AzuraCast API
 	handle /api* {
 		reverse_proxy localhost:8000 {
@@ -74,6 +64,40 @@ yourdomain.com {
 	}
 }
 
+# Stream subdomain - dedicated for streaming
+stream.yourdomain.com {
+	# Stream endpoints - proxy to AzuraCast streaming
+	handle /* {
+		reverse_proxy localhost:8000 {
+			header_up Host {upstream_hostport}
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+	
+	# CORS headers for streaming
+	header {
+		Access-Control-Allow-Origin "*"
+		Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+		Access-Control-Allow-Headers "Content-Type, Range"
+		Access-Control-Expose-Headers "Content-Length, Content-Range"
+	}
+	
+	# Streaming optimizations
+	header {
+		Cache-Control "no-cache, no-store, must-revalidate"
+		Pragma "no-cache"
+		Expires "0"
+	}
+	
+	# Logging for stream access
+	log {
+		output file /var/log/caddy/bc-radio-stream.log
+		format json
+	}
+}
+
 # Development configuration (localhost)
 localhost, localhost:3000 {
 	handle / {
@@ -89,10 +113,6 @@ localhost, localhost:3000 {
 		reverse_proxy localhost:8080
 	}
 	
-	handle /stream* {
-		reverse_proxy localhost:8000
-	}
-	
 	handle /api* {
 		reverse_proxy localhost:8000
 	}
@@ -102,5 +122,18 @@ localhost, localhost:3000 {
 		Access-Control-Allow-Origin "*"
 		Access-Control-Allow-Methods "GET, POST, OPTIONS"
 		Access-Control-Allow-Headers "Content-Type, Authorization"
+	}
+}
+
+# Development stream subdomain
+stream.localhost {
+	handle /* {
+		reverse_proxy localhost:8000
+	}
+	
+	header {
+		Access-Control-Allow-Origin "*"
+		Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+		Access-Control-Allow-Headers "Content-Type, Range"
 	}
 }

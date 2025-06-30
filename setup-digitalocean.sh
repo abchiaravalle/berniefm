@@ -516,6 +516,7 @@ cp Caddyfile /etc/caddy/Caddyfile
 python3 build.py --init
 sed -i 's/yourdomain.com/$DOMAIN/g' build.config.json
 sed -i 's|https://yourdomain.com|https://$DOMAIN|g' build.config.json
+sed -i 's|stream.yourdomain.com|stream.$DOMAIN|g' build.config.json
 
 # Build and deploy
 python3 build.py
@@ -579,6 +580,14 @@ configure_do_dns() {
             --record-data "$DOMAIN" \
             --record-ttl 300 >/dev/null 2>&1 || print_warning "CNAME record may already exist"
         
+        # Create CNAME record for stream subdomain
+        print_api "Creating CNAME record for stream..."
+        doctl compute domain records create "$DOMAIN" \
+            --record-type CNAME \
+            --record-name stream \
+            --record-data "$DOMAIN" \
+            --record-ttl 300 >/dev/null 2>&1 || print_warning "CNAME record may already exist"
+        
         print_success "DigitalOcean DNS configured!"
         echo ""
         echo "📋 DigitalOcean Nameservers (if needed):"
@@ -625,6 +634,12 @@ show_dns_instructions() {
     echo "   Value: $DOMAIN"
     echo "   TTL: 300 (5 minutes)"
     echo ""
+    echo "3️⃣  CNAME Record (Required, for stream subdomain):"
+    echo "   Type: CNAME"
+    echo "   Name: stream"
+    echo "   Value: $DOMAIN"
+    echo "   TTL: 300 (5 minutes)"
+    echo ""
     echo "🔧 Where to Add These Records:"
     echo "• If domain is with DigitalOcean: Use DigitalOcean DNS"
     echo "• If domain is elsewhere: Use your domain registrar's DNS panel"
@@ -638,13 +653,15 @@ show_dns_instructions() {
     echo "✅ After DNS propagation, your BC Radio will be available at:"
     echo "🎵 https://$DOMAIN"
     echo "🔧 Admin: https://$DOMAIN/admin"
-    echo "📻 Stream: https://$DOMAIN/stream/listen"
+    echo "📻 Stream: https://stream.$DOMAIN/listen"
     echo "🔌 API: https://$DOMAIN/api/nowplaying"
     echo ""
     echo "💡 Quick DNS Test Commands:"
     echo "dig $DOMAIN                    # Check A record"
+    echo "dig stream.$DOMAIN             # Check stream subdomain"
     echo "curl -I https://$DOMAIN        # Test HTTPS"
     echo "curl https://$DOMAIN/api/nowplaying  # Test API"
+    echo "curl -I https://stream.$DOMAIN/listen  # Test stream"
     echo ""
 }
 
@@ -670,7 +687,7 @@ show_summary() {
     echo "🔗 Access URLs:"
     echo "• Radio: https://$DOMAIN"
     echo "• Admin: https://$DOMAIN/admin"
-    echo "• Stream: https://$DOMAIN/stream/listen"
+    echo "• Stream: https://stream.$DOMAIN/listen"
     echo "• API: https://$DOMAIN/api/nowplaying"
     echo ""
     echo "🛠️ Management Commands:"
