@@ -1,0 +1,82 @@
+# BC Radio Caddy Configuration
+# Replace yourdomain.com with your actual domain
+
+yourdomain.com {
+	# Main site - serve static files or proxy to web server
+	handle / {
+		file_server
+		root * /var/www/bc-radio
+	}
+	
+	# AzuraCast admin interface
+	handle /admin* {
+		reverse_proxy localhost:80
+	}
+	
+	# Stream endpoint
+	handle /stream* {
+		reverse_proxy localhost:8000
+	}
+	
+	# API endpoints
+	handle /api* {
+		reverse_proxy localhost:8000 {
+			header_up Host {upstream_hostport}
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+	
+	# CORS headers for API
+	@api path /api*
+	header @api {
+		Access-Control-Allow-Origin "*"
+		Access-Control-Allow-Methods "GET, POST, OPTIONS"
+		Access-Control-Allow-Headers "Content-Type, Authorization"
+	}
+	
+	# Security headers
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		X-XSS-Protection "1; mode=block"
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+	
+	# Gzip compression
+	encode gzip
+	
+	# Logging
+	log {
+		output file /var/log/caddy/bc-radio.log
+		format json
+	}
+}
+
+# Development configuration (localhost)
+localhost, localhost:3000 {
+	handle / {
+		file_server
+		root * ./dist
+	}
+	
+	handle /admin* {
+		reverse_proxy localhost:80
+	}
+	
+	handle /stream* {
+		reverse_proxy localhost:8000
+	}
+	
+	handle /api* {
+		reverse_proxy localhost:8000
+	}
+	
+	@api path /api*
+	header @api {
+		Access-Control-Allow-Origin "*"
+		Access-Control-Allow-Methods "GET, POST, OPTIONS"
+		Access-Control-Allow-Headers "Content-Type, Authorization"
+	}
+}
