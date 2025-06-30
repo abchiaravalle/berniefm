@@ -1,0 +1,30 @@
+# Music files (too large for git)
+music/
+
+# Docker volumes
+uploads/
+
+# AzuraCast data (Docker volumes handle persistence)
+azuracast_*/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
