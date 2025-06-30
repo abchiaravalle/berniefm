@@ -28,9 +28,20 @@ python3 check_setup.py
 # Open http://localhost and complete setup wizard
 ```
 
-### Option 2: Production with Caddy (Recommended)
+### Option 2: DigitalOcean Deployment (Recommended)
 
-For production deployment with automatic HTTPS:
+Fully automated deployment on DigitalOcean with one command:
+
+```bash
+# Complete DigitalOcean setup (creates droplet, firewall, DNS, everything!)
+./setup-digitalocean.sh
+
+# Your radio will be live at https://yourdomain.com
+```
+
+### Option 3: Production with Caddy (Manual Server)
+
+For production deployment on your own server with automatic HTTPS:
 
 ```bash
 # 1. Setup AzuraCast backend
@@ -47,7 +58,7 @@ python3 build.py
 # 4. Your radio is live at https://yourdomain.com
 ```
 
-### Option 3: Static Deployment Only
+### Option 4: Static Deployment Only
 
 Deploy just the frontend to a CDN/static host:
 
@@ -89,11 +100,82 @@ python3 build.py
    python3 troubleshoot.py
    ```
 
-### 🌐 Production Deployment with Caddy
+### � DigitalOcean Deployment (Fully Automated)
 
 #### Prerequisites
+- DigitalOcean account
+- Domain name (can be purchased through DigitalOcean or any registrar)
+- DigitalOcean API token ([Get one here](https://cloud.digitalocean.com/account/api/tokens))
+
+#### One-Command Deployment
+
+```bash
+# Install doctl (DigitalOcean CLI) if not installed
+# macOS: brew install doctl
+# Ubuntu: snap install doctl
+# Manual: https://docs.digitalocean.com/reference/doctl/how-to/install/
+
+# Run the complete setup
+./setup-digitalocean.sh
+
+# Follow the prompts:
+# 1. Enter your DigitalOcean API token
+# 2. Enter your domain name
+# 3. Choose droplet region and size
+# 4. Wait for deployment (5-10 minutes)
+# 5. Configure DNS as instructed
+```
+
+#### What This Creates
+- **Droplet**: Ubuntu 22.04 server with Docker, Caddy, AzuraCast
+- **Reserved IP**: Static IP address for your domain
+- **Firewall**: Configured for web traffic and streaming
+- **Project**: Organized DigitalOcean project
+- **Backups**: Automatic daily backups enabled
+- **SSL**: Automatic HTTPS with Let's Encrypt
+- **Monitoring**: DigitalOcean monitoring enabled
+
+#### Management Commands
+
+```bash
+# Check deployment status
+python3 do-manage.py status
+
+# View logs
+python3 do-manage.py logs
+
+# Restart services
+python3 do-manage.py restart
+
+# Create backup snapshot
+python3 do-manage.py backup
+
+# Scale droplet size
+python3 do-manage.py scale s-4vcpu-8gb
+
+# Monitor services
+python3 do-manage.py monitor --duration 600
+
+# Update deployment
+python3 do-manage.py update
+
+# Destroy everything (careful!)
+python3 do-manage.py destroy
+```
+
+#### Cost Estimate
+- **Basic Setup (s-2vcpu-4gb)**: ~$28/month
+  - Droplet: $24/month
+  - Reserved IP: $4/month
+  - Backups: 20% of droplet cost
+- **Performance Setup (s-4vcpu-8gb)**: ~$58/month
+- **High-End Setup (s-8vcpu-16gb)**: ~$115/month
+
+### 🌐 Production Deployment with Caddy (Manual Server)
+
+#### Prerequisites
+- Your own server with Docker and Python 3 installed
 - Domain name pointing to your server
-- Server with Docker and Python 3 installed
 - Sudo access for Caddy installation
 
 #### Step-by-Step Production Setup
@@ -257,6 +339,7 @@ For detailed AzuraCast setup, see `AZURACAST_CONFIGURATION.md`. Key points:
 | Script | Purpose | Usage |
 |--------|---------|-------|
 | `setup.sh` | Complete local setup | `./setup.sh` |
+| `setup-digitalocean.sh` | **Automated DigitalOcean deployment** | `./setup-digitalocean.sh` |
 | `setup-caddy.sh` | Production Caddy setup | `./setup-caddy.sh` |
 | `build.py` | Build static frontend | `python3 build.py` |
 | `download_music.py` | Download music from S3 | `python3 download_music.py` |
@@ -268,6 +351,7 @@ For detailed AzuraCast setup, see `AZURACAST_CONFIGURATION.md`. Key points:
 | `check_setup.py` | Environment validation | `python3 check_setup.py` |
 | `troubleshoot.py` | Diagnose and fix issues | `python3 troubleshoot.py` |
 | `backup_config.py` | Backup/restore configuration | `python3 backup_config.py create` |
+| `do-manage.py` | **DigitalOcean management** | `python3 do-manage.py status` |
 
 ### Build System Commands
 
@@ -425,10 +509,12 @@ curl -I https://yourdomain.com
 | Document | Description |
 |----------|-------------|
 | `README.md` | This comprehensive setup guide |
+| `DIGITALOCEAN_DEPLOYMENT.md` | **Complete DigitalOcean deployment guide** |
 | `AZURACAST_CONFIGURATION.md` | Detailed AzuraCast configuration |
 | `POTENTIAL_ISSUES_AND_FIXES.md` | Troubleshooting and known issues |
 | `Caddyfile` | Caddy reverse proxy configuration |
 | `build.config.json` | Build system configuration (after init) |
+| `do-config.json` | DigitalOcean deployment configuration (after setup) |
 
 ## 🔧 Advanced Configuration
 
