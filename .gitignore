@@ -7,6 +7,14 @@ uploads/
 # AzuraCast data (Docker volumes handle persistence)
 azuracast_*/
 
+# Backup files
+bc_radio_backup_*.zip
+backup_*/
+restore_temp/
+
+# Download tracking
+failed_downloads.txt
+
 # Python cache
 __pycache__/
 *.pyc

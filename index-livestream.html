@@ -682,7 +682,7 @@
 
   <!-- Hidden audio element for the stream -->
   <audio id="stream-audio" preload="none">
-    <source src="http://localhost:8000/listen" type="audio/mpeg">
+    <source src="" type="audio/mpeg">
     Your browser does not support the audio element.
   </audio>
 
@@ -691,6 +691,20 @@
     let isPlaying = false;
     let streamAudio = null;
     let currentSongInterval = null;
+    
+    // Dynamic URL configuration
+    const getBaseUrl = () => {
+      if (window.location.protocol === 'file:') {
+        return 'http://localhost:8000';
+      }
+      // For production, assume AzuraCast is on port 8000 of the same domain
+      const protocol = window.location.protocol;
+      const hostname = window.location.hostname;
+      return `${protocol}//${hostname}:8000`;
+    };
+    
+    const STREAM_URL = `${getBaseUrl()}/listen`;
+    const API_URL = `${getBaseUrl()}/api/nowplaying`;
     
     // DOM elements
     const playBtn = document.getElementById('playpause');
@@ -706,6 +720,9 @@
     // Initialize stream
     function initializeStream() {
       streamAudio = document.getElementById('stream-audio');
+      
+      // Set stream URL
+      streamAudio.src = STREAM_URL;
       
       // Set initial volume
       streamAudio.volume = volumeSlider.value / 100;
@@ -794,7 +811,7 @@
     
     // Fetch current song info from AzuraCast API
     function fetchCurrentSong() {
-      fetch('http://localhost:8000/api/nowplaying')
+      fetch(API_URL)
         .then(response => response.json())
         .then(data => {
           if (data && data.length > 0) {
@@ -805,8 +822,31 @@
               const songTitle = currentSong.song.title || 'Unknown Title';
               const songArtist = currentSong.song.artist || 'Bernie Chiaravalle';
               const songAlbum = currentSong.song.album || '';
+              const songPath = currentSong.song.path || '';
               
-              currentSongEl.textContent = songTitle;
+              // Check if this is an unreleased track
+              const isUnreleased = songAlbum.toLowerCase().includes('unreleased') || 
+                                 songPath.includes('Random mp3s') ||
+                                 songAlbum.toLowerCase().includes('random');
+              
+              if (isUnreleased) {
+                currentSongEl.innerHTML = `${songTitle}<p class="wordanim" style="
+                  margin-top:5px;
+                  margin-bottom:0px;
+                  letter-spacing:2px;
+                  font-weight:800;
+                  font-family:'Instrument Sans',sans-serif;
+                  font-size:12px;
+                  background: linear-gradient(90deg, #00c6ff 0%, #7f00ff 40%, #ff3a44 70%, #ff00cc 100%);
+                  -webkit-background-clip: text;
+                  background-clip: text;
+                  color: transparent;
+                  -webkit-text-fill-color: transparent;
+                ">UNRELEASED</p>`;
+              } else {
+                currentSongEl.textContent = songTitle;
+              }
+              
               currentArtistEl.textContent = songArtist;
               
               // Update album art if available
@@ -874,7 +914,7 @@
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
       // Check if stream is available
-      fetch('http://localhost:8000/api/nowplaying')
+      fetch(API_URL)
         .then(response => response.json())
         .then(data => {
           updateStreamStatus(true);
