@@ -2,23 +2,43 @@
 # Replace yourdomain.com with your actual domain
 
 yourdomain.com {
-	# Main site - serve static files or proxy to web server
+	# Main site - serve static files (BC Radio frontend)
 	handle / {
 		file_server
 		root * /var/www/bc-radio
 	}
 	
-	# AzuraCast admin interface
+	# AzuraCast admin interface - proxy to AzuraCast web interface
 	handle /admin* {
-		reverse_proxy localhost:80
+		reverse_proxy localhost:8080 {
+			header_up Host {upstream_hostport}
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
 	}
 	
-	# Stream endpoint
+	# AzuraCast public pages (if needed)
+	handle /public* {
+		reverse_proxy localhost:8080 {
+			header_up Host {upstream_hostport}
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+	
+	# Stream endpoint - proxy to AzuraCast streaming
 	handle /stream* {
-		reverse_proxy localhost:8000
+		reverse_proxy localhost:8000 {
+			header_up Host {upstream_hostport}
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
 	}
 	
-	# API endpoints
+	# API endpoints - proxy to AzuraCast API
 	handle /api* {
 		reverse_proxy localhost:8000 {
 			header_up Host {upstream_hostport}
@@ -62,7 +82,11 @@ localhost, localhost:3000 {
 	}
 	
 	handle /admin* {
-		reverse_proxy localhost:80
+		reverse_proxy localhost:8080
+	}
+	
+	handle /public* {
+		reverse_proxy localhost:8080
 	}
 	
 	handle /stream* {

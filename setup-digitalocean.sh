@@ -482,16 +482,35 @@ set -e
 # Extract files
 cd /root
 tar -xzf bc-radio-deploy.tar.gz
-cd bc-radio-*/ || cd /root
 
 # Make scripts executable
 chmod +x *.sh *.py
 
-# Run setup
-./setup.sh --skip-prompts
+# Update docker-compose to avoid port conflicts
+sed -i 's/"80:80"/"8080:80"  # AzuraCast web interface on port 8080 to avoid conflict with Caddy/' docker-compose.yml
 
-# Setup Caddy with domain
-echo "$DOMAIN" | ./setup-caddy.sh --domain-from-stdin
+# Update Caddyfile with domain
+sed -i 's/yourdomain.com/$DOMAIN/g' Caddyfile
+
+# Run setup (AzuraCast only, skip Caddy for now)
+./setup.sh --azuracast-only
+
+# Install Caddy
+if ! command -v caddy &> /dev/null; then
+    apt update
+    apt install -y debian-keyring debian-archive-keyring apt-transport-https
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+    apt update
+    apt install -y caddy
+fi
+
+# Setup Caddy directories
+mkdir -p /var/www/bc-radio /var/log/caddy
+chown -R caddy:caddy /var/www/bc-radio /var/log/caddy 2>/dev/null || true
+
+# Install Caddyfile
+cp Caddyfile /etc/caddy/Caddyfile
 
 # Create build config
 python3 build.py --init
@@ -500,6 +519,10 @@ sed -i 's|https://yourdomain.com|https://$DOMAIN|g' build.config.json
 
 # Build and deploy
 python3 build.py
+
+# Start Caddy
+systemctl enable caddy
+systemctl start caddy
 
 echo "Deployment complete!"
 DEPLOY_SCRIPT
@@ -510,6 +533,67 @@ DEPLOY_SCRIPT
     print_success "BC Radio deployed successfully!"
 }
 
+# Configure DigitalOcean DNS (optional)
+configure_do_dns() {
+    print_status "DigitalOcean DNS Configuration"
+    
+    DOMAIN=$(jq -r '.domain' "$DO_CONFIG_FILE")
+    DROPLET_IP=$(jq -r '.droplet.reserved_ip // .droplet.ip' "$DO_CONFIG_FILE")
+    
+    echo ""
+    echo "Would you like to automatically configure DNS using DigitalOcean?"
+    echo "This will:"
+    echo "• Add your domain to DigitalOcean DNS"
+    echo "• Create A record pointing to your droplet"
+    echo "• Create CNAME record for www subdomain"
+    echo ""
+    echo "Note: This only works if your domain is managed by DigitalOcean"
+    echo "or if you plan to change your nameservers to DigitalOcean."
+    echo ""
+    read -p "Configure DigitalOcean DNS automatically? (y/N): " -n 1 -r
+    echo
+    
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        print_api "Creating DigitalOcean DNS zone..."
+        
+        # Create domain
+        if doctl compute domain create "$DOMAIN" 2>/dev/null; then
+            print_success "Domain zone created: $DOMAIN"
+        else
+            print_warning "Domain zone may already exist"
+        fi
+        
+        # Create A record
+        print_api "Creating A record..."
+        doctl compute domain records create "$DOMAIN" \
+            --record-type A \
+            --record-name @ \
+            --record-data "$DROPLET_IP" \
+            --record-ttl 300 >/dev/null 2>&1 || print_warning "A record may already exist"
+        
+        # Create CNAME record for www
+        print_api "Creating CNAME record for www..."
+        doctl compute domain records create "$DOMAIN" \
+            --record-type CNAME \
+            --record-name www \
+            --record-data "$DOMAIN" \
+            --record-ttl 300 >/dev/null 2>&1 || print_warning "CNAME record may already exist"
+        
+        print_success "DigitalOcean DNS configured!"
+        echo ""
+        echo "📋 DigitalOcean Nameservers (if needed):"
+        echo "• ns1.digitalocean.com"
+        echo "• ns2.digitalocean.com"
+        echo "• ns3.digitalocean.com"
+        echo ""
+        echo "If your domain is registered elsewhere, update your nameservers"
+        echo "to point to DigitalOcean's nameservers above."
+        echo ""
+    else
+        print_status "Skipping automatic DNS configuration"
+    fi
+}
+
 # Setup DNS instructions
 show_dns_instructions() {
     print_status "DNS Configuration Required"
@@ -518,23 +602,49 @@ show_dns_instructions() {
     DROPLET_IP=$(jq -r '.droplet.reserved_ip // .droplet.ip' "$DO_CONFIG_FILE")
     
     echo ""
-    echo "🌐 DNS Configuration"
-    echo "===================="
+    echo "🌐 DNS Configuration Required"
+    echo "============================="
     echo ""
-    echo "Add these DNS records to your domain provider:"
+    echo "🎯 Your BC Radio server is ready at IP: $DROPLET_IP"
+    echo "📡 Domain: $DOMAIN"
     echo ""
-    echo "A Record:"
-    echo "  Name: @ (or leave blank for root domain)"
-    echo "  Value: $DROPLET_IP"
-    echo "  TTL: 300"
+    echo "⚠️  IMPORTANT: You must configure DNS before your site will be accessible!"
     echo ""
-    echo "CNAME Record (optional, for www):"
-    echo "  Name: www"
-    echo "  Value: $DOMAIN"
-    echo "  TTL: 300"
+    echo "📋 DNS Records to Add:"
+    echo "====================="
     echo ""
-    echo "After DNS propagation (5-30 minutes), your radio will be available at:"
+    echo "1️⃣  A Record (Required):"
+    echo "   Type: A"
+    echo "   Name: @ (or leave blank for root domain)"
+    echo "   Value: $DROPLET_IP"
+    echo "   TTL: 300 (5 minutes)"
+    echo ""
+    echo "2️⃣  CNAME Record (Optional, for www subdomain):"
+    echo "   Type: CNAME"
+    echo "   Name: www"
+    echo "   Value: $DOMAIN"
+    echo "   TTL: 300 (5 minutes)"
+    echo ""
+    echo "🔧 Where to Add These Records:"
+    echo "• If domain is with DigitalOcean: Use DigitalOcean DNS"
+    echo "• If domain is elsewhere: Use your domain registrar's DNS panel"
+    echo "• Common providers: Cloudflare, Namecheap, GoDaddy, etc."
+    echo ""
+    echo "⏱️  DNS Propagation:"
+    echo "• Usually takes 5-30 minutes"
+    echo "• Can take up to 24 hours in some cases"
+    echo "• Test with: dig $DOMAIN or nslookup $DOMAIN"
+    echo ""
+    echo "✅ After DNS propagation, your BC Radio will be available at:"
     echo "🎵 https://$DOMAIN"
+    echo "🔧 Admin: https://$DOMAIN/admin"
+    echo "📻 Stream: https://$DOMAIN/stream/listen"
+    echo "🔌 API: https://$DOMAIN/api/nowplaying"
+    echo ""
+    echo "💡 Quick DNS Test Commands:"
+    echo "dig $DOMAIN                    # Check A record"
+    echo "curl -I https://$DOMAIN        # Test HTTPS"
+    echo "curl https://$DOMAIN/api/nowplaying  # Test API"
     echo ""
 }
 
@@ -628,6 +738,9 @@ main() {
     
     # Deploy BC Radio
     deploy_bc_radio
+    
+    # Configure DNS
+    configure_do_dns
     
     # Show DNS instructions
     show_dns_instructions

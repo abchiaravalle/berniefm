@@ -5,6 +5,39 @@
 
 set -e
 
+# Parse command line arguments
+AZURACAST_ONLY=false
+SKIP_PROMPTS=false
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --azuracast-only)
+            AZURACAST_ONLY=true
+            shift
+            ;;
+        --skip-prompts)
+            SKIP_PROMPTS=true
+            shift
+            ;;
+        --help|-h)
+            echo "BC Radio Setup Script"
+            echo ""
+            echo "Usage: $0 [options]"
+            echo ""
+            echo "Options:"
+            echo "  --azuracast-only  Only setup AzuraCast (skip web server setup)"
+            echo "  --skip-prompts    Skip interactive prompts"
+            echo "  --help, -h        Show this help message"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option $1"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+    esac
+done
+
 echo "🎵 BC Radio Livestream Setup"
 echo "================================"
 echo ""
@@ -64,10 +97,15 @@ download_music() {
     
     if [ -d "music" ] && [ "$(ls -A music)" ]; then
         print_warning "Music directory already exists and is not empty."
-        read -p "Do you want to re-download all music files? (y/N): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            print_status "Skipping music download."
+        if [ "$SKIP_PROMPTS" = false ]; then
+            read -p "Do you want to re-download all music files? (y/N): " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                print_status "Skipping music download."
+                return 0
+            fi
+        else
+            print_status "Skipping music download (existing files found)."
             return 0
         fi
     fi
@@ -108,9 +146,15 @@ wait_for_azuracast() {
     
     local max_attempts=30
     local attempt=1
+    local azuracast_port="8080"
+    
+    # If not AZURACAST_ONLY mode, AzuraCast runs on port 8080
+    if [ "$AZURACAST_ONLY" = true ]; then
+        azuracast_port="80"
+    fi
     
     while [ $attempt -le $max_attempts ]; do
-        if curl -s -f http://localhost >/dev/null 2>&1; then
+        if curl -s -f http://localhost:$azuracast_port >/dev/null 2>&1; then
             print_success "AzuraCast is ready!"
             return 0
         fi
@@ -121,17 +165,24 @@ wait_for_azuracast() {
     done
     
     print_error "AzuraCast did not become ready within the expected time"
-    print_warning "You may need to wait a bit longer and check manually at http://localhost"
+    print_warning "You may need to wait a bit longer and check manually at http://localhost:$azuracast_port"
 }
 
 # Display final instructions
 show_final_instructions() {
+    local azuracast_port="8080"
+    
+    # If AZURACAST_ONLY mode, AzuraCast runs on port 80
+    if [ "$AZURACAST_ONLY" = true ]; then
+        azuracast_port="80"
+    fi
+    
     echo ""
     echo "🎉 Setup Complete!"
     echo "=================="
     echo ""
     echo "Next steps:"
-    echo "1. Open your browser and go to: http://localhost"
+    echo "1. Open your browser and go to: http://localhost:$azuracast_port"
     echo "2. Create your admin account in AzuraCast"
     echo "3. Follow the configuration steps in README.md"
     echo ""
@@ -142,8 +193,10 @@ show_final_instructions() {
     echo "• Create playlists and enable AutoDJ"
     echo "• Test the stream at: http://localhost:8000/listen"
     echo ""
-    echo "Then open index-livestream.html to enjoy your BC Radio stream!"
-    echo ""
+    if [ "$AZURACAST_ONLY" = false ]; then
+        echo "Then open index-livestream.html to enjoy your BC Radio stream!"
+        echo ""
+    fi
     echo "📖 For detailed instructions, see README.md"
 }
 

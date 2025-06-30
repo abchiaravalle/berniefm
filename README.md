@@ -171,6 +171,14 @@ python3 do-manage.py destroy
 - **Performance Setup (s-4vcpu-8gb)**: ~$58/month
 - **High-End Setup (s-8vcpu-16gb)**: ~$115/month
 
+#### Port Configuration
+The setup automatically configures ports to avoid conflicts:
+- **Port 80**: Caddy web server (serves BC Radio frontend)
+- **Port 443**: Caddy HTTPS (automatic SSL)
+- **Port 8080**: AzuraCast admin interface (proxied via `/admin`)
+- **Port 8000**: AzuraCast streaming (proxied via `/stream`)
+- **Port 22**: SSH access
+
 ### 🌐 Production Deployment with Caddy (Manual Server)
 
 #### Prerequisites
@@ -407,9 +415,25 @@ sudo caddy validate --config /etc/caddy/Caddyfile
 
 # View logs
 sudo journalctl -u caddy -f
+
+# Check if port 80 is available
+sudo netstat -tulpn | grep :80
 ```
 
-#### 4. DNS/SSL Issues
+#### 4. Port Conflicts
+```bash
+# Check what's running on each port
+sudo netstat -tulpn | grep -E ":(80|443|8080|8000)"
+
+# If AzuraCast is on wrong port, update docker-compose.yml
+sed -i 's/"80:80"/"8080:80"/' docker-compose.yml
+docker-compose up -d
+
+# Restart Caddy after port changes
+sudo systemctl restart caddy
+```
+
+#### 5. DNS/SSL Issues
 ```bash
 # Test DNS resolution
 nslookup yourdomain.com

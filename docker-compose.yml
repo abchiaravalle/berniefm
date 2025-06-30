@@ -5,7 +5,7 @@ services:
     image: ghcr.io/azuracast/azuracast:latest
     container_name: azuracast
     ports:
-      - "80:80"
+      - "8080:80"  # AzuraCast web interface on port 8080 to avoid conflict with Caddy
       - "443:443"
       - "2022:2022"
       - "8000-8999:8000-8999"
