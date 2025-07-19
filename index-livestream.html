@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BC Radio - Live Stream</title>
+
+  <!-- libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="SplitText.min.js"></script>
+
+<link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="BC Radio Live">
+  <link rel="apple-touch-icon" href="appleicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  
+  <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js');
+  }
+  </script>
+  
+  <style>
+    *{transition:all .4s ease}
+
+    /* === light and dark mode === */
+    body{
+      margin:0;
+      height:100vh;
+      /* background:linear-gradient(135deg,#B50DF5,#F876D5,#EDC3FD,#FACDF2); */
+      background-size:400% 400%;
+      animation:gradientShift 15s ease infinite;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-family:'Instrument Sans',sans-serif;
+      color:#000;
+    }
+
+    @keyframes gradientShift{0%{background-position:0 50%}50%{background-position:100% 50%}100%{background-position:0 50%}}
+
+    /* === blurred YouTube background (if enabled) === */
+    .bg-video{position:fixed;inset:0;z-index:-3;overflow:hidden}
+    .bg-video iframe{width:100%;height:100%;pointer-events:none;filter:blur(25px) brightness(.35)}
+
+    /* === player === */
+    .player{
+      background:rgba(255,255,255,0.7);
+      padding:40px;
+      border:1px solid #e6e6e6;
+      max-width:600px;
+      width:100%;
+      border-radius:0;
+      box-shadow:0 12px 30px rgba(0,0,0,.5);
+      text-align:center;
+      backdrop-filter:blur(12px);
+      z-index:10;
+    }
+    .player.resize{transform:scale(.97)}
+    .title{font-size:1.6rem;margin:0 0 22px;font-weight:700;opacity:0;animation:fadeIn .4s forwards}
+    @keyframes fadeIn{to{opacity:1}}
+
+    .button-26{
+      background:#fff;
+      border:2px solid #888;
+      font-size:18px;
+      cursor:pointer;
+      border-radius:10px;
+      outline:none;
+      padding:0;
+      box-shadow:0 2px 10px rgba(0,0,0,.15),5px 14px 20px rgba(0,0,0,.15);
+      display:flex;
+      align-items:center;
+      margin-left:auto!important;
+      margin-right:auto!important;
+    }
+    .button-26__content{
+      padding:24px 40px;
+      border-radius:8px;
+      box-shadow:inset 0 -6px #d5d7de,0 -2px #ffffff;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .button-26__text{color:#888;font-weight:600;transform:translateY(-4px)}
+    .button-26 i{color:#000;font-size:20px;transform:translateY(-4px)}
+    .button-26:active{box-shadow:none}
+    .button-26:active .button-26__content{box-shadow:none}
+    .button-26:active .button-26__text,
+    .button-26:active i{transform:translateY(0)}
+
+    /* === sliders & progress === */
+    .volume-slider{
+      appearance:none;
+      width:180px;
+      height:6px;
+      border-radius:5px;
+      background:#fff;
+      outline:none;
+      margin-top:24px;
+      cursor:pointer;
+    }
+    .volume-slider::-webkit-slider-thumb{
+      appearance:none;
+      width:18px;
+      height:18px;
+      background:#2F28CE;
+      border-radius:50%;
+      cursor:pointer;
+    }
+
+    /* === queue === */
+    #upcoming{margin-top:26px;font-size:.95rem;line-height:1.5;opacity:0;animation:fadeIn .4s .05s forwards}
+
+    /* === mobile tweaks === */
+    @media(max-width:600px){
+      .player{width:88%;padding:32px}
+      .volume-slider{width:150px}
+    }
+
+    .player img{height:100px;aspect-ratio:1/1;object-fit:contain;background:#fff;margin-bottom:20px;border-radius:500px}
+    .player p{font-size:10px;margin-bottom:20px}
+    .player .title{margin-bottom:0}
+    
+    .player {
+      width: 100%;
+      max-width: 1200px;
+      background-color: white;
+      border: none!important;
+      box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px;
+      border-radius: 20px!important;
+      padding: 30px!important;
+    }
+    
+    .left-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .right-column {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    
+    .player img {
+      height: 300px;
+      width: 300px;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+    
+    .visualizer-container {
+      width: 100%;
+      height: 100px;
+      margin: 20px 0;
+    }
+    
+    .title-container {
+      /* margin-bottom: 30px; */
+    }
+    
+    .button-container {
+      margin: 20px 0;
+    }
+    
+    @media screen and (max-width: 768px) {
+      .player {
+        padding: 20px!important;
+      }
+      
+      .right-column {
+        margin-top: 20px;
+      }
+      
+      .player img {
+        height: 200px;
+        width: 200px;
+      }
+    }
+    
+    /* Start invisible */
+    body {
+      opacity: 0;
+      transition: opacity 0.8s ease-in;
+    }
+    
+    /* Become visible when JS says so */
+    body.loaded {
+      opacity: 1;
+    }
+    
+    .player:hover {
+    /*     transform: scale(1.05); */
+    /*     transition: 1.5s ease  all!important */
+    }
+    
+    .button-26__content:hover {
+        box-shadow: inset 0 -3px #d5d7de, 0 -2px #ffffff;
+        transition: .2s ease all!important
+    }
+    
+    #current-time {
+        display: block!important;;
+        position: fixed;
+        bottom: 00px; left: 20px;
+        font-size: 48px;
+    /*     font-weight: 800 */
+        line-height: 1.2em
+    }
+    
+    #current-time * {
+      line-height: 1em
+    }
+    
+    .time, .tick-date { 
+        font-size: 8rem!important;
+        font-weight: 800;
+    }
+    
+    @media screen and (max-width: 990px) {
+    
+    .time, .tick-date { 
+        font-size: 4rem!important;
+    
+    }
+        
+        #current-time {
+                font-size: 32px;
+    
+        }
+    }
+    
+    .player dotlottie-player {
+        height: 25px!important;
+        margin-bottom: 25px;
+        opacity: .20;
+    
+    }
+    
+    #play-label {
+        color: black!important;
+        letter-spacing: 5px!important
+    }
+    
+    .title {
+        font-family: "bookmania", serif;
+        font-size: 22px!important;
+        line-height: 1em!important;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+        word-break: break-word;
+        hyphens: auto;
+    }
+    
+    .button-26__content {
+        min-width: 125px;
+        justify-content: center
+    }
+    
+    #upcoming strong {
+    /*     font-family: "bookmania", serif; */
+        text-transform: uppercase;
+        letter-spacing: 3px;
+        font-weight: 800!important;
+    }
+    
+    .tick-date {
+        font-family: "bookmania", serif;
+        font-weight: 600;
+        margin-top: 10px;
+    /*     display: inline-block!important; */
+    }
+    
+    .player {
+            width: 800px;
+            max-width: unset;
+            background-color: white;
+            border: none!important;
+            box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px;
+            border-radius: 20px!important;
+        }
+
+    .title {
+        font-size: 40px
+    }
+    
+    * {
+        text-wrap: balance
+    }
+    
+    .fa-sharp fa-light:before {
+        color: rgba(0,0,0,.1);
+    }
+    
+    .fa-sharp fa-light:after {
+        color: #000000;
+        opacity: .3
+    }
+    
+    #current-weather div:first-of-type:not(div div){
+        line-height:2em;
+        font-size: 14px!important;
+        font-weight: 800;
+        margin-top: 0;
+    }
+    
+    #current-weather div:first-of-type:not(div div) i {
+        line-height: 1em;
+        transform: translatey(2.5px)
+    }
+            
+    @media screen and (max-width: 990px) {
+        .player {
+            max-width: 375px;
+            padding: 25px
+        }
+    }
+     
+    /* iOS-specific margin for player */
+    body.ios-device .player {
+      margin: 24px auto !important;
+    }
+    
+    .album-art {
+      width: 300px;
+      height: 300px;
+      object-fit: cover;
+      border-radius: 50%;
+      transition: opacity 0.5s ease;
+    }
+    
+    .album-art.fade-out {
+      opacity: 0;
+    }
+    
+    .album-art.fade-in {
+      opacity: 1;
+    }
+    
+    .cd-case {
+      height: 320px;
+      width: 320px;
+      margin: 20px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform-style: preserve-3d;
+      transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      transform: perspective(800px) rotateY(18deg) skewY(2deg);
+      z-index: 1;
+    }
+    .cd-case::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      bottom: -18px;
+      width: 180px;
+      height: 38px;
+      background: radial-gradient(ellipse at center, rgba(0,0,0,0.22) 60%, rgba(0,0,0,0.05) 100%);
+      filter: blur(7px);
+      transform: translateX(-50%) skewX(22deg) rotate(-4deg);
+      opacity: 0.65;
+      z-index: 0;
+      pointer-events: none;
+    }
+    
+    .cd-case.flipping {
+      transform: perspective(800px) rotateY(198deg) skewY(2deg);
+    }
+    
+    .album-art {
+      height: 270px;
+      width: 270px;
+      border-radius: 3px;
+      background-size: cover;
+      background-position: center;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1;
+      backface-visibility: hidden;
+      border:1px solid #e6e6e6;
+      background-image: linear-gradient(rgba(255,255,255,0.15),rgba(255,255,255,0)), url('https://web-assets-acwebdev.s3.amazonaws.com/bcradioSquare.jpeg');
+    }
+    
+    .spine {
+      height: 120px;
+      width: 15px;
+      position: absolute;
+      top: 43px;
+      left: 0;
+      border-radius: 0 50% 50% 0;
+      z-index: 0;
+    }
+    
+    .sup {
+      height: 10px;
+      width: 20px;
+      position: absolute;
+      z-index: 2;
+    }
+    
+    .pos-tl { top: 0; left: 20px; border-radius: 0 0 5px 5px; }
+    .pos-tr { top: 0; left: 160px; border-radius: 0 0 5px 5px; }
+    .pos-bl { bottom: 0; left: 20px; border-radius: 5px 5px 0 0; }
+    .pos-br { bottom: 0; left: 160px; border-radius: 5px 5px 0 0; }
+
+    /* === Livestream specific styles === */
+    .stream-status {
+      margin: 15px 0;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all 0.3s ease;
+    }
+    
+    .stream-status.live {
+      background: linear-gradient(90deg, #ff4757, #ff3838);
+      color: white;
+      animation: pulse 2s infinite;
+    }
+    
+    .stream-status.offline {
+      background: #ddd;
+      color: #666;
+    }
+    
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.7; }
+      100% { opacity: 1; }
+    }
+    
+    .volume-control {
+      margin: 20px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    
+    .volume-control i {
+      color: #666;
+    }
+    
+    .now-playing {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(255,255,255,0.5);
+      border-radius: 10px;
+      border: 1px solid #e6e6e6;
+    }
+    
+    .now-playing h4 {
+      margin: 0 0 5px 0;
+      font-size: 16px;
+      font-weight: 700;
+      color: #333;
+    }
+    
+    .now-playing p {
+      margin: 0;
+      font-size: 14px;
+      color: #666;
+    }
+    
+    /* Audio player hidden but functional */
+    #stream-audio {
+      display: none;
+    }
+
+    .icon-row {
+        display: flex;
+        gap: 20px;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        padding-bottom: 0;
+    }
+    .icon-row a {
+        text-decoration: none;
+        color: inherit;
+        transition: color 0.3s ease;
+    }
+    .icon-row a:hover .fa-apple {
+        color: #FF4259;
+    }
+    .icon-row a:hover .fa-spotify {
+        color: #1DB954!important;
+    }
+    .icon-row a:hover .fa-facebook {
+        color: #1877F2;
+        filter: brightness(1.3);
+    }
+    .icon-row a:hover .fa-instagram {
+        color: #E1306C;
+        filter: brightness(1.3);
+    }
+    
+    .icon-row a:hover .fa-link {
+        color: #a1077d;
+        filter: brightness(1.3);
+    }
+
+    .tick-date {
+        font-size: 64px!important
+    }
+
+    .tick-time { 
+        font-size: 32px!important;
+        line-height: 1em!important;
+    }
+
+    #current-time {
+        line-height: 1.2em!important
+    }
+
+    @media screen and (max-width: 990px) {
+        .title a {
+            margin: 0!important;
+            max-width: unset!important;
+            margin-top: 10px!important;
+            margin-bottom: 15px!important
+        }
+    }
+  </style>
+  
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@dotlottie/player-component@latest/dist/dotlottie-player.mjs"></script>
+  <link rel="stylesheet" href="https://use.typekit.net/ihj1dwh.css">
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script src="https://kit.fontawesome.com/6f464c9e30.js" crossorigin="anonymous"></script>
+
+  <script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "rbimvwhure");
+  </script>
+
+  <!-- Add Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+  
+  <span id="current-time"></span>
+
+  <!-- iOS Add to Home Screen Notification -->
+  <div id="ios-pwa-notice" style="
+    display:none;
+    position:fixed;
+    left:0; right:0; bottom:0;
+    z-index:9999;
+    background:rgba(255,255,255,0.97);
+    color:#222;
+    font-family:'Instrument Sans',sans-serif;
+    font-size:15px;
+    box-shadow:0 -2px 16px rgba(0,0,0,0.08);
+    padding:14px 18px 14px 18px;
+    text-align:center;
+    border-top:1px solid #eee;
+    line-height:1.5em;
+  ">
+    <span style="vertical-align:middle;">
+      To install this app, tap
+      <svg style="height:1.2em;vertical-align:middle;margin:0 2px;" viewBox="0 0 24 24"><path fill="#007aff" d="M12 16a1 1 0 0 1-1-1V6.41l-3.3 3.3a1 1 0 1 1-1.4-1.42l5-5a1 1 0 0 1 1.4 0l5 5a1 1 0 1 1-1.4 1.42l-3.3-3.3V15a1 1 0 0 1-1 1Z"/><rect fill="#007aff" x="4" y="18" width="16" height="2" rx="1"/></svg>
+      then <b>Add to Home Screen</b>.
+    </span>
+    <div style="margin-top:8px;font-size:13px;color:#666;">
+      <b>Note:</b> Live stream will continue playing in the background on iOS when added to home screen.
+    </div>
+    <button id="ios-pwa-close" style="
+      background:none;
+      border:none;
+      color:#888;
+      font-size:20px;
+      font-weight:700;
+      position:absolute;
+      right:12px;
+      top:8px;
+      cursor:pointer;
+      line-height:1;
+    ">&times;</button>
+  </div>
+
+  <div class="player" data-aos="fade-up" data-aos-duration="1200" id="player">
+    <div class="row">
+      <!-- Left Column -->
+      <div class="col-md-6 left-column">
+        <div class="cd-case" id="cd-case">
+          <div class="sup pos-tl"></div>
+          <div class="sup pos-tr"></div>
+          <div class="sup pos-bl"></div>
+          <div class="sup pos-br"></div>
+          <div class="spine"></div>
+          <div class="album-art" id="album-art"></div>
+        </div>
+        <div id="last-updated" style="color:#e6e6e6;font-size:13px;margin:8px 0 0 0;text-align:left;width:100%;"></div>
+        <p class="wordanim" style="letter-spacing:3px;font-weight:600;margin-top:20px;">BERNIE CHIARAVALLE</p>
+      </div>
+      
+      <!-- Right Column -->
+      <div class="col-md-6 right-column">
+        <div class="title-container">
+          <div class="title wordanim mb-4" id="track-title">BC Radio Live Stream</div>
+        </div>
+        
+        <!-- Stream Status -->
+        <div class="stream-status live" id="stream-status">
+          <i class="fas fa-circle" style="font-size: 8px; margin-right: 8px;"></i>
+          LIVE
+        </div>
+        
+        <!-- Now Playing Info -->
+        <div class="now-playing" id="now-playing">
+          <h4 id="current-song">Loading...</h4>
+          <p id="current-artist">Bernie Chiaravalle</p>
+        </div>
+        
+        <div class="button-container my-0">
+          <button class="button-26" id="playpause" aria-label="Play / Pause Stream">
+            <div class="button-26__content">
+              <i class="fa-solid fa-play" id="btn-icon"></i>
+              <span class="button-26__text" id="play-label">START&nbsp;STREAM</span>
+            </div>
+          </button>
+        </div>
+        
+        <!-- Volume Control -->
+        <div class="volume-control">
+          <i class="fas fa-volume-down"></i>
+          <input type="range" class="volume-slider" id="volume-slider" min="0" max="100" value="70">
+          <i class="fas fa-volume-up"></i>
+        </div>
+        
+        <div class="visualizer-container d-none">
+          <dotlottie-player
+            id="visLottie"
+            src="vis.lottie"
+            loop
+            speed="0.3"
+            style="width:100%;height:100%;display:none;">
+          </dotlottie-player>
+        </div>
+
+        <div id="upcoming"></div>
+        
+        <div class="icon-row" style="display: flex; gap: 20px; justify-content: center; align-items: center;">
+          <a href="https://music.apple.com/us/artist/bernie-chiaravalle/80848772" target="_blank" style="text-decoration: none; color: inherit;">
+            <i class="fab fa-apple"></i>
+          </a>
+          <a href="https://open.spotify.com/artist/4xt2hzGfXdXqKR2msI2gOj" target="_blank" style="text-decoration: none; color: inherit;">
+            <i class="fab fa-spotify"></i>
+          </a>
+          <a href="https://www.facebook.com/berniechiaravalle/" target="_blank" style="text-decoration: none; color: inherit;">
+            <i class="fab fa-facebook"></i>
+          </a>
+          <a href="https://www.instagram.com/bvchiaravalle/" target="_blank" style="text-decoration: none; color: inherit;">
+            <i class="fab fa-instagram"></i>
+          </a>
+          <a href="https://www.berniechiaravalle.com/" target="_blank" style="text-decoration: none; color: inherit;">
+            <i class="fa fa-link"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden audio element for the stream -->
+  <audio id="stream-audio" preload="none">
+    <source src="" type="audio/mpeg">
+    Your browser does not support the audio element.
+  </audio>
+
+  <!-- Livestream JavaScript -->
+  <script>
+    let isPlaying = false;
+    let streamAudio = null;
+    let currentSongInterval = null;
+    
+    // Dynamic URL configuration
+    const getBaseUrl = () => {
+      if (window.location.protocol === 'file:') {
+        return 'http://localhost:8000';
+      }
+      // For production, assume AzuraCast is on port 8000 of the same domain
+      const protocol = window.location.protocol;
+      const hostname = window.location.hostname;
+      return `${protocol}//${hostname}:8000`;
+    };
+    
+    const STREAM_URL = `${getBaseUrl()}/listen`;
+    const API_URL = `${getBaseUrl()}/api/nowplaying`;
+    
+    // DOM elements
+    const playBtn = document.getElementById('playpause');
+    const playLabel = document.getElementById('play-label');
+    const btnIcon = document.getElementById('btn-icon');
+    const volumeSlider = document.getElementById('volume-slider');
+    const streamStatus = document.getElementById('stream-status');
+    const currentSongEl = document.getElementById('current-song');
+    const currentArtistEl = document.getElementById('current-artist');
+    const lottiePlayer = document.getElementById('visLottie');
+    const albumArt = document.getElementById('album-art');
+    
+    // Initialize stream
+    function initializeStream() {
+      streamAudio = document.getElementById('stream-audio');
+      
+      // Set stream URL
+      streamAudio.src = STREAM_URL;
+      
+      // Set initial volume
+      streamAudio.volume = volumeSlider.value / 100;
+      
+      // Volume control
+      volumeSlider.addEventListener('input', function() {
+        if (streamAudio) {
+          streamAudio.volume = this.value / 100;
+        }
+      });
+      
+      // Stream event listeners
+      streamAudio.addEventListener('loadstart', function() {
+        console.log('Stream loading...');
+      });
+      
+      streamAudio.addEventListener('canplay', function() {
+        console.log('Stream ready to play');
+        updateStreamStatus(true);
+      });
+      
+      streamAudio.addEventListener('error', function(e) {
+        console.error('Stream error:', e);
+        updateStreamStatus(false);
+        setPlayButton('START&nbsp;STREAM', 'play');
+        isPlaying = false;
+      });
+      
+      streamAudio.addEventListener('ended', function() {
+        console.log('Stream ended');
+        setPlayButton('START&nbsp;STREAM', 'play');
+        isPlaying = false;
+        if (lottiePlayer) lottiePlayer.pause();
+      });
+      
+      streamAudio.addEventListener('play', function() {
+        console.log('Stream started playing');
+        if (lottiePlayer) lottiePlayer.play();
+      });
+      
+      streamAudio.addEventListener('pause', function() {
+        console.log('Stream paused');
+        if (lottiePlayer) lottiePlayer.pause();
+      });
+    }
+    
+    // Play/Pause functionality
+    playBtn.addEventListener('click', function() {
+      if (!streamAudio) {
+        initializeStream();
+      }
+      
+      if (isPlaying) {
+        streamAudio.pause();
+        setPlayButton('START&nbsp;STREAM', 'play');
+        isPlaying = false;
+        if (lottiePlayer) lottiePlayer.pause();
+      } else {
+        streamAudio.play().then(() => {
+          setPlayButton('STOP&nbsp;STREAM', 'stop');
+          isPlaying = true;
+          if (lottiePlayer) lottiePlayer.play();
+          startCurrentSongUpdates();
+        }).catch(error => {
+          console.error('Error playing stream:', error);
+          updateStreamStatus(false);
+        });
+      }
+    });
+    
+    // Helper functions
+    function setPlayButton(text, icon) {
+      playLabel.innerHTML = text;
+      btnIcon.className = `fa-solid fa-${icon}`;
+    }
+    
+    function updateStreamStatus(isLive) {
+      if (isLive) {
+        streamStatus.className = 'stream-status live';
+        streamStatus.innerHTML = '<i class="fas fa-circle" style="font-size: 8px; margin-right: 8px;"></i>LIVE';
+      } else {
+        streamStatus.className = 'stream-status offline';
+        streamStatus.innerHTML = '<i class="fas fa-circle" style="font-size: 8px; margin-right: 8px;"></i>OFFLINE';
+      }
+    }
+    
+    // Fetch current song info from AzuraCast API
+    function fetchCurrentSong() {
+      fetch(API_URL)
+        .then(response => response.json())
+        .then(data => {
+          if (data && data.length > 0) {
+            const station = data[0];
+            const currentSong = station.now_playing;
+            
+            if (currentSong && currentSong.song) {
+              const songTitle = currentSong.song.title || 'Unknown Title';
+              const songArtist = currentSong.song.artist || 'Bernie Chiaravalle';
+              const songAlbum = currentSong.song.album || '';
+              const songPath = currentSong.song.path || '';
+              
+              // Check if this is an unreleased track
+              const isUnreleased = songAlbum.toLowerCase().includes('unreleased') || 
+                                 songPath.includes('Random mp3s') ||
+                                 songAlbum.toLowerCase().includes('random');
+              
+              if (isUnreleased) {
+                currentSongEl.innerHTML = `${songTitle}<p class="wordanim" style="
+                  margin-top:5px;
+                  margin-bottom:0px;
+                  letter-spacing:2px;
+                  font-weight:800;
+                  font-family:'Instrument Sans',sans-serif;
+                  font-size:12px;
+                  background: linear-gradient(90deg, #00c6ff 0%, #7f00ff 40%, #ff3a44 70%, #ff00cc 100%);
+                  -webkit-background-clip: text;
+                  background-clip: text;
+                  color: transparent;
+                  -webkit-text-fill-color: transparent;
+                ">UNRELEASED</p>`;
+              } else {
+                currentSongEl.textContent = songTitle;
+              }
+              
+              currentArtistEl.textContent = songArtist;
+              
+              // Update album art if available
+              if (currentSong.song.art) {
+                updateAlbumArt(currentSong.song.art);
+              }
+              
+              // Update page title
+              document.title = `${songTitle} - BC Radio Live`;
+            }
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching current song:', error);
+          currentSongEl.textContent = 'BC Radio Live Stream';
+          currentArtistEl.textContent = 'Bernie Chiaravalle';
+        });
+    }
+    
+    function updateAlbumArt(artUrl) {
+      if (artUrl && albumArt) {
+        const cdCase = document.getElementById('cd-case');
+        
+        // Animate album art change
+        gsap.to(cdCase, {
+          x: -window.innerWidth * 0.7,
+          opacity: 0.5,
+          scale: 0.95,
+          duration: 0.5,
+          ease: 'power2.in',
+          onComplete: () => {
+            albumArt.style.backgroundImage = `linear-gradient(rgba(255,255,255,0.15),rgba(255,255,255,0)), url('${artUrl}')`;
+            gsap.set(cdCase, { x: window.innerWidth * 0.7, opacity: 0.5, scale: 0.95 });
+            gsap.to(cdCase, {
+              x: 0,
+              opacity: 1,
+              scale: 1,
+              duration: 0.7,
+              ease: 'power2.out'
+            });
+          }
+        });
+      }
+    }
+    
+    function startCurrentSongUpdates() {
+      // Update immediately
+      fetchCurrentSong();
+      
+      // Update every 10 seconds
+      if (currentSongInterval) {
+        clearInterval(currentSongInterval);
+      }
+      currentSongInterval = setInterval(fetchCurrentSong, 10000);
+    }
+    
+    // Space bar hotkey
+    document.addEventListener('keydown', function(e) {
+      if (e.code === 'Space' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+        e.preventDefault();
+        playBtn.click();
+      }
+    });
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      // Check if stream is available
+      fetch(API_URL)
+        .then(response => response.json())
+        .then(data => {
+          updateStreamStatus(true);
+          fetchCurrentSong();
+        })
+        .catch(error => {
+          console.error('Stream not available:', error);
+          updateStreamStatus(false);
+        });
+    });
+    
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', function() {
+      if (currentSongInterval) {
+        clearInterval(currentSongInterval);
+      }
+    });
+  </script>
+
+  <!-- Time Display Script -->
+  <script>
+    const currentTimeSpan = document.getElementById('current-time');
+    
+    function updateTime() {
+      const now = new Date();
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+      const day = days[now.getDay()];
+      const date = now.getDate();
+      const month = months[now.getMonth()];
+      const year = now.getFullYear();
+      
+      let hours = now.getHours();
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'p' : 'a';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+    
+      currentTimeSpan.innerHTML = `
+        <span class="tick-time">${hours}:${minutes}${ampm}</span><br>
+        <span class="tick-date">${day} ${month} ${date}</span>
+      `;
+    
+      gsap.fromTo(".tick-time", 
+        { opacity: 1, y: 10 }, 
+        { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }
+      );
+      gsap.fromTo(".tick-date", 
+        { opacity: 1, y: 10 }, 
+        { opacity: 1, y: 0, duration: 0.4, ease: "power2.out", delay: 0.1 }
+      );
+    
+      gsap.fromTo(currentTimeSpan, 
+        { scale: 1 }, 
+        { scale: 1, duration: 0.15, yoyo: true, repeat: 1, ease: "power1.inOut" }
+      );
+    }
+    
+    updateTime();
+    setInterval(updateTime, 1000);
+  </script>
+  
+  <!-- Weather Script -->
+  <script>
+    async function fetchWeather() {
+      try {
+        const ipInfo = await fetch('https://ipapi.co/json/').then(r => r.json());
+        const city = ipInfo.city;
+        const lat = ipInfo.latitude;
+        const lon = ipInfo.longitude;
+    
+        const weatherInfo = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,weathercode&temperature_unit=fahrenheit&timezone=auto`)
+          .then(r => r.json());
+    
+        const weatherSpan = document.getElementById('current-weather');
+        const temp = Math.round(weatherInfo.current_weather.temperature);
+        const desc = weatherInfo.current_weather.weathercode;
+    
+        const hourlyTimes = weatherInfo.hourly.time;
+        const hourlyTemps = weatherInfo.hourly.temperature_2m;
+        const hourlyCodes = weatherInfo.hourly.weathercode;
+    
+        const now = new Date();
+        const currentHour = now.getHours();
+    
+        let descText = "";
+        let iconClass = "";
+    
+        switch (desc) {
+          case 0: descText = "Clear Sky"; iconClass = "fa-sharp fa-light fa-brightness"; break;
+          case 1: case 2: case 3: descText = "Partly Cloudy"; iconClass = "fa-sharp fa-light fa-cloud-sun"; break;
+          case 45: case 48: descText = "Foggy"; iconClass = "fa-sharp fa-light fa-smog"; break;
+          case 51: case 53: case 55: descText = "Drizzle"; iconClass = "fa-sharp fa-light fa-cloud-drizzle"; break;
+          case 61: case 63: case 65: descText = "Rain"; iconClass = "fa-sharp fa-light fa-cloud-showers-heavy"; break;
+          case 66: case 67: descText = "Freezing Rain"; iconClass = "fa-sharp fa-light fa-cloud-meatball"; break;
+          case 71: case 73: case 75: descText = "Snow"; iconClass = "fa-sharp fa-light fa-snowflake"; break;
+          case 80: case 81: case 82: descText = "Showers"; iconClass = "fa-sharp fa-light fa-cloud-rain"; break;
+          case 95: descText = "Thunderstorm"; iconClass = "fa-sharp fa-light fa-bolt"; break;
+          default: descText = "Weird Weather"; iconClass = "fa-sharp fa-light fa-question";
+        }
+    
+        let mainHTML = `
+          <div style="margin-bottom:10px; text-align: right " >
+            <i class="${iconClass}" style="font-size:20px;margin-right:8px;"></i>
+            ${city}, ${descText}, ${temp}°F
+          </div>
+          <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:10px;">
+        `;
+    
+        for (let i = 0; i < 6; i++) {
+          const forecastIndex = i + weatherInfo.hourly.time.findIndex(t => {
+            const date = new Date(t);
+            return date.getHours() === currentHour;
+          });
+    
+          const hourTime = new Date(hourlyTimes[forecastIndex]);
+          const hour = hourTime.getHours();
+          const formattedHour = hour === 0 ? "12a" : hour < 12 ? `${hour}a` : hour === 12 ? "12p" : `${hour-12}p`;
+    
+          const tempF = Math.round(hourlyTemps[forecastIndex]);
+          const code = hourlyCodes[forecastIndex];
+    
+          let hourIcon = "";
+          switch (code) {
+            case 0: hourIcon = "fa-sharp fa-light fa-brightness"; break;
+            case 1: case 2: case 3: hourIcon = "fa-sharp fa-light fa-cloud-sun"; break;
+            case 45: case 48: hourIcon = "fa-sharp fa-light fa-smog"; break;
+            case 51: case 53: case 55: hourIcon = "fa-sharp fa-light fa-cloud-drizzle"; break;
+            case 61: case 63: case 65: hourIcon = "fa-sharp fa-light fa-cloud-showers-heavy"; break;
+            case 66: case 67: hourIcon = "fa-sharp fa-light fa-cloud-meatball"; break;
+            case 71: case 73: case 75: hourIcon = "fa-sharp fa-light fa-snowflake"; break;
+            case 80: case 81: case 82: hourIcon = "fa-sharp fa-light fa-cloud-rain"; break;
+            case 95: hourIcon = "fa-sharp fa-light fa-bolt"; break;
+            default: hourIcon = "fa-sharp fa-light fa-question";
+          }
+    
+          mainHTML += `
+            <div style="text-align:center;font-size:12px;">
+              <div style="font-weight:600;">${formattedHour}</div>
+              <i class="${hourIcon}" style="font-size:18px;margin:4px 0;"></i>
+            </div>
+          `;
+        }
+    
+        mainHTML += `</div>`;
+        weatherSpan.innerHTML = mainHTML;
+    
+      } catch (error) {
+        console.error('Weather fetch error:', error);
+        document.getElementById('current-weather').innerHTML = `
+          <i class="fa-sharp fa-light fa-triangle-exclamation" style="font-size:20px;margin-right:8px;"></i>
+          Weather unavailable
+        `;
+      }
+    }
+    
+    document.addEventListener('DOMContentLoaded', fetchWeather);
+  </script>
+  
+  <!-- Animation Scripts -->
+  <script>
+    gsap.registerPlugin(SplitText);
+  
+    document.querySelectorAll('.wordanim').forEach(target=>{
+      const split = new SplitText(target,{type:"words,chars"});
+      gsap.set(split.chars,{opacity:0,y:10});
+      gsap.to(split.chars,{
+        opacity:1,
+        y:0,
+        duration:.5,
+        ease:"power3.out",
+        stagger:0.01,
+        delay: 2
+      });
+    });
+  </script>
+  
+  <script>
+    AOS.init();
+  </script>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      document.body.classList.add('loaded');
+    });
+  </script>
+  
+  <span id="current-weather" style="position:fixed;top:10px;right:10px;font-size:14px;font-weight:600;"></span>
+
+  <!-- Add Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- iOS PWA Scripts -->
+  <script>
+    (function(){
+      function isIos() {
+        return /iphone|ipad|ipod/i.test(navigator.userAgent);
+      }
+      function isSafari() {
+        return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+      }
+      function isInStandaloneMode() {
+        return (window.navigator.standalone === true) || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+      }
+      if (isIos() && isSafari() && !isInStandaloneMode() && !localStorage.getItem('hideIosPwaNotice')) {
+        var notice = document.getElementById('ios-pwa-notice');
+        notice.style.display = 'block';
+        document.getElementById('ios-pwa-close').onclick = function() {
+          notice.style.display = 'none';
+          localStorage.setItem('hideIosPwaNotice', '1');
+        };
+      }
+    })();
+  </script>
+
+  <script>
+    (function(){
+      if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
+        document.body.classList.add('ios-device');
+      }
+    })();
+  </script>
+</body>
+</html>
