@@ -1460,32 +1460,32 @@
       <!-- Shell -->
       <div class="bg-zinc-900/80 border border-zinc-800 rounded-3xl shadow-2xl shadow-black/40 backdrop-blur-xl overflow-hidden" style="  position: relative; z-index: 10;">
         <!-- Mode Toggle - Front and Center -->
-        <div class="flex items-center justify-between py-4 px-4 sm:px-6 border-b border-zinc-800/80">
-          <div class="flex-1"></div>
-          <div class="relative inline-flex items-center rounded-full bg-zinc-800/80 p-1.5 border border-zinc-700/50 overflow-visible">
-            <button id="tab-upnext" class="tab-button-toggle relative z-10 flex items-center gap-2.5 px-5 py-2.5 rounded-full text-sm sm:text-base font-medium transition-all duration-300 ease-out">
+        <div class="flex items-center justify-between py-3 sm:py-4 px-3 sm:px-4 lg:px-6 border-b border-zinc-800/80 gap-2">
+          <div class="flex-1 hidden sm:block"></div>
+          <div class="relative inline-flex items-center rounded-full bg-zinc-800/80 p-1 sm:p-1.5 border border-zinc-700/50 overflow-visible">
+            <button id="tab-upnext" class="tab-button-toggle relative z-10 flex items-center gap-1.5 sm:gap-2.5 px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-full text-xs sm:text-sm lg:text-base font-medium transition-all duration-300 ease-out">
               <span>Live radio</span>
             </button>
-            <button id="tab-christmas" class="tab-button-toggle active relative z-10 flex items-center gap-2 px-5 py-2.5 rounded-full text-sm sm:text-base font-medium transition-all duration-300 ease-out overflow-visible">
+            <button id="tab-christmas" class="tab-button-toggle active relative z-10 flex items-center gap-1 sm:gap-2 px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-full text-xs sm:text-sm lg:text-base font-medium transition-all duration-300 ease-out overflow-visible">
               <span class="christmas-sparkle" style="animation-delay: 0s;">🎄</span>
               <span class="whitespace-nowrap">Christmas</span>
               <span class="christmas-sparkle" style="animation-delay: 0.3s;">✨</span>
             </button>
-            <div class="tab-slider absolute top-1.5 rounded-full transition-all duration-300 ease-out" style="height: calc(100% - 12px);"></div>
+            <div class="tab-slider absolute top-1 sm:top-1.5 rounded-full transition-all duration-300 ease-out" style="height: calc(100% - 8px);"></div>
           </div>
-          <div class="flex-1 flex justify-end">
-            <button id="openRequestModal" class="inline-flex items-center gap-1.5 rounded-full border border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/20 transition-colors text-[0.65rem] sm:text-xs text-sky-200 font-medium px-3 py-1.5">
-              <i class="fa-solid fa-music"></i>
-              <span>Request</span>
+          <div class="flex-1 flex justify-end sm:flex-1">
+            <button id="openRequestModal" class="inline-flex items-center gap-1 sm:gap-1.5 rounded-full border border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/20 transition-colors text-[0.6rem] sm:text-[0.65rem] lg:text-xs text-sky-200 font-medium px-2 sm:px-3 py-1 sm:py-1.5">
+              <i class="fa-solid fa-music text-xs sm:text-sm"></i>
+              <span class="hidden xs:inline">Request</span>
             </button>
           </div>
         </div>
         
         <!-- Top bar -->
-        <div id="top-bar-title" class="flex flex-col items-center justify-center gap-2 border-b border-zinc-800/80 px-4 sm:px-6 py-4">
+        <div id="top-bar-title" class="flex flex-col items-center justify-center gap-2 border-b border-zinc-800/80 px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
           <div class="flex flex-col items-center gap-2">
-            <div class="flex items-center gap-2">
-              <h1 id="main-title" class="text-xl sm:text-2xl font-semibold tracking-tight text-zinc-50" style="font-size: 52px!important; font-weight: 800!important; margin-top: 20px; margin-bottom: 20px">
+            <div class="flex items-center gap-2 flex-wrap justify-center">
+              <h1 id="main-title" class="text-xl sm:text-2xl font-semibold tracking-tight text-zinc-50" style="font-size: clamp(32px, 8vw, 52px)!important; font-weight: 800!important; line-height: 1.25em!important; margin-top: 10px!important; margin-bottom: 10px!important; word-break: break-word;">
                 BC Radio
               </h1>
               <span class="inline-flex items-center rounded-full border border-emerald-500/50 bg-emerald-500/10 text-emerald-300 text-[0.65rem] sm:text-xs font-medium leading-none px-1.5 py-0.5 gap-1" id="live-indicator">
@@ -1493,7 +1493,7 @@
                 Live
               </span>
             </div>
-            <p class="text-xs sm:text-sm text-zinc-400 text-center">
+            <p class="text-xs sm:text-sm text-zinc-400 text-center px-2">
               Rarities &amp; Classics from Bernie Chiaravalle
             </p>
           </div>
