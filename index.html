@@ -47,15 +47,322 @@
     /* === light and dark mode === */
     body{
       margin:0;
-      height:100vh;
-      /* background:linear-gradient(135deg,#B50DF5,#F876D5,#EDC3FD,#FACDF2); */
-      background-size:400% 400%;
-      animation:gradientShift 15s ease infinite;
-      display:flex;
-      align-items:center;
-      justify-content:center;
+      min-height:100vh;
+      background: #09090b;
       font-family:'Instrument Sans',sans-serif;
-      color:#000;
+      color:#fafafa;
+      overflow-x: hidden;
+      position: relative;
+    }
+    
+    /* Background video styles */
+    .bg-video {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+    
+    .bg-video iframe {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 200dvw;
+      height: 200dvh;
+      min-width: 200dvw;
+      min-height: 200dvh;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      filter: blur(25px) brightness(0.5);
+      object-fit: cover;
+    }
+    
+    /* JavaScript will handle dynamic scaling to ensure full coverage */
+    
+    .bg-video::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.1);
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+    }
+    
+    /* Christmas Lights Rope */
+    .christmas-lights.lightrope {
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 1000;
+      margin: -15px 0 0 0;
+      padding: 0;
+      pointer-events: none;
+      width: 100%;
+    }
+    
+    .christmas-lights.lightrope li {
+      position: relative;
+      animation-fill-mode: both;
+      animation-iteration-count: infinite;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: inline-block;
+      width: 12px;
+      height: 28px;
+      border-radius: 50%;
+      margin: 20px;
+      background: rgba(220, 20, 60, 1); /* Red */
+      box-shadow: 0px 4.67px 24px 3px rgba(220, 20, 60, 1);
+      animation-name: flash-red;
+      animation-duration: 2s;
+    }
+    
+    .christmas-lights.lightrope li:nth-child(2n+1) {
+      background: rgba(34, 139, 34, 1); /* Green */
+      box-shadow: 0px 4.67px 24px 3px rgba(34, 139, 34, 0.5);
+      animation-name: flash-green;
+      animation-duration: 0.4s;
+    }
+    
+    .christmas-lights.lightrope li:nth-child(3n+1) {
+      background: rgba(255, 215, 0, 1); /* Gold */
+      box-shadow: 0px 4.67px 24px 3px rgba(255, 215, 0, 1);
+      animation-name: flash-gold;
+      animation-duration: 1.4s;
+    }
+    
+    .christmas-lights.lightrope li:nth-child(4n+2) {
+      background: rgba(30, 144, 255, 1); /* Blue */
+      box-shadow: 0px 4.67px 24px 3px rgba(30, 144, 255, 1);
+      animation-name: flash-blue;
+      animation-duration: 1.1s;
+    }
+    
+    .christmas-lights.lightrope li:nth-child(5n+1) {
+      background: rgba(255, 255, 255, 1); /* White */
+      box-shadow: 0px 4.67px 24px 3px rgba(255, 255, 255, 1);
+      animation-name: flash-white;
+      animation-duration: 1.8s;
+    }
+    
+    .christmas-lights.lightrope li:nth-child(6n+2) {
+      background: rgba(255, 20, 147, 1); /* Deep Pink */
+      box-shadow: 0px 4.67px 24px 3px rgba(255, 20, 147, 1);
+      animation-name: flash-pink;
+      animation-duration: 1.6s;
+    }
+    
+    .christmas-lights.lightrope li:nth-child(odd) {
+      animation-duration: 1.8s;
+    }
+    
+    .christmas-lights.lightrope li:before {
+      content: "";
+      position: absolute;
+      background: #222;
+      width: 10px;
+      height: 9.33px;
+      border-radius: 3px;
+      top: -4.67px;
+      left: 1px;
+    }
+    
+    .christmas-lights.lightrope li:after {
+      content: "";
+      top: -14px;
+      left: 9px;
+      position: absolute;
+      width: 52px;
+      height: 18.67px;
+      border-bottom: solid #222 2px;
+      border-radius: 50%;
+    }
+    
+    .christmas-lights.lightrope li:last-child:after {
+      content: none;
+    }
+    
+    .christmas-lights.lightrope li:first-child {
+      margin-left: -40px;
+    }
+    
+    @keyframes flash-red {
+      0%, 100% {
+        background: rgba(220, 20, 60, 1);
+        box-shadow: 0px 4.67px 24px 3px rgba(220, 20, 60, 1);
+      }
+      50% {
+        background: rgba(220, 20, 60, 0.4);
+        box-shadow: 0px 4.67px 24px 3px rgba(220, 20, 60, 0.2);
+      }
+    }
+    
+    @keyframes flash-green {
+      0%, 100% {
+        background: rgba(34, 139, 34, 1);
+        box-shadow: 0px 4.67px 24px 3px rgba(34, 139, 34, 1);
+      }
+      50% {
+        background: rgba(34, 139, 34, 0.4);
+        box-shadow: 0px 4.67px 24px 3px rgba(34, 139, 34, 0.2);
+      }
+    }
+    
+    @keyframes flash-gold {
+      0%, 100% {
+        background: rgba(255, 215, 0, 1);
+        box-shadow: 0px 4.67px 24px 3px rgba(255, 215, 0, 1);
+      }
+      50% {
+        background: rgba(255, 215, 0, 0.4);
+        box-shadow: 0px 4.67px 24px 3px rgba(255, 215, 0, 0.2);
+      }
+    }
+    
+    @keyframes flash-blue {
+      0%, 100% {
+        background: rgba(30, 144, 255, 1);
+        box-shadow: 0px 4.67px 24px 3px rgba(30, 144, 255, 1);
+      }
+      50% {
+        background: rgba(30, 144, 255, 0.4);
+        box-shadow: 0px 4.67px 24px 3px rgba(30, 144, 255, 0.2);
+      }
+    }
+    
+    @keyframes flash-white {
+      0%, 100% {
+        background: rgba(255, 255, 255, 1);
+        box-shadow: 0px 4.67px 24px 3px rgba(255, 255, 255, 1);
+      }
+      50% {
+        background: rgba(255, 255, 255, 0.4);
+        box-shadow: 0px 4.67px 24px 3px rgba(255, 255, 255, 0.2);
+      }
+    }
+    
+    @keyframes flash-pink {
+      0%, 100% {
+        background: rgba(255, 20, 147, 1);
+        box-shadow: 0px 4.67px 24px 3px rgba(255, 20, 147, 1);
+      }
+      50% {
+        background: rgba(255, 20, 147, 0.4);
+        box-shadow: 0px 4.67px 24px 3px rgba(255, 20, 147, 0.2);
+      }
+    }
+    
+    /* Custom scrollbar for queue */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #18181b;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #3f3f46;
+      border-radius: 3px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #52525b;
+    }
+    
+    /* Tab styles */
+    .tab-button {
+      padding: 8px 12px;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    
+    .tab-button.active {
+      background: rgba(59, 130, 246, 0.1);
+    }
+    
+    .tab-button:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    
+    .tab-content {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .tab-content.hidden {
+      display: none;
+    }
+    
+    /* Elegant Toggle Switch Styles */
+    .tab-button-toggle {
+      position: relative;
+      cursor: pointer;
+      color: rgba(212, 212, 216, 0.6);
+      white-space: nowrap;
+      overflow: visible;
+      padding: 0.25rem 0.75rem;
+    }
+    
+    .tab-button-toggle.active {
+      color: rgb(212, 212, 216);
+    }
+    
+    .tab-slider {
+      pointer-events: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(16, 185, 129, 0.3));
+      border: 1px solid rgba(59, 130, 246, 0.4);
+    }
+    
+    /* Christmas animation styles */
+    .christmas-pulse {
+      animation: christmasPulse 1.5s ease-in-out infinite;
+    }
+    
+    @keyframes christmasPulse {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.6;
+        transform: scale(1.2);
+      }
+    }
+    
+    .christmas-sparkle {
+      font-size: 14px;
+      animation: sparkleFloat 2s ease-in-out infinite;
+      pointer-events: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      vertical-align: middle;
+    }
+    
+    @keyframes sparkleFloat {
+      0%, 100% {
+        opacity: 0.5;
+        transform: translateY(0) scale(1);
+      }
+      50% {
+        opacity: 1;
+        transform: translateY(-2px) scale(1.1);
+      }
+    }
+    
+    /* Stop animation when clicked */
+    .tab-button.animation-stopped .christmas-pulse,
+    .tab-button.animation-stopped .christmas-sparkle {
+      animation: none;
+      opacity: 1;
     }
     /* @media (prefers-color-scheme: dark) {
       body {
@@ -90,8 +397,7 @@
     @keyframes gradientShift{0%{background-position:0 50%}50%{background-position:100% 50%}100%{background-position:0 50%}}
 
     /* === blurred YouTube background (if enabled) === */
-    .bg-video{position:fixed;inset:0;z-index:-3;overflow:hidden}
-    .bg-video iframe{width:100%;height:100%;pointer-events:none;filter:blur(25px) brightness(.35)}
+    /* Removed duplicate rule - using the one at line 59 with z-index: 0 */
 
     /* === player === */
     .player{
@@ -422,14 +728,65 @@
     .player p{font-size:10px;margin-bottom:20px}
     .player .title{margin-bottom:0}
     
+    /* Main Layout Container */
+    .main-layout-container {
+      display: grid;
+      grid-template-columns: 1fr 350px;
+      grid-template-rows: auto auto;
+      gap: 30px;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 30px 20px;
+      align-items: start;
+      min-height: calc(100vh - 60px);
+      box-sizing: border-box;
+    }
+    
     .player {
       width: 100%;
-      max-width: 1200px;
+      max-width: 800px;
       background-color: white;
       border: none!important;
       box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px;
       border-radius: 20px!important;
       padding: 30px!important;
+      grid-column: 1;
+      grid-row: 1;
+    }
+    
+    /* Sidebar Section */
+    .sidebar-section {
+      grid-column: 2;
+      grid-row: 1;
+      background-color: white;
+      border-radius: 20px;
+      padding: 25px;
+      box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px;
+      align-self: start;
+      position: sticky;
+      top: 30px;
+      max-height: calc(100vh - 60px);
+      overflow-y: auto;
+    }
+    
+    .sidebar-content {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .queue-section {
+      margin-bottom: 20px;
+    }
+    
+    /* Footer Section */
+    .footer-section {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      background-color: white;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px;
+      text-align: center;
     }
     
     .left-column {
@@ -466,9 +823,47 @@
       margin: 20px 0;
     }
     
+    @media screen and (max-width: 1200px) {
+      .main-layout-container {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+      }
+      
+      .sidebar-section {
+        grid-column: 1;
+        grid-row: 2;
+        max-height: none;
+        position: static;
+        top: auto;
+      }
+      
+      .footer-section {
+        grid-column: 1;
+        grid-row: 3;
+      }
+      
+      .player {
+        max-width: 100%;
+      }
+    }
+    
     @media screen and (max-width: 768px) {
+      .main-layout-container {
+        padding: 15px;
+        gap: 20px;
+      }
+      
       .player {
         padding: 20px!important;
+        max-width: 100%;
+      }
+      
+      .sidebar-section {
+        padding: 20px;
+      }
+      
+      .footer-section {
+        padding: 20px;
       }
       
       .right-column {
@@ -481,16 +876,6 @@
       }
     }
     
-    /* Start invisible */
-    body {
-      opacity: 0;
-      transition: opacity 0.8s ease-in;
-    }
-    
-    /* Become visible when JS says so */
-    body.loaded {
-      opacity: 1;
-    }
     
     .player:hover {
     /*     transform: scale(1.05); */
@@ -602,18 +987,6 @@
         opacity: .3
     }
     
-    #current-weather div:first-of-type:not(div div){
-        line-height:2em;
-        font-size: 14px!important;
-        font-weight: 800;
-        /* font-family: 'bookmania'; */
-        margin-top: 
-    }
-    
-    #current-weather div:first-of-type:not(div div) i {
-        line-height: 1em;
-        transform: translatey(2.5px)
-    }
             
             @media screen and (max-width: 990px) {
     
@@ -830,6 +1203,11 @@
       justify-content: center;
     }
 
+    /* Unset max-width for .max-w-lg */
+    .max-w-lg {
+      max-width: unset !important;
+    }
+
   </style>
   
   <style>
@@ -891,23 +1269,26 @@
     }
 }
 
-@media screen and (max-width: 1200px) {
 
-
-.player {
+@media screen and (max-width: 990px) {
+  .player {
     position: fixed!important;
     width: 100dvw!important;
     max-width: unset!important;
     margin: 0!important;
-    /* padding: 0!important; */
     height: 100dvh!important;
-    border-radius: 0!important
-}
+    border-radius: 0!important;
+    z-index: 100;
+  }
+  
+  .sidebar-section,
+  .footer-section {
+    display: none!important;
+  }
 
-#current-weather, #current-time {
-  display: none!important
-}
-
+  #current-time {
+    display: none!important
+  }
 }
 
 .modal-content {
@@ -933,11 +1314,81 @@
   })(window, document, "clarity", "script", "rbimvwhure");
 </script>
 
-<!-- Add Bootstrap CSS -->
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<!-- Add Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
 </head>
 
 <body>
+
+  <style>
+    /* customizable snowflake styling */
+    .snowflake {
+      color: #fff;
+      font-size: 1em;
+      font-family: Arial, sans-serif;
+      text-shadow: 0 0 5px #000;
+    }
+    
+    .snowflake,.snowflake .inner{animation-iteration-count:infinite;animation-play-state:running}@keyframes snowflakes-fall{0%{transform:translateY(0)}100%{transform:translateY(110vh)}}@keyframes snowflakes-shake{0%,100%{transform:translateX(0)}50%{transform:translateX(80px)}}.snowflake{position:fixed;top:-10%;z-index:9999;-webkit-user-select:none;user-select:none;cursor:default;pointer-events:none;animation-name:snowflakes-shake;animation-duration:3s;animation-timing-function:ease-in-out}.snowflake .inner{animation-duration:10s;animation-name:snowflakes-fall;animation-timing-function:linear}.snowflake:nth-of-type(0){left:1%;animation-delay:0s}.snowflake:nth-of-type(0) .inner{animation-delay:0s}.snowflake:first-of-type{left:10%;animation-delay:1s}.snowflake:first-of-type .inner,.snowflake:nth-of-type(8) .inner{animation-delay:1s}.snowflake:nth-of-type(2){left:20%;animation-delay:.5s}.snowflake:nth-of-type(2) .inner,.snowflake:nth-of-type(6) .inner{animation-delay:6s}.snowflake:nth-of-type(3){left:30%;animation-delay:2s}.snowflake:nth-of-type(11) .inner,.snowflake:nth-of-type(3) .inner{animation-delay:4s}.snowflake:nth-of-type(4){left:40%;animation-delay:2s}.snowflake:nth-of-type(10) .inner,.snowflake:nth-of-type(4) .inner{animation-delay:2s}.snowflake:nth-of-type(5){left:50%;animation-delay:3s}.snowflake:nth-of-type(5) .inner{animation-delay:8s}.snowflake:nth-of-type(6){left:60%;animation-delay:2s}.snowflake:nth-of-type(7){left:70%;animation-delay:1s}.snowflake:nth-of-type(7) .inner{animation-delay:2.5s}.snowflake:nth-of-type(8){left:80%;animation-delay:0s}.snowflake:nth-of-type(9){left:90%;animation-delay:1.5s}.snowflake:nth-of-type(9) .inner{animation-delay:3s}.snowflake:nth-of-type(10){left:25%;animation-delay:0s}.snowflake:nth-of-type(11){left:65%;animation-delay:2.5s}
+    </style>
+    <div class="snowflakes" aria-hidden="true">
+      <div class="snowflake">
+        <div class="inner">❅</div>
+      </div>
+      <div class="snowflake">
+        <div class="inner">❅</div>
+      </div>
+      <div class="snowflake">
+        <div class="inner">❅</div>
+      </div>
+      <div class="snowflake">
+        <div class="inner">❅</div>
+      </div>
+      <div class="snowflake">
+        <div class="inner">❅</div>
+      </div>
+      <div class="snowflake">
+        <div class="inner">❅</div>
+      </div>
+      <div class="snowflake">
+        <div class="inner">❅</div>
+      </div>
+      <div class="snowflake">
+        <div class="inner">❅</div>
+      </div>
+      <div class="snowflake">
+        <div class="inner">❅</div>
+      </div>
+      <div class="snowflake">
+        <div class="inner">❅</div>
+      </div>
+      <div class="snowflake">
+        <div class="inner">❅</div>
+      </div>
+      <div class="snowflake">
+        <div class="inner">❅</div>
+      </div>
+    </div>
+    
+  <!-- Christmas Lights Rope -->
+  <ul class="christmas-lights lightrope">
+    <li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li>
+    <li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li>
+    <li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li>
+    <li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li>
+  </ul>
+  
+  <!-- Background Video -->
+  <div class="bg-video" style="position: fixed; inset: 0; z-index: 0; overflow: hidden; width: 100vw; height: 100vh;">
+    <iframe 
+      src="https://www.youtube.com/embed/mSX3OyW9Rao?autoplay=1&loop=1&mute=1&playlist=mSX3OyW9Rao&controls=0&modestbranding=1&playsinline=1&rel=0&showinfo=0" 
+      frameborder="0" 
+      allow="autoplay; encrypted-media" 
+      allowfullscreen
+      style="position: absolute; top: 50%; left: 50%; width: 200dvw; height: 200dvh; min-width: 200dvw; min-height: 200dvh; transform: translate(-50%, -50%); pointer-events: none; filter: blur(25px) brightness(0.5); object-fit: cover;"
+    ></iframe>
+    <div style="position: absolute; inset: 0; background: rgba(0, 0, 0, 0.1); z-index: 1; width: 100%; height: 100%;"></div>
+  </div>
   
   <span id="current-time"></span>
 
@@ -985,7 +1436,7 @@
   <div class="modal-overlay" id="requestModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 class="modal-title">Request a Song</h2>
+        <h2 class="modal-title">Request a song</h2>
         <button class="modal-close" id="closeModal">×</button>
       </div>
       
@@ -1003,95 +1454,181 @@
     </div>
   </div>
 
-  <div class="player" data-aos="fade-up" data-aos-duration="1200" id="player">
-    <div class="row">
-      <!-- Left Column -->
-      <div class="col-md-6 left-column">
-        <div class="cd-case" id="cd-case">
-          <div class="sup pos-tl"></div>
-          <div class="sup pos-tr"></div>
-          <div class="sup pos-bl"></div>
-          <div class="sup pos-br"></div>
-          <div class="spine"></div>
-          <div class="album-art" id="album-art"></div>
+  <!-- Main Player Interface -->
+  <div class="min-h-screen text-zinc-100 antialiased flex items-center justify-center p-4 sm:p-6 lg:p-10" style="position: relative; z-index: 10; background: transparent;">
+    <div class="w-full max-w-5xl mx-auto" style="position: relative; z-index: 10;">
+      <!-- Shell -->
+      <div class="bg-zinc-900/80 border border-zinc-800 rounded-3xl shadow-2xl shadow-black/40 backdrop-blur-xl overflow-hidden" style="  position: relative; z-index: 10;">
+        <!-- Mode Toggle - Front and Center -->
+        <div class="flex items-center justify-between py-4 px-4 sm:px-6 border-b border-zinc-800/80">
+          <div class="flex-1"></div>
+          <div class="relative inline-flex items-center rounded-full bg-zinc-800/80 p-1.5 border border-zinc-700/50 overflow-visible">
+            <button id="tab-upnext" class="tab-button-toggle relative z-10 flex items-center gap-2.5 px-5 py-2.5 rounded-full text-sm sm:text-base font-medium transition-all duration-300 ease-out">
+              <span>Live radio</span>
+            </button>
+            <button id="tab-christmas" class="tab-button-toggle active relative z-10 flex items-center gap-2 px-5 py-2.5 rounded-full text-sm sm:text-base font-medium transition-all duration-300 ease-out overflow-visible">
+              <span class="christmas-sparkle" style="animation-delay: 0s;">🎄</span>
+              <span class="whitespace-nowrap">Christmas</span>
+              <span class="christmas-sparkle" style="animation-delay: 0.3s;">✨</span>
+            </button>
+            <div class="tab-slider absolute top-1.5 rounded-full transition-all duration-300 ease-out" style="height: calc(100% - 12px);"></div>
+          </div>
+          <div class="flex-1 flex justify-end">
+            <button id="openRequestModal" class="inline-flex items-center gap-1.5 rounded-full border border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/20 transition-colors text-[0.65rem] sm:text-xs text-sky-200 font-medium px-3 py-1.5">
+              <i class="fa-solid fa-music"></i>
+              <span>Request</span>
+            </button>
+          </div>
+        </div>
+        
+        <!-- Top bar -->
+        <div id="top-bar-title" class="flex flex-col items-center justify-center gap-2 border-b border-zinc-800/80 px-4 sm:px-6 py-4">
+          <div class="flex flex-col items-center gap-2">
+            <div class="flex items-center gap-2">
+              <h1 id="main-title" class="text-xl sm:text-2xl font-semibold tracking-tight text-zinc-50" style="font-size: 52px!important; font-weight: 800!important; margin-top: 20px; margin-bottom: 20px">
+                BC Radio
+              </h1>
+              <span class="inline-flex items-center rounded-full border border-emerald-500/50 bg-emerald-500/10 text-emerald-300 text-[0.65rem] sm:text-xs font-medium leading-none px-1.5 py-0.5 gap-1" id="live-indicator">
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                Live
+              </span>
+            </div>
+            <p class="text-xs sm:text-sm text-zinc-400 text-center">
+              Rarities &amp; Classics from Bernie Chiaravalle
+            </p>
+          </div>
         </div>
 
-        <p class="wordanim" style="letter-spacing:3px;font-weight:600;margin-top:20px;">BERNIE CHIARAVALLE</p>
+        <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(0,2.4fr)]">
+          <!-- Christmas Playlist Container (outside main player) -->
+          <div id="christmas-playlist-container" class="border-b lg:border-b-0 lg:border-r border-zinc-800/80 p-4 sm:p-6 lg:p-8 hidden" style="min-height: 400px;">
+            <!-- Christmas player embed will load here -->
+            <div id="acwebdev-player-70454fd3"></div>
+            <script src="https://player.acwebdev.net/embed.js?id=70454fd3" async></script>
+          </div>
+          
+          <!-- Now playing / artwork -->
+          <div id="main-player-section" class="border-b lg:border-b-0 lg:border-r border-zinc-800/80">
+            <div class="flex flex-col lg:flex-row gap-6 lg:gap-8 p-4 sm:p-6 lg:p-8">
+              <!-- Artwork & controls -->
+              <div class="relative w-full lg:w-2/5 flex flex-col">
+                <div class="relative w-full aspect-square max-w-sm mx-auto">
+                  <div class="aspect-square rounded-3xl bg-gradient-to-br from-violet-500 via-sky-400 to-emerald-400 overflow-hidden shadow-xl shadow-blue-900/50" id="album-art-container">
+                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(255,255,255,0.25),transparent_55%),radial-gradient(circle_at_80%_100%,rgba(15,23,42,0.96),rgba(15,23,42,1))]"></div>
+                    <div class="absolute inset-5 sm:inset-7 rounded-2xl border border-white/10 bg-zinc-950/30 backdrop-blur-md flex flex-col justify-between p-4 sm:p-5">
+                      <div class="flex flex-col gap-1.5">
+                        <span class="text-[0.65rem] sm:text-xs tracking-[0.18em] text-zinc-400 font-medium">
+                          Now playing
+                        </span>
+                        <span class="text-base sm:text-lg lg:text-xl font-semibold tracking-tight text-zinc-50 line-clamp-2" id="track-title">
+                          BC Radio Live Stream
+                        </span>
+                        <span class="text-xs sm:text-sm text-zinc-300" id="track-artist">
+                          Bernie Chiaravalle
+                        </span>
+                      </div>
+                      <div class="flex justify-between items-end">
+                        <div class="flex flex-col gap-1">
+                          <span class="text-[0.6rem] sm:text-xs text-zinc-400">
+                            BC Radio
+                          </span>
+                          <span class="text-xs sm:text-sm text-zinc-200">
+                            Live Stream
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="absolute inset-0" id="album-art" style="background-size: cover; background-position: center; opacity: 1;"></div>
+                    
+                    <!-- Prominent centered play/pause toggle button -->
+                    <button id="playpause-artwork" class="absolute inset-0 flex items-center justify-center z-10 group transition-opacity duration-300" style="opacity: 0.5;">
+                      <div class="h-24 w-24 sm:h-32 sm:w-32 rounded-full bg-zinc-50/95 backdrop-blur-sm shadow-2xl shadow-black/50 flex items-center justify-center hover:scale-110 transition-transform duration-200 border-4 border-zinc-100">
+                        <i class="fa-solid fa-play text-zinc-950 text-3xl sm:text-4xl ml-1" id="artwork-icon"></i>
+                      </div>
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- Meta + waveform -->
+              <div class="flex-1 flex flex-col justify-between gap-4 pt-8 lg:pt-0">
+                <div class="space-y-4">
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="flex flex-col">
+                      <span class="text-lg sm:text-xl lg:text-2xl font-semibold tracking-tight text-zinc-50" id="track-title-main">
+                        BC Radio Live Stream
+                      </span>
+                      <span class="text-sm sm:text-base text-zinc-300" id="track-artist-main">
+                        Bernie Chiaravalle
+                      </span>
+                      <span class="text-xs text-zinc-400 tracking-[0.18em] mt-2">
+                        Upcoming in this set
+                      </span>
+                    </div>
+                  </div>
+
+                </div>
+
+                <!-- Bottom info row -->
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <div class="flex items-center gap-3">
+                    <div class="h-8 w-8 rounded-full bg-zinc-800 flex items-center justify-center">
+                      <i class="fa-solid fa-globe w-4 h-4 text-zinc-300"></i>
+                    </div>
+                    <div class="flex flex-col">
+                      <span class="text-xs text-zinc-400 tracking-[0.18em]">
+                        Broadcast
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Upcoming queue -->
+          <div class="bg-zinc-950/40 h-full overflow-hidden">
+            <div class="h-full flex flex-col">
+
+              <!-- BC Radio Tab Content -->
+              <div id="tab-content-upnext" class="tab-content hidden flex-1 overflow-y-auto custom-scrollbar">
+                <div class="divide-y divide-zinc-800/80" id="queue-list">
+                  <!-- Items populated dynamically -->
+                </div>
+              </div>
+
+              <!-- Christmas Tab Content -->
+              <div id="tab-content-christmas" class="tab-content flex-1 overflow-y-auto custom-scrollbar">
+                <!-- Christmas player is in the visualizer area above -->
+              </div>
+
+              <!-- Footer -->
+              <div class="border-t border-zinc-800/80 px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2 text-[0.65rem] sm:text-xs text-zinc-400">
+                  <i class="fa-solid fa-clock"></i>
+                  <span id="session-info">Streaming 24/7</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <a href="https://music.apple.com/us/artist/bernie-chiaravalle/80848772" target="_blank" class="inline-flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900/80 hover:bg-zinc-800 transition-colors text-[0.65rem] sm:text-xs text-zinc-300 font-medium px-2.5 py-1.5">
+                    <i class="fab fa-apple"></i>
+                  </a>
+                  <a href="https://open.spotify.com/artist/4xt2hzGfXdXqKR2msI2gOj" target="_blank" class="inline-flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900/80 hover:bg-zinc-800 transition-colors text-[0.65rem] sm:text-xs text-zinc-300 font-medium px-2.5 py-1.5">
+                    <i class="fab fa-spotify"></i>
+                  </a>
+                  <a href="https://www.facebook.com/berniechiaravalle/" target="_blank" class="inline-flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900/80 hover:bg-zinc-800 transition-colors text-[0.65rem] sm:text-xs text-zinc-300 font-medium px-2.5 py-1.5">
+                    <i class="fab fa-facebook"></i>
+                  </a>
+                  <a href="https://www.instagram.com/bvchiaravalle/" target="_blank" class="inline-flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900/80 hover:bg-zinc-800 transition-colors text-[0.65rem] sm:text-xs text-zinc-300 font-medium px-2.5 py-1.5">
+                    <i class="fab fa-instagram"></i>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       
-      <!-- Right Column -->
-      <div class="col-md-6 right-column">
-        <div class="title-container">
-          <div class="title wordanim mb-4" id="track-title"></div>
-        </div>
-        
-        <div class="button-container my-0" style="display: flex; gap: 15px; align-items: center; justify-content: center;">
-          <button class="button-26" id="playpause" aria-label="Play / Pause">
-            <div class="button-26__content">
-              <i class="fa-solid fa-play" id="btn-icon"></i>
-              <span class="button-26__text" id="play-label">START&nbsp;RADIO</span>
-            </div>
-          </button>
-        </div>
-        
-        <div class="visualizer-container d-none">
-          <dotlottie-player
-            id="visLottie"
-            src="vis.lottie"
-            loop
-            speed="0.3"
-            style="width:100%;height:100%;display:none;">
-          </dotlottie-player>
-        </div>
-
-        <div id="upcoming"></div>
-        
-        <div class="icon-row" style="display: flex; gap: 20px; justify-content: center; align-items: center;">
-          <a href="https://music.apple.com/us/artist/bernie-chiaravalle/80848772" target="_blank" style="text-decoration: none; color: inherit;">
-            <i class="fab fa-apple"></i>
-          </a>
-          <a href="https://open.spotify.com/artist/4xt2hzGfXdXqKR2msI2gOj" target="_blank" style="text-decoration: none; color: inherit;">
-            <i class="fab fa-spotify"></i>
-          </a>
-          <a href="https://www.facebook.com/berniechiaravalle/" target="_blank" style="text-decoration: none; color: inherit;">
-            <i class="fab fa-facebook"></i>
-          </a>
-          <a href="https://www.instagram.com/bvchiaravalle/" target="_blank" style="text-decoration: none; color: inherit;">
-            <i class="fab fa-instagram"></i>
-          </a>
-          <a href="https://www.berniechiaravalle.com/" target="_blank" style="text-decoration: none; color: inherit;">
-            <i class="fa fa-link"></i>
-          </a>
-          <button id="share-song-btn" title="Share this song" style="background:none;border:none;cursor:pointer;font-size:22px;color:inherit;outline:none;display:none;padding:0;">
-            <i class="fa-regular fa-clipboard" id="share-icon"></i>
-          </button>
-        </div>
-        
-        <!-- Request Song Link -->
-        <div style="text-align: center; margin-top: 15px;">
-          <a href="#" id="openRequestModal" style="
-            background: linear-gradient(45deg, #ff006e, #8338ec, #3a86ff, #06ffa5, #ffbe0b);
-            background-size: 300% 100%;
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            -webkit-text-fill-color: transparent;
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 700;
-            letter-spacing: 1px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: inline-block;
-            position: relative;
-            animation: gradientFlow 3s ease-in-out infinite;
-            text-transform: uppercase;
-          " onmouseover="this.style.transform='scale(1.05)'; this.style.filter='brightness(1.2)'" 
-             onmouseout="this.style.transform='scale(1)'; this.style.filter='brightness(1)'">
-            <i class="fa-solid fa-music" style="margin-right: 6px; font-size: 12px;"></i>Request a Song
-          </a>
-        </div>
-      </div>
     </div>
   </div>
   
@@ -1099,7 +1636,7 @@
     <button id="toggle-theme" class="button-26" aria-label="Toggle Theme">
       <div class="button-26__content">
         <i class="fa-solid fa-circle-half-stroke"></i>
-        <span class="button-26__text">TOGGLE THEME</span>
+        <span class="button-26__text">Toggle theme</span>
       </div>
     </button>
   </div> -->
@@ -1428,105 +1965,55 @@
     
     /* ---------- dom refs ---------- */
     const playBtn=$('playpause'),
+          playBtnArtwork=$('playpause-artwork'),
           label=$('play-label'),
           icon=$('btn-icon'),
           titleEl=$('track-title'),
-          queueEl=$('upcoming'),
-          player=$('player'),
-          progressEl=$('progress'),
-          tPlayed=$('time-played'),
-          tLeft=$('time-left'),
-          lottiePlayer=$('visLottie');   /* ★ NEW ★ */
+          titleElMain=$('track-title-main'),
+          artistEl=$('track-artist'),
+          artistElMain=$('track-artist-main'),
+          queueEl=$('queue-list'),
+          queueContainer=$('tab-content-upnext'),
+          albumArtEl=$('album-art');
     
     const setBtn=(txt,ico)=>{
-      label.textContent=txt;
-      icon.className=`fa-solid fa-${ico}`;
+      if(label) label.textContent=txt;
+      if(icon) icon.className=`fa-solid fa-${ico}`;
+      updateArtworkButtonIcon();
     };
     
     /* ---------- UI helpers ---------- */
     function updateQueue(){
-      const n=[];for(let i=1;i<=3;i++)n.push(tidy(playlist[(idx+i)%playlist.length]));
-      queueEl.style.animation='none';void queueEl.offsetWidth;
-      queueEl.innerHTML=`<strong>Next up:</strong><br>${n.join('<br>')}`;
-      queueEl.style.animation='fadeIn .4s forwards';
+      if(!queueEl) return;
+      // For stream mode, queue is updated by fetchMetadata
+      // This is for playlist mode (not currently used)
     }
+    
     function fadeTitle(txt, src){
-      titleEl.style.animation='none';void titleEl.offsetWidth;
-      // If Random mp3s, add unreleased label
-      if(src && src.includes('Random%20mp3s')){
-        titleEl.innerHTML = `${txt}<p class=\"wordanim\" style=\"
-          margin-top:0px;
-          margin-bottom:0px;
-          letter-spacing:3px;
-          font-weight:800;
-          font-family:'Instrument Sans',sans-serif;
-          background: linear-gradient(90deg, #00c6ff 0%, #7f00ff 40%, #ff3a44 70%, #ff00cc 100%);
-          -webkit-background-clip: text;
-          background-clip: text;
-          color: transparent;
-          -webkit-text-fill-color: transparent;
-        \">UNRELEASED</p>`;
-      } else {
-        // Set the title only
-        titleEl.textContent = txt;
-        // Now check iTunes API for a result
-        const query = encodeURIComponent(`bernie chiaravalle ${txt}`);
-        fetch(`https://itunes.apple.com/search?term=${query}&entity=song&limit=1`)
-          .then(r => r.json())
-          .then(data => {
-            if (data.resultCount > 0 && data.results[0].trackViewUrl) {
-              // Add the button below the artist name in the left column
-              const btn = document.createElement('a');
-              const webUrl = data.results[0].trackViewUrl;
-              const itmssUrl = webUrl.replace(/^https:/, 'itmss:');
-              btn.href = '#';
-              btn.innerHTML = `<i class='fa fa-music' style='margin-right:4px;'></i>Add or Purchase`;
-              btn.style.display = 'block';
-              btn.style.margin = '18px auto 0 auto';
-              btn.style.maxWidth = '325px';
-              btn.style.padding = '8px 0';
-              btn.style.fontSize = '15px';
-              btn.style.fontFamily = 'Instrument Sans,sans-serif';
-              btn.style.fontWeight = '600';
-              btn.style.borderRadius = '6px';
-              btn.style.color = '#2F28CE';
-              btn.style.textDecoration = 'none';
-              btn.style.verticalAlign = 'middle';
-              btn.style.transition = 'background .2s';
-              btn.onclick = function(e) {
-                e.preventDefault();
-                // Try to open the Music app via itmss://, fallback to web
-                let opened = false;
-                const timeout = setTimeout(function() {
-                  if (!opened) window.open(webUrl, '_blank', 'noopener');
-                }, 800);
-                window.location = itmssUrl;
-                setTimeout(function() { opened = true; }, 100);
-              };
-              // Remove any previous button
-              const leftCol = document.querySelector('.left-column');
-              if (leftCol) {
-                const prevBtn = leftCol.querySelector('.itunes-btn');
-                if (prevBtn) prevBtn.remove();
-                // Insert after the .wordanim paragraph
-                const artistTag = leftCol.querySelector('.wordanim');
-                if (artistTag) {
-                  btn.classList.add('itunes-btn');
-                  artistTag.insertAdjacentElement('afterend', btn);
-                }
-              }
-            }
-          });
+      if(titleEl) titleEl.textContent = txt;
+      if(titleElMain) titleElMain.textContent = txt;
+      if(artistEl) artistEl.textContent = 'Bernie Chiaravalle';
+      if(artistElMain) artistElMain.textContent = 'Bernie Chiaravalle';
+    }
+    
+    function updateAlbumArt(url) {
+      if(albumArtEl && url) {
+        // Add fade transition
+        albumArtEl.style.transition = 'opacity 0.3s ease-in-out';
+        albumArtEl.style.opacity = '0';
+        setTimeout(() => {
+          albumArtEl.style.backgroundImage = `linear-gradient(rgba(255,255,255,0.15),rgba(255,255,255,0)), url('${url}')`;
+          albumArtEl.style.backgroundSize = 'cover';
+          albumArtEl.style.backgroundPosition = 'center';
+          albumArtEl.style.opacity = '1';
+        }, 150);
       }
-      titleEl.style.animation='fadeIn .4s forwards';
     }
     function updateProgress(){
+      // Progress tracking removed - no longer needed
       if(sound&&sound.playing()){
-        const cur=sound.seek(),dur=sound.duration();
-        progressEl.style.width=`${(cur/dur)*100}%`;
-        tPlayed.textContent=fmt(cur);tLeft.textContent=fmt(dur-cur);
+        progRAF=requestAnimationFrame(updateProgress);
       }
-      progRAF=requestAnimationFrame(updateProgress);
     }
     
     /* ---------- playback ---------- */
@@ -1579,19 +2066,27 @@
       fadeTitle(tidy(src), src);
       sound.play();
       lottiePlayer.play();
-      setBtn('PAUSE','pause');
+      setBtn('Pause','pause');
       updateQueue();
       updateProgress();
       showShareBtn();
     }
     
-    playBtn.addEventListener('click',()=>{
+    if(playBtn) {
+      playBtn.addEventListener('click', () => {
+        handlePlayPause();
+      });
+    }
+    
+    // Shared function for play/pause logic
+    function handlePlayPause() {
       if(!started){
         started=true;
         // Show loading bar
         document.getElementById('loadingBar').style.display = 'block';
-        setBtn('LOADING...','play');
-        titleEl.textContent = "Connecting to BC Radio...";
+        setBtn('Loading...','play');
+        if(titleEl) titleEl.textContent = "Connecting to BC Radio...";
+        if(titleElMain) titleElMain.textContent = "Connecting to BC Radio...";
         
         // Stream BC Radio instead of playlist
         if(sound) sound.unload();
@@ -1604,29 +2099,52 @@
           },
           onplay: () => {
             // Hide loading bar
-            document.getElementById('loadingBar').style.display = 'none';
-            setBtn('PAUSE','pause');
-            lottiePlayer.play();
-            titleEl.textContent = "BC Radio Live Stream";
+            const loadingBar = document.getElementById('loadingBar');
+            if(loadingBar) loadingBar.style.display = 'none';
+            setBtn('Pause','pause');
+            updateArtworkButtonIcon();
+            if(titleEl) titleEl.textContent = "BC Radio Live Stream";
+            if(titleElMain) titleElMain.textContent = "BC Radio Live Stream";
+            
+            // Try to connect to audio context for visualization
+            try {
+              if (sound && sound._sounds && sound._sounds[0]) {
+                const audioElement = sound._sounds[0]._node;
+                if (audioElement && !audioContext) {
+                  audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                  analyser = audioContext.createAnalyser();
+                  analyser.fftSize = 256;
+                  const source = audioContext.createMediaElementSource(audioElement);
+                  source.connect(analyser);
+                  dataArray = new Uint8Array(analyser.frequencyBinCount);
+                }
+              }
+            } catch (e) {
+              console.log('Could not connect audio context:', e);
+            }
             // Start fetching metadata
             fetchMetadata();
-            setInterval(fetchMetadata, 3000); // Update every 3 seconds
+            if(!window.metadataInterval) {
+              window.metadataInterval = setInterval(fetchMetadata, 3000); // Update every 3 seconds
+            }
           },
           onpause: () => {
-            setBtn('PLAY','play');
-            lottiePlayer.pause();
+            setBtn('Play','play');
+            showArtworkPlayButton();
           },
           onloaderror: (id, error) => {
             console.error('Stream load error:', error);
             document.getElementById('loadingBar').style.display = 'none';
-            setBtn('ERROR','exclamation-triangle');
-            titleEl.textContent = "Error loading stream";
+            setBtn('Error','exclamation-triangle');
+            if(titleEl) titleEl.textContent = "Error loading stream";
+            if(titleElMain) titleElMain.textContent = "Error loading stream";
           },
           onplayerror: (id, error) => {
             console.error('Stream play error:', error);
             document.getElementById('loadingBar').style.display = 'none';
-            setBtn('ERROR','exclamation-triangle');
-            titleEl.textContent = "Error playing stream";
+            setBtn('Error','exclamation-triangle');
+            if(titleEl) titleEl.textContent = "Error playing stream";
+            if(titleElMain) titleElMain.textContent = "Error playing stream";
           }
         });
         sound.play();
@@ -1635,14 +2153,65 @@
       
       if(sound.playing()){
         sound.pause();
-        lottiePlayer.pause();           /* ★ pause Lottie when audio pauses ★ */
-        setBtn('PLAY','play');
+        setBtn('Play','play');
+        showArtworkPlayButton();
       }else{
         sound.play();
-        lottiePlayer.play();            /* ★ resume Lottie with audio ★ */
-        setBtn('PAUSE','pause');
+        setBtn('Pause','pause');
+        hideArtworkPlayButton();
+        
+        // Try to connect to audio context for visualization
+        try {
+          if (sound && sound._sounds && sound._sounds[0]) {
+            const audioElement = sound._sounds[0]._node;
+            if (audioElement && !audioContext) {
+              audioContext = new (window.AudioContext || window.webkitAudioContext)();
+              analyser = audioContext.createAnalyser();
+              analyser.fftSize = 256;
+              const source = audioContext.createMediaElementSource(audioElement);
+              source.connect(analyser);
+              dataArray = new Uint8Array(analyser.frequencyBinCount);
+            }
+          }
+        } catch (e) {
+          console.log('Could not connect audio context:', e);
+        }
       }
-    });
+    }
+    
+    // Handle artwork play button
+    if(playBtnArtwork) {
+      playBtnArtwork.addEventListener('click', () => {
+        handlePlayPause();
+      });
+    }
+    
+    // Update artwork play button icon based on play state
+    function updateArtworkButtonIcon() {
+      const artworkIcon = document.getElementById('artwork-icon');
+      if (!artworkIcon || !playBtnArtwork) return;
+      
+      if (sound && sound.playing()) {
+        // Show pause icon
+        artworkIcon.className = 'fa-solid fa-pause text-zinc-950 text-3xl sm:text-4xl';
+        playBtnArtwork.style.opacity = '0.5';
+        playBtnArtwork.style.pointerEvents = 'auto';
+      } else {
+        // Show play icon
+        artworkIcon.className = 'fa-solid fa-play text-zinc-950 text-3xl sm:text-4xl ml-1';
+        playBtnArtwork.style.opacity = '0.5';
+        playBtnArtwork.style.pointerEvents = 'auto';
+      }
+    }
+    
+    // Keep for backward compatibility
+    function hideArtworkPlayButton() {
+      updateArtworkButtonIcon();
+    }
+    
+    function showArtworkPlayButton() {
+      updateArtworkButtonIcon();
+    }
     
     /* space-bar hotkey */
     document.addEventListener('keydown',e=>{
@@ -1650,6 +2219,144 @@
         e.preventDefault();playBtn.click();
       }
     });
+    
+    /* ========== Tab System ========== */
+    let christmasScriptLoaded = false;
+    const tabUpnext = document.getElementById('tab-upnext');
+    const tabChristmas = document.getElementById('tab-christmas');
+    const contentUpnext = document.getElementById('tab-content-upnext');
+    const contentChristmas = document.getElementById('tab-content-christmas');
+    const christmasContainer = document.getElementById('christmas-player-container');
+    
+    function switchTab(tab) {
+      // Remove active class from all tabs
+      if(tabUpnext) tabUpnext.classList.remove('active');
+      if(tabChristmas) tabChristmas.classList.remove('active');
+      
+      // Hide all content
+      if(contentUpnext) contentUpnext.classList.add('hidden');
+      if(contentChristmas) contentChristmas.classList.add('hidden');
+      
+      // Update slider position based on actual button dimensions
+      const slider = document.querySelector('.tab-slider');
+      if (slider) {
+        const activeButton = tab === 'upnext' ? tabUpnext : tabChristmas;
+        if (activeButton) {
+          // Use requestAnimationFrame to ensure layout is complete
+          requestAnimationFrame(() => {
+            const container = activeButton.parentElement;
+            if (container) {
+              const buttonRect = activeButton.getBoundingClientRect();
+              const containerRect = container.getBoundingClientRect();
+              const relativeLeft = buttonRect.left - containerRect.left;
+              const padding = 3; // Match the padding in the container (p-1.5 = 6px, so 3px on each side)
+              slider.style.width = `${buttonRect.width - (padding * 2)}px`;
+              slider.style.left = `${relativeLeft + padding}px`;
+            }
+          });
+        }
+      }
+      
+      // Get player elements
+      const mainPlayerSection = document.getElementById('main-player-section');
+      const christmasPlaylistContainer = document.getElementById('christmas-playlist-container');
+      const christmasPlayerContainer = document.getElementById('christmas-player-container');
+      
+      // Update title based on active tab and show/hide top bar
+      const topBarTitle = document.getElementById('top-bar-title');
+      const mainTitle = document.getElementById('main-title');
+      
+      if (tab === 'upnext') {
+        // Hide top bar title section on Live radio tab
+        if(topBarTitle) topBarTitle.classList.add('hidden');
+        if (mainTitle) {
+          mainTitle.textContent = 'BC Radio';
+        }
+      } else if (tab === 'christmas') {
+        // Show top bar title section on Christmas tab
+        if(topBarTitle) topBarTitle.classList.remove('hidden');
+        if (mainTitle) {
+          mainTitle.textContent = 'BC Radio: Holiday edition';
+        }
+      }
+      
+      if (tab === 'upnext') {
+        if(tabUpnext) tabUpnext.classList.add('active');
+        if(contentUpnext) contentUpnext.classList.remove('hidden');
+        
+        // Show main player, hide Christmas players
+        if(mainPlayerSection) mainPlayerSection.classList.remove('hidden');
+        if(christmasPlaylistContainer) {
+          christmasPlaylistContainer.classList.add('hidden');
+          christmasPlaylistContainer.style.display = 'none';
+        }
+        if(christmasPlayerContainer) christmasPlayerContainer.classList.add('hidden');
+      } else if (tab === 'christmas') {
+        if(tabChristmas) tabChristmas.classList.add('active');
+        if(contentChristmas) contentChristmas.classList.remove('hidden');
+        
+        // Stop animation on click
+        if(tabChristmas) tabChristmas.classList.add('animation-stopped');
+        
+        // Hide main player, show Christmas players
+        if(mainPlayerSection) mainPlayerSection.classList.add('hidden');
+        if(christmasPlaylistContainer) {
+          christmasPlaylistContainer.classList.remove('hidden');
+          christmasPlaylistContainer.style.display = '';
+        }
+        if(christmasPlayerContainer) christmasPlayerContainer.classList.remove('hidden');
+      }
+    }
+    
+    if (tabUpnext) {
+      tabUpnext.addEventListener('click', () => switchTab('upnext'));
+    }
+    
+    if (tabChristmas) {
+      tabChristmas.addEventListener('click', () => switchTab('christmas'));
+    }
+    
+    // Scale background video to always fill screen
+    function scaleBackgroundVideo() {
+      const iframe = document.querySelector('.bg-video iframe');
+      if (!iframe) return;
+      
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const videoWidth = viewportWidth * 2; // 200dvw = 2x viewport width
+      const videoHeight = viewportHeight * 2; // 200dvh = 2x viewport height
+      
+      // Calculate scale to ensure video always covers viewport
+      const scaleX = viewportWidth / videoWidth;
+      const scaleY = viewportHeight / videoHeight;
+      const scale = Math.max(scaleX, scaleY) * 1.1; // 1.1 for extra coverage
+      
+      iframe.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    }
+    
+    // Update scale on window resize
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(scaleBackgroundVideo, 100);
+    });
+    
+    // Set Christmas as default on page load
+    // Wait for DOM to be fully ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        if (tabChristmas && contentChristmas) {
+          switchTab('christmas');
+        }
+        scaleBackgroundVideo();
+      });
+    } else {
+      // DOM already loaded
+      if (tabChristmas && contentChristmas) {
+        switchTab('christmas');
+      }
+      scaleBackgroundVideo();
+    }
     
     /* ========== BC Radio Metadata Fetcher ========== */
     async function fetchMetadata() {
@@ -1663,61 +2370,67 @@
         const playingNext = station.playing_next;
         const songHistory = station.song_history || [];
 
-        // Helper to render a song row
-        function renderSongRow(songObj, isCurrent = false) {
-          if (!songObj) return '';
+        // Build the queue list in new format
+        let queueHtml = '';
+        const queueItems = [];
+        if (playingNext) queueItems.push(playingNext);
+        songHistory.slice(0, 3).forEach(h => queueItems.push(h));
+        
+        queueItems.forEach((songObj, index) => {
+          if (!songObj) return;
           const song = songObj.song || {};
-          const isRequest = songObj.is_request;
-          // const art = song.art || 'https://via.placeholder.com/32x32?text=♪'; // Remove artwork
           let title = song.title || song.text || 'Unknown Track';
           title = removePrefixedNumbers(title);
           title = titleCaseExceptPronouns(title);
           const artist = song.artist || 'Bernie Chiaravalle';
-          const prefix = isRequest ? `<span class='listener-request-prefix'>LISTENER REQUEST:</span><br>` : '';
-          const titleClass = isRequest ? 'listener-request' : '';
-          const currentClass = isCurrent ? 'current-song' : '';
-          // Only show 'by ARTIST' if artist is not exactly 'Bernie Chiaravalle'
-          const artistHtml = artist !== 'Bernie Chiaravalle' ? ` <span style='color:#888;font-size:0.95em;'>by ${artist}</span>` : '';
-          return `<li class='${currentClass}'>
-            <span>${prefix}<span class='${titleClass}'>${title}</span>${artistHtml}</span>
-          </li>`;
-        }
-
-        // Build the queue list: only upcoming and previous songs (not current)
-        let queueHtml = `<ul class='queue-list queue-centered'>`;
-        if (playingNext) queueHtml += renderSongRow(playingNext, false);
-        // Show up to 3 previous songs
-        songHistory.slice(0, 2).forEach(h => {
-          queueHtml += renderSongRow(h, false);
+          const isRequest = songObj.is_request;
+          
+          queueHtml += `
+            <button class="w-full flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3.5 hover:bg-zinc-900/70 transition-colors text-left">
+              <div class="relative h-10 w-10 rounded-xl bg-gradient-to-br from-sky-400 via-violet-500 to-fuchsia-500 overflow-hidden">
+                <div class="absolute inset-0 opacity-60 bg-[radial-gradient(circle_at_30%_10%,rgba(255,255,255,0.6),transparent_55%)]"></div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                  <i class="fa-solid fa-music w-4 h-4 text-zinc-50"></i>
+                </div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="text-sm sm:text-base font-medium text-zinc-100 truncate">${title}</p>
+                    <p class="text-xs sm:text-sm text-zinc-400 truncate">${artist}</p>
+                  </div>
+                </div>
+              </div>
+            </button>
+          `;
         });
-        queueHtml += `</ul>`;
 
         // Update the queue element
-        const queueEl = document.getElementById('upcoming');
         if (queueEl) {
-          queueEl.innerHTML = `<strong style='display:block;text-align:center;margin-bottom:20px;'>COMING UP:</strong>${queueHtml}`;
-          queueEl.style.display = 'block';
-          queueEl.style.animation = 'fadeIn .4s forwards';
+          queueEl.innerHTML = queueHtml;
         }
 
-        // Update main title and album art as before
-        let songTitle = nowPlaying.song.title || nowPlaying.song.text || 'Unknown Track';
+        // Update main title and album art
+        let songTitle = nowPlaying.song.title || nowPlaying.song.text || 'BC Radio Live Stream';
         songTitle = removePrefixedNumbers(songTitle);
         songTitle = titleCaseExceptPronouns(songTitle);
         const artist = nowPlaying.song.artist || 'Bernie Chiaravalle';
-        const titleEl = document.getElementById('track-title');
+        
         if (titleEl) {
-          if (nowPlaying.is_request) {
-            titleEl.innerHTML = `<span class='listener-request-prefix'>LISTENER REQUEST: <br></span> <span class='listener-request'>${songTitle}</span>`;
-          } else {
-            titleEl.textContent = songTitle;
-          }
+          titleEl.textContent = songTitle;
         }
+        if (titleElMain) {
+          titleElMain.textContent = songTitle;
+        }
+        if (artistEl) {
+          artistEl.textContent = artist;
+        }
+        if (artistElMain) {
+          artistElMain.textContent = artist;
+        }
+        
         if (nowPlaying.song.art) {
-          const albumArt = document.getElementById('album-art');
-          if (albumArt) {
-            albumArt.style.backgroundImage = `linear-gradient(rgba(255,255,255,0.15),rgba(255,255,255,0)), url('${nowPlaying.song.art}')`;
-          }
+          updateAlbumArt(nowPlaying.song.art);
         }
       } catch (error) {
         console.error('Error fetching metadata:', error);
@@ -2210,103 +2923,6 @@
   
   
 <script>
-  // === Weather by IP - Full Current + 6-Hour Forecast ===
-  async function fetchWeather() {
-    try {
-      const ipInfo = await fetch('https://ipapi.co/json/').then(r => r.json());
-      const city = ipInfo.city;
-      const lat = ipInfo.latitude;
-      const lon = ipInfo.longitude;
-  
-      const weatherInfo = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,weathercode&temperature_unit=fahrenheit&timezone=auto`)
-        .then(r => r.json());
-  
-      const weatherSpan = document.getElementById('current-weather');
-      const temp = Math.round(weatherInfo.current_weather.temperature);
-      const desc = weatherInfo.current_weather.weathercode;
-  
-      const hourlyTimes = weatherInfo.hourly.time;
-      const hourlyTemps = weatherInfo.hourly.temperature_2m;
-      const hourlyCodes = weatherInfo.hourly.weathercode;
-  
-      const now = new Date();
-      const currentHour = now.getHours();
-  
-      // Main current weather
-      let descText = "";
-      let iconClass = "";
-  
-      switch (desc) {
-        case 0: descText = "Clear Sky"; iconClass = "fa-sharp fa-light fa-brightness"; break;
-        case 1: case 2: case 3: descText = "Partly Cloudy"; iconClass = "fa-sharp fa-light fa-cloud-sun"; break;
-        case 45: case 48: descText = "Foggy"; iconClass = "fa-sharp fa-light fa-smog"; break;
-        case 51: case 53: case 55: descText = "Drizzle"; iconClass = "fa-sharp fa-light fa-cloud-drizzle"; break;
-        case 61: case 63: case 65: descText = "Rain"; iconClass = "fa-sharp fa-light fa-cloud-showers-heavy"; break;
-        case 66: case 67: descText = "Freezing Rain"; iconClass = "fa-sharp fa-light fa-cloud-meatball"; break;
-        case 71: case 73: case 75: descText = "Snow"; iconClass = "fa-sharp fa-light fa-snowflake"; break;
-        case 80: case 81: case 82: descText = "Showers"; iconClass = "fa-sharp fa-light fa-cloud-rain"; break;
-        case 95: descText = "Thunderstorm"; iconClass = "fa-sharp fa-light fa-bolt"; break;
-        default: descText = "Weird Weather"; iconClass = "fa-sharp fa-light fa-question";
-      }
-  
-      let mainHTML = `
-        <div style="margin-bottom:10px; text-align: right " >
-          <i class="${iconClass}" style="font-size:20px;margin-right:8px;"></i>
-          ${city}, ${descText}, ${temp}°F
-        </div>
-        <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:10px;">
-      `;
-  
-      // Grab next 6 hours starting from now
-      for (let i = 0; i < 6; i++) {
-        const forecastIndex = i + weatherInfo.hourly.time.findIndex(t => {
-          const date = new Date(t);
-          return date.getHours() === currentHour;
-        });
-  
-        const hourTime = new Date(hourlyTimes[forecastIndex]);
-        const hour = hourTime.getHours();
-        const formattedHour = hour === 0 ? "12a" : hour < 12 ? `${hour}a` : hour === 12 ? "12p" : `${hour-12}p`;
-  
-        const tempF = Math.round(hourlyTemps[forecastIndex]);
-        const code = hourlyCodes[forecastIndex];
-  
-        let hourIcon = "";
-        switch (code) {
-          case 0: hourIcon = "fa-sharp fa-light fa-brightness"; break;
-          case 1: case 2: case 3: hourIcon = "fa-sharp fa-light fa-cloud-sun"; break;
-          case 45: case 48: hourIcon = "fa-sharp fa-light fa-smog"; break;
-          case 51: case 53: case 55: hourIcon = "fa-sharp fa-light fa-cloud-drizzle"; break;
-          case 61: case 63: case 65: hourIcon = "fa-sharp fa-light fa-cloud-showers-heavy"; break;
-          case 66: case 67: hourIcon = "fa-sharp fa-light fa-cloud-meatball"; break;
-          case 71: case 73: case 75: hourIcon = "fa-sharp fa-light fa-snowflake"; break;
-          case 80: case 81: case 82: hourIcon = "fa-sharp fa-light fa-cloud-rain"; break;
-          case 95: hourIcon = "fa-sharp fa-light fa-bolt"; break;
-          default: hourIcon = "fa-sharp fa-light fa-question";
-        }
-  
-        mainHTML += `
-          <div style="text-align:center;font-size:12px;">
-            <div style="font-weight:600;">${formattedHour}</div>
-            <i class="${hourIcon}" style="font-size:18px;margin:4px 0;"></i>
-          </div>
-        `;
-      }
-  
-      mainHTML += `</div>`;
-  
-      weatherSpan.innerHTML = mainHTML;
-  
-    } catch (error) {
-      console.error('Weather fetch error:', error);
-      document.getElementById('current-weather').innerHTML = `
-        <i class="fa-sharp fa-light fa-triangle-exclamation" style="font-size:20px;margin-right:8px;"></i>
-        Weather unavailable
-      `;
-    }
-  }
-  
-  document.addEventListener('DOMContentLoaded', fetchWeather);
   </script>  
   <script>
     gsap.registerPlugin(SplitText);
@@ -2332,20 +2948,13 @@
     AOS.init();
   </script>
   
-    <script>
-    // Wait until the DOM tree is built, then reveal everything
-    document.addEventListener('DOMContentLoaded', function () {
-      document.body.classList.add('loaded');
-    });
-  </script>
   
-  <span id="current-weather" style="position:fixed;top:10px;right:10px;font-size:14px;font-weight:600;"></span>
 
   <!-- Full Queue Modal -->
   <div id="queue-modal" style="display:none;position:fixed;z-index:99999;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.75);backdrop-filter:blur(2px);align-items:center;justify-content:center;">
     <div style="background:#fff;padding:32px 24px 24px 24px;border-radius:16px;max-width:90vw;max-height:80vh;overflow:auto;box-shadow:0 8px 32px rgba(0,0,0,0.25);position:relative;">
       <button id="close-queue-modal" style="position:absolute;top:12px;right:16px;font-size:22px;background:none;border:none;cursor:pointer;color:#888">&times;</button>
-      <h2 style="margin-top:0;text-align:center;font-size:1.5em;">Full Queue</h2>
+      <h2 style="margin-top:0;text-align:center;font-size:1.5em;">Full queue</h2>
       <ul id="queue-list" style="list-style:none;padding:0;margin:0;max-width:400px;"></ul>
       <div style="font-size:13px;color:#888;text-align:center;margin-top:12px;">Double-click a song to play it instantly</div>
     </div>
