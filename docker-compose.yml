@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  azuracast:
+    image: ghcr.io/azuracast/azuracast:latest
+    container_name: azuracast
+    ports:
+      - "8080:80"  # AzuraCast web interface on port 8080 to avoid conflict with Caddy
+      - "443:443"
+      - "2022:2022"
+      - "8000-8999:8000-8999"
+    volumes:
+      - azuracast_db:/var/azuracast/db
+      - azuracast_influxdb:/var/azuracast/influxdb
+      - azuracast_station_data:/var/azuracast/stations
+      - azuracast_shoutcast2:/var/azuracast/servers/shoutcast2
+      - azuracast_stereo_tool:/var/azuracast/servers/stereo_tool
+      - azuracast_geolite:/var/azuracast/geoip
+      - azuracast_sftpgo:/var/azuracast/sftpgo
+      - azuracast_backups:/var/azuracast/backups
+      - ./music:/var/azuracast/www_tmp/music
+      - ./uploads:/var/azuracast/uploads
+    environment:
+      - AZURACAST_DC_REVISION=17
+      - AZURACAST_VERSION=latest
+      - AZURACAST_SFTP_PORT=2022
+      - NGINX_RADIO_PORTS=8000-8999
+      - NGINX_WEBDJ_PORTS=8010-8019
+      - COMPOSER_PLUGIN_MODE=false
+      - ADDITIONAL_MEDIA_SYNC_WORKER_COUNT=1
+    restart: unless-stopped
+    logging:
+      options:
+        max-size: "1m"
+        max-file: "5"
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    sysctls:
+      - net.core.somaxconn=65535
+
+volumes:
+  azuracast_db: {}
+  azuracast_influxdb: {}
+  azuracast_station_data: {}
+  azuracast_shoutcast2: {}
+  azuracast_stereo_tool: {}
+  azuracast_geolite: {}
+  azuracast_sftpgo: {}
+  azuracast_backups: {}
