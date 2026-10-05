@@ -10,6 +10,7 @@
  */
 (function () {
   const API = '/api';
+  const STATE_URL = 'https://media.bcradio.net/state/now.json';
   const SILENT = 'data:audio/mpeg;base64,//tAwAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAALAAAFMwA3Nzc3Nzc3NzdLS0tLS0tLS0tfX19fX19fX19zc3Nzc3Nzc3OHh4eHh4eHh4ebm5ubm5ubm5uvr6+vr6+vr6/Dw8PDw8PDw8PX19fX19fX19fr6+vr6+vr6+v///////////8AAAAATGF2YzYzLjEuAAAAAAAAAAAAAAAAJAQvAAAAAAAABTP1AW8ZAAAAAAD/+xDEAAPAAAGkAAAAIAAANIAAAARMQU1FNC4wVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTQuMFVVVf/7EsQpg8AAAaQAAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTQuMFVVVf/7EMRTg8AAAaQAAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FNC4wVVVV//sSxH0DwAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FNC4wVVVV//sQxKcDwAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUU0LjBVVVX/+xLE0IPAAAGkAAAAIAAANIAAAARVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/+xDE1gPAAAGkAAAAIAAANIAAAARVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7EsTVg8AAAaQAAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7EMTWA8AAAaQAAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//sSxNWDwAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//sQxNYDwAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU=';
   const listeners = {};
   const emit = (e, d) => (listeners[e] || []).forEach(fn => { try { fn(d); } catch (err) { console.error(err); } });
@@ -24,6 +25,7 @@
     const { now } = await r.json();
     const rtt = performance.now() - t0;
     const est = now - (Date.now() - rtt / 2);
+    if (!(now > 1e12)) return;
     const stale = Date.now() - bestAt > 600000;
     if (rtt <= bestRtt || stale || Math.abs(est - offsetMs) > 1500) {
       bestRtt = rtt; bestAt = Date.now(); offsetMs = est;
@@ -36,18 +38,32 @@
 
   // ---------- station state ----------
   let state = null, lastStateAt = 0;
+  // Normal path: the published schedule file on R2 (no server work at all).
+  // If it is missing, or runs out within 10 minutes, ask the API, which also
+  // extends the schedule and republishes the file for everyone.
   async function fetchState(fresh) {
-    const r = await fetch(API + '/now' + (fresh ? '?fresh=1&_=' + Math.random() : ''), { cache: 'no-store' });
-    if (!r.ok) throw new Error('now ' + r.status);
-    setState(await r.json());
+    let s = null;
+    try {
+      const r = await fetch(STATE_URL + '?_=' + Math.floor(Date.now() / 5000), { cache: 'no-store' });
+      if (r.ok) s = await r.json();
+    } catch (e) {}
+    const t = serverNow();
+    const lastEnd = s && s.items && s.items.length ? s.items[s.items.length - 1].end_ms : 0;
+    if (!s || !s.items || lastEnd - t < 600000 || !s.items.some(i => i.start_ms <= t && t < i.end_ms)) {
+      const r = await fetch(API + '/now?_=' + Math.random(), { cache: 'no-store' });
+      if (!r.ok) throw new Error('now ' + r.status);
+      s = await r.json();
+    }
+    setState(s);
     return state;
   }
   function setState(s) {
     if (!s || !s.now) return;
+    if (!s.items) s.items = [...(s.history || []).slice().reverse(), s.current, ...(s.next || [])].filter(Boolean);
     state = s; lastStateAt = Date.now();
     emit('state', state);
   }
-  const timeline = () => state ? [...(state.history || []).slice().reverse(), state.current, ...(state.next || [])].filter(Boolean) : [];
+  const timeline = () => state && state.items ? state.items : [];
   const itemAt = t => timeline().find(i => i.start_ms <= t && t < i.end_ms) || null;
   const itemAfter = item => timeline().find(i => i.start_ms >= item.end_ms - 5) || null;
   function upcoming(n = 4) {
@@ -173,7 +189,10 @@
     const el = A();
     if (now >= activeItem.end_ms - 60) { handoff(false); return; }
     // keep the schedule fresh while on air (a request may re-plan the future)
-    if (Date.now() - lastStateAt > 40000) { lastStateAt = Date.now(); fetchState(false).catch(() => {}); }
+    const left = activeItem.end_ms - now;
+    if ((Date.now() - lastStateAt > 120000) || (left < 45000 && left > 5000 && Date.now() - lastStateAt > 30000)) {
+      lastStateAt = Date.now(); fetchState(false).catch(() => {});
+    }
     const nxt = itemAfter(activeItem);
     if (nxt && key(preparedItem) !== key(nxt) && activeItem.end_ms - now < 45000) {
       preparedItem = nxt;
@@ -274,7 +293,7 @@
   }
   syncClock().catch(() => {});
   poll();
-  setInterval(() => { if (!document.hidden && !wantPlaying) poll(); }, 60000);
+  setInterval(() => { if (!document.hidden && !wantPlaying) poll(); }, 20000);
   setInterval(() => syncClock(2).catch(() => {}), 600000);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) return;

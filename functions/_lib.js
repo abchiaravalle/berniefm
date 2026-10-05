@@ -4,7 +4,8 @@
 // so all browsers play the same track at the same position.
 
 export const MEDIA = 'https://media.bcradio.net/';
-export const HORIZON_MS = 30 * 60 * 1000;     // keep >= 30 min scheduled ahead
+export const HORIZON_MS = 2 * 3600 * 1000;    // keep >= 2 h scheduled ahead (published to R2 as a static file)
+export const STATE_KEY = 'state/now.json';
 export const HISTORY_KEEP_MS = 3 * 24 * 3600 * 1000;
 export const NO_REPEAT_TRACK_MS = 4 * 3600 * 1000; // request blocked if played within 4h (matches old station feel)
 export const GAP_MS = 0;                      // back-to-back, no dead air
@@ -88,8 +89,9 @@ async function pickRotation(env, excludeIds, recentGroups) {
 // Extend the schedule so it reaches now + HORIZON_MS. Safe under concurrency:
 // each slot is INSERT OR IGNORE keyed on seq; a racing worker that loses simply
 // re-reads. Pending listener requests are slotted first (FIFO).
-export async function ensureSchedule(env, now = Date.now()) {
-  for (let guard = 0; guard < 40; guard++) {
+export async function ensureSchedule(env, now = Date.now(), { publish = true } = {}) {
+  let added = 0;
+  for (let guard = 0; guard < 120; guard++) {
     const { results: tails } = await env.DB.prepare(
       'SELECT s.seq, s.start_ms, s.dur_ms, s.track_id, t.grp FROM schedule s LEFT JOIN tracks t ON t.id=s.track_id ORDER BY s.seq DESC LIMIT 3'
     ).all();
@@ -105,7 +107,7 @@ export async function ensureSchedule(env, now = Date.now()) {
       // restart the clock at now rather than "catching up" through dead slots.
       if (nextStart < now) nextStart = now;
     }
-    if (nextStart > now + HORIZON_MS) return;
+    if (nextStart > now + HORIZON_MS) break;
 
     // Requests first
     const req = await env.DB.prepare(
@@ -119,7 +121,7 @@ export async function ensureSchedule(env, now = Date.now()) {
         'SELECT track_id FROM schedule WHERE start_ms >= ?1'
       ).bind(now - 6 * 3600 * 1000).all();
       const t = await pickRotation(env, new Set(upcoming.map(u => u.track_id)), recentGroups);
-      if (!t) return;
+      if (!t) break;
       trackId = t.id; durMs = t.dur_ms;
     }
     // Conditional insert: only lands if the tail we planned from still exists
@@ -130,6 +132,7 @@ export async function ensureSchedule(env, now = Date.now()) {
        SELECT ?1,?2,?3,?4,?5,?6 WHERE (?7 = 0) OR EXISTS (SELECT 1 FROM schedule WHERE seq=?7 AND start_ms=?8)`
     ).bind(nextSeq, trackId, nextStart, durMs, requestId, now, tail ? tail.seq : 0, tail ? tail.start_ms : 0).run();
     if (ins.meta && ins.meta.changes === 1) {
+      added++;
       const stmts = [
         env.DB.prepare('UPDATE tracks SET last_played_ms=?1, plays=plays+1 WHERE id=?2').bind(nextStart, trackId),
       ];
@@ -140,6 +143,8 @@ export async function ensureSchedule(env, now = Date.now()) {
     }
     // loop: re-read tail (either ours or the racer's)
   }
+  if (added && publish) await publishState(env, now);
+  return added;
 }
 
 export async function pruneHistory(env, now = Date.now()) {
@@ -164,22 +169,43 @@ export function trackOut(row) {
   };
 }
 
-// Full station state at `now`: current item + offset, upcoming, recent history.
-export async function stationState(env, now = Date.now()) {
-  await ensureSchedule(env, now);
+// Timeline around `now`: last few finished items + everything scheduled ahead.
+export async function buildState(env, now = Date.now()) {
   const cols = 's.seq, s.start_ms, s.dur_ms, s.request_id, t.id, t.title, t.artist, t.album, t.art, t.file';
-  const { results: around } = await env.DB.prepare(
+  const { results } = await env.DB.prepare(
     `SELECT ${cols} FROM schedule s JOIN tracks t ON t.id=s.track_id
-     WHERE s.start_ms > ?1 - 7200000 ORDER BY s.start_ms ASC LIMIT 40`
-  ).bind(now).all();
-  const items = around.map(r => ({
+     WHERE s.start_ms + s.dur_ms > ?1 ORDER BY s.start_ms ASC LIMIT 80`
+  ).bind(now - 3600000).all();
+  let items = results.map(r => ({
     seq: r.seq, start_ms: r.start_ms, end_ms: r.start_ms + r.dur_ms, is_request: !!r.request_id, track: trackOut(r),
   }));
   let curIdx = items.findIndex(i => i.start_ms <= now && now < i.end_ms);
   if (curIdx < 0) curIdx = items.findIndex(i => i.start_ms > now);
-  const current = items[curIdx] || null;
-  const next = curIdx >= 0 ? items.slice(curIdx + 1, curIdx + 6) : [];
-  const history = curIdx > 0 ? items.slice(Math.max(0, curIdx - 5), curIdx).reverse() : [];
+  if (curIdx > 5) items = items.slice(curIdx - 5);
+  return { now, items };
+}
+
+// Everyone's player reads this static file from R2 (media.bcradio.net), so
+// listening never costs a server call. Rewritten whenever the schedule changes.
+export async function publishState(env, now = Date.now()) {
+  const st = await buildState(env, now);
+  st.generated_ms = now;
+  await env.MEDIA.put(STATE_KEY, JSON.stringify(st), {
+    httpMetadata: { contentType: 'application/json; charset=utf-8', cacheControl: 'public, max-age=5' },
+  });
+  return st;
+}
+
+// Full station state at `now` (current / next / history views on top of items).
+export async function stationState(env, now = Date.now()) {
+  await ensureSchedule(env, now);
+  const st = await buildState(env, now);
+  const items = st.items;
+  let curIdx = items.findIndex(i => i.start_ms <= now && now < i.end_ms);
+  if (curIdx < 0) curIdx = items.findIndex(i => i.start_ms > now);
+  st.current = items[curIdx] || null;
+  st.next = curIdx >= 0 ? items.slice(curIdx + 1, curIdx + 6) : [];
+  st.history = curIdx > 0 ? items.slice(Math.max(0, curIdx - 5), curIdx).reverse() : [];
   pruneHistory(env, now);
-  return { now, current, next, history };
+  return st;
 }

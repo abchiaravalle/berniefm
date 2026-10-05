@@ -1,11 +1,11 @@
-import { json, ipHash, limited, verifyTurnstile, ensureSchedule, stationState, NO_REPEAT_TRACK_MS } from '../_lib.js';
+import { json, ipHash, limited, verifyTurnstile, ensureSchedule, stationState, publishState, NO_REPEAT_TRACK_MS } from '../_lib.js';
 
 // Hostname pin for the shared Turnstile widget: only tokens solved on this
 // station's own hosts (incl. this project's preview aliases) are accepted.
 const ALLOWED_HOSTS = h => h === 'bcradio.net' || h === 'stream.bcradio.net' ||
   h === 'berniefm.pages.dev' || /^[a-z0-9-]+\.berniefm\.pages\.dev$/.test(h || '');
 const ACTION = 'bcradio-request';
-const LOCK_MS = 60000;           // never reshuffle anything starting in the next 60s (clients may hold state up to ~20s old)
+const LOCK_MS = 90000;           // never reshuffle anything starting in the next 90s (players re-read the schedule before every song change)
 const MAX_PENDING = 15;
 
 // Re-plan the future so pending requests play next (FIFO) without touching the
@@ -31,7 +31,8 @@ async function replan(env, now) {
     }
     await env.DB.batch(stmts);
   }
-  await ensureSchedule(env, now);
+  await ensureSchedule(env, now, { publish: false });
+  await publishState(env, now);
 }
 
 export async function onRequestPost({ request, env }) {
