@@ -1,0 +1,11 @@
+{
+  "name": "berniefm",
+  "pages_build_output_dir": "public",
+  "compatibility_date": "2025-04-27",
+  "d1_databases": [
+    { "binding": "DB", "database_name": "bcradio", "database_id": "58a51119-1d5a-4dbb-b3ea-3b704c004472" }
+  ],
+  "r2_buckets": [
+    { "binding": "MEDIA", "bucket_name": "bcradio-media" }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "berniefm",
+  "private": true,
+  "devDependencies": {
+    "wrangler": "^4.119.0"
+  }
+}

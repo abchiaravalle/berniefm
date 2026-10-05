@@ -599,6 +599,10 @@
       border-color: #2F28CE;
     }
 
+    .song-item.song-unavailable {
+      opacity: 0.45;
+    }
+
     .song-item.selected {
       background: #2F28CE;
       border-color: #2F28CE;
@@ -1330,6 +1334,8 @@
 
 <!-- Add Tailwind CSS -->
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="/bcsync-v1.js"></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 </head>
 
 <body>
@@ -1481,6 +1487,7 @@
         <div class="loading-text">Loading available songs...</div>
       </div>
       
+      <div id="request-turnstile" style="display:flex;justify-content:center;margin:0 0 16px 0;min-height:65px;"></div>
       <button class="request-button" id="submitRequest" disabled>
         Select a song to request
       </button>
@@ -1691,325 +1698,9 @@
     </button>
   </div> -->
 
-<!-- 🎧 + 🪄 Lottie-sync patch ─ replace your entire JS block (from `const base=` down) with this version -->
   <script>
-    const base="https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/";
-    const audioFiles = [
-  // === Driven By Desire ===
-  `${base}Driven%20By%20Desire/01%20Miss%20That%20Train%20%28Catch%20That%20Dream%29.m4a`,
-  `${base}Driven%20By%20Desire/02%20Writing%20a%20Romance.m4a`,
-  `${base}Driven%20By%20Desire/03%20Man%20Who%20Would%20Be%20King.m4a`,
-  `${base}Driven%20By%20Desire/04%20Down%20Down%20Down.m4a`,
-  `${base}Driven%20By%20Desire/05%20It%20Was%20Only%20Love.m4a`,
-  `${base}Driven%20By%20Desire/06%20All%20Things%20Considered.m4a`,
-  `${base}Driven%20By%20Desire/07%20Not%20Without%20a%20Fight.m4a`,
-  `${base}Driven%20By%20Desire/08%20Someone%20to%20Hold.m4a`,
-  `${base}Driven%20By%20Desire/09%20Let%20Me%20Be%20the%20One.m4a`,
-  `${base}Driven%20By%20Desire/10%20From%20Now%20On.m4a`,
-
-  // === Chiaro Destino mp3 version ===
-  `${base}Chiaro%20Destino%20mp3%20version/01%20Things%20We%20Said%20Today.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/02%20My%20Back%20Pages.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/03%20Isnt%20It%20A%20Pity.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/04%20Dino%27s%20Song.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/05%20You%27ve%20Got%20To%20Hide%20Your%20Love%20Away.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/06%20All%20the%20Children%20Sing.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/07%20Four%20Days%20Gone.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/08%20Happier%20Than%20the%20Morning%20Sun.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/09%20Long%20Long%20Time.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/10%20Angel.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/11%20Laughing.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/12%20I%20Want%20To%20Tell%20You.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/13%20Motor%20of%20Love.mp3`,
-  `${base}Chiaro%20Destino%20mp3%20version/14%20Love.mp3`,
-
-  // === Random mp3s (Unreleased) ===
-  `${base}Random%20mp3s/a%20loss%20for%20words_march5.mp3`,
-  `${base}Random%20mp3s/allnight_watchman_nov25mix.mp3`,
-  `${base}Random%20mp3s/BegYourForgiveness_march27mix.mp3`,
-  `${base}Random%20mp3s/ByHeart_RealLove.mp3`,
-  `${base}Random%20mp3s/Don%27t_Make_Promise_jan13mix.mp3`,
-  `${base}Random%20mp3s/I%27ll_Get_Back_To_You_april7mix_m.mp3`,
-  `${base}Random%20mp3s/KeepThisTrain.mp3`,
-  `${base}Random%20mp3s/looking_for_love2024_dec11mix.mp3`,
-  `${base}Random%20mp3s/obsession_blues_bc_april7mox.mp3`,
-  `${base}Random%20mp3s/What_We%27ve_Got.mp3`,
-  `${base}Random%20mp3s/whenitcomestolovesept24_emastered.mp3`,
-  `${base}Random%20mp3s/2%20Hearts%20N%27%20Limbo-Silent%20Partner.mp3`,
-  `${base}Random%20mp3s/All%20I%20Believe%20In.mp3`,
-  `${base}Random%20mp3s/Anytime%20%28is%20the%20right%20time%29.mp3`,
-  `${base}Random%20mp3s/Anytime%20Soon%20demo.mp3`,
-  `${base}Random%20mp3s/Around%20the%20World.mp3`,
-  `${base}Random%20mp3s/Art%20of%20Letting%20Go%20%28version2%29.mp3`,
-  `${base}Random%20mp3s/bapa%20ba.mp3`,
-  `${base}Random%20mp3s/Be%20A%20Better%20Man.mp3`,
-  `${base}Random%20mp3s/BegYourForgiveness_march27mix.mp3`,
-  `${base}Random%20mp3s/Breakout.mp3`,
-  `${base}Random%20mp3s/ByHeart_RealLove.mp3`,
-  `${base}Random%20mp3s/Cicada%20Shuffle.mp3`,
-  `${base}Random%20mp3s/Destiny.mp3`,
-  `${base}Random%20mp3s/Don%27t_Make_Promise_jan13mix.mp3`,
-  `${base}Random%20mp3s/Enough%20is%20Enough.mp3`,
-  `${base}Random%20mp3s/Every%20Word.mp3`,
-  `${base}Random%20mp3s/Everybody%20Wants%20To%20Be%20Your%20Friend.mp3`,
-  `${base}Random%20mp3s/Flash%20Theme.mp3`,
-  `${base}Random%20mp3s/For%20What%20It%27s%20Worth.mp3`,
-  `${base}Random%20mp3s/Forever%20and%20Ever-with%20Chris%20Comet.mp3`,
-  `${base}Random%20mp3s/Forgive%20and%20Forget-2024version.mp3`,
-  `${base}Random%20mp3s/Forgive%20Me%20Love.mp3`,
-  `${base}Random%20mp3s/Friends.mp3`,
-  `${base}Random%20mp3s/From%20A%20Glance.mp3`,
-  `${base}Random%20mp3s/Give%20Your%20Love%20To%20Me-Logos.mp3`,
-  `${base}Random%20mp3s/Happy%20Birthday%20My%20Love.mp3`,
-  `${base}Random%20mp3s/Hate%20Love%20A%20Little-Amy%20Holland.mp3`,
-  `${base}Random%20mp3s/Have%20Faith%20in%20Us.mp3`,
-  `${base}Random%20mp3s/Heart%20of%20Mind.mp3`,
-  `${base}Random%20mp3s/I%20Want%20You%20Back.mp3`,
-  `${base}Random%20mp3s/I%20Will%20Follow.mp3`,
-  `${base}Random%20mp3s/I%20Will.mp3`,
-  `${base}Random%20mp3s/I%27ll%20See%20You%20In%20My%20Dreams.mp3`,
-  `${base}Random%20mp3s/I%27ll_Get_Back_To_You_april7mix_m.mp3`,
-  `${base}Random%20mp3s/Impossible%20Love-Amy%20Holland.mp3`,
-  `${base}Random%20mp3s/In%20Enough%20Trouble%20%28original%20demo%29.mp3`,
-  `${base}Random%20mp3s/it%27s%20Your%20Kiss-demo.mp3`,
-  `${base}Random%20mp3s/KeepThisTrain.mp3`,
-  `${base}Random%20mp3s/Let%20Her%20Go-Silent%20Partner.mp3`,
-  `${base}Random%20mp3s/Let%20Me%20Know.mp3`,
-  `${base}Random%20mp3s/Let%20The%20Night%20Unwind.mp3`,
-  `${base}Random%20mp3s/Let%27s%20Go%20Fly%20a%20Kite.mp3`,
-  `${base}Random%20mp3s/Light%20On%20My%20Path-Amy%20Holland.mp3`,
-  `${base}Random%20mp3s/Little%20Pink%20Hand-Michael%20Dinga.mp3`,
-  `${base}Random%20mp3s/Long%20Hard%20Look.mp3`,
-  `${base}Random%20mp3s/looking_for_love2024_dec11mix.mp3`,
-  `${base}Random%20mp3s/Love%20Will%20Deliver%20%28original%20demo%29.mp3`,
-  `${base}Random%20mp3s/Love%20You%20More.mp3`,
-  `${base}Random%20mp3s/Love%20you%20want%20Euro.mp3`,
-  `${base}Random%20mp3s/Make%20Love%20Strong-Logos.mp3`,
-  `${base}Random%20mp3s/Miracle%20River-Amy%20Holland.mp3`,
-  `${base}Random%20mp3s/More%20Than%20We%20Need.mp3`,
-  `${base}Random%20mp3s/Mountains%20at%20Midnight-Amy%20Holland.mp3`,
-  `${base}Random%20mp3s/Must%20Be%20Love-Page%20One.mp3`,
-  `${base}Random%20mp3s/My%20Heart%20Goes%20Out%20To%20You.mp3`,
-  `${base}Random%20mp3s/Obsession%20Blues-original%20demo.mp3`,
-  `${base}Random%20mp3s/obsession_blues_bc_april7mox.mp3`,
-  `${base}Random%20mp3s/Oh%20Darling-Logos.mp3`,
-  `${base}Random%20mp3s/On%20this%20Night.mp3`,
-  `${base}Random%20mp3s/One%20%26%20Only-Silent%20Partner.mp3`,
-  `${base}Random%20mp3s/Peaceful%20Theme.mp3`,
-  `${base}Random%20mp3s/Perfect%20World-Michael%20Dinga.mp3`,
-  `${base}Random%20mp3s/Ready%20For%20Nothing%20%28original%20demo%20with%20Mike%20McDonald%29.mp3`,
-  `${base}Random%20mp3s/Saintly-Michael%20Dinga.mp3`,
-  `${base}Random%20mp3s/Save%20Your%20Love.mp3`,
-  `${base}Random%20mp3s/Shadows.mp3`,
-  `${base}Random%20mp3s/So%20Good-with%20Genna%20Ferguson.mp3`,
-  `${base}Random%20mp3s/Stories.mp3`,
-  `${base}Random%20mp3s/sun%20for%20winnie.mp3`,
-  `${base}Random%20mp3s/Tell%20Me%20True-Silent%20Partner.mp3`,
-  `${base}Random%20mp3s/Till%20I%20Found%20You%20%28original%20demo%29.mp3`,
-  `${base}Random%20mp3s/Timasana.mp3`,
-  `${base}Random%20mp3s/Way%20of%20Life.mp3`,
-  `${base}Random%20mp3s/We%20Had%20It%20Made.mp3`,
-  `${base}Random%20mp3s/What_We%27ve_Got.mp3`,
-  `${base}Random%20mp3s/whenitcomestolovesept24_emastered.mp3`,
-  `${base}Random%20mp3s/Where%20Forever%20Starts-with%20Joel%20Fry.mp3`,
-  `${base}Random%20mp3s/Witness-Amy%20Holland.mp3`,
-  `${base}Random%20mp3s/Woody%27s%20Got%20A%20Hat.mp3`,
-  `${base}Random%20mp3s/You%20Move%20Me%20That%20Way-Amy%20Holland.mp3`,
-
-  // === Here There and Everywhere ===
-  `${base}Here_There_and_Everywhere.m4a`,
-
-  // === Julian ===
-  `${base}Julian.m4a`,
-
-  // === Hideaway Tales ===
-  `${base}Hideaway%20Tales/01%20Lonely%20Too%20Long.m4a`,
-  `${base}Hideaway%20Tales/02%20Don%27t%20Know%20What%20You%20Want.m4a`,
-  `${base}Hideaway%20Tales/03%20Darker%20Days.m4a`,
-  `${base}Hideaway%20Tales/04%20In%20My%20Heart.m4a`,
-  `${base}Hideaway%20Tales/05%20One%20On%20One.m4a`,
-  `${base}Hideaway%20Tales/06%20It%27s%20You.m4a`,
-  `${base}Hideaway%20Tales/07%20Never%20Fade%20Away.m4a`,
-  `${base}Hideaway%20Tales/08%20Love%20Waits%20for%20You.m4a`,
-  `${base}Hideaway%20Tales/09%20Make%20It%20Alright.m4a`,
-  `${base}Hideaway%20Tales/10%20Through%20Every%20Window.m4a`,
-  `${base}Hideaway%20Tales/11%20Living%20the%20Dream.m4a`,
-  `${base}Hideaway%20Tales/12%20Let%20You%20Walk%20Away.m4a`,
-  `${base}Hideaway%20Tales/13%20Two%20Goodbyes%20Away%20%28Revisited%29.m4a`,
-
-  // === Life As We Know It ===
-  `${base}Life%20As%20We%20Know%20It/01%20The%20Love%20You%20Want.m4a`,
-  `${base}Life%20As%20We%20Know%20It/02%20The%20Way%20to%20My%20Heart.m4a`,
-  `${base}Life%20As%20We%20Know%20It/03%20Two%20Goodbyes%20Away.m4a`,
-  `${base}Life%20As%20We%20Know%20It/04%20You%20Alone.m4a`,
-  `${base}Life%20As%20We%20Know%20It/05%20Life%20As%20We%20Know%20It.m4a`,
-  `${base}Life%20As%20We%20Know%20It/06%20Where%27%20You%20Runnin%27.m4a`,
-  `${base}Life%20As%20We%20Know%20It/07%20Someday%20You%20Will.m4a`,
-  `${base}Life%20As%20We%20Know%20It/08%20The%20Way%20It%20Looks%20from%20Here.m4a`,
-  `${base}Life%20As%20We%20Know%20It/09%20Then%20Again%2C%20Maybe%20Not.m4a`,
-  `${base}Life%20As%20We%20Know%20It/10%20Only%20So%20Much.m4a`,
-  `${base}Life%20As%20We%20Know%20It/11%20My%20Only%20Chance.m4a`,
-
-  // === Long Before I Knew You mp3s ===
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/01%20I%20Try%20To%20Please%20You.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/02%20Long%20Before%20I%20Knew%20You.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/03%20Could%20You%20Believe.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/04%20It%27s%20Your%20World.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/05%20Give%20Your%20Love%20To%20Me.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/06%20Somebody%20Show%20Me.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/07%20You%20and%20Me.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/08%20Swear%20Your%20Love.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/09%20Love%20Has%20Left%20You%20Alone.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/10%20Lover%27s%20Dream.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/11%20Dear%20To%20Me.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/12%20Dont%20Know%20Where%20To%20Begin.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/13%20Leave%20It%20To%20You.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/14%20If%20We%20Try.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/15%20Your%20Baby%27s%20Gone.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/16%20Your%20Love%20Shines.mp3`,
-  `${base}Long%20Before%20I%20Knew%20You%20mp3s/17%20Hell%20of%20A%20Fight.mp3`,
-
-  // === Make Some Sense of This ===
-  `${base}Make%20Some%20Sense%20of%20This/01%20Peace%20of%20Mind.m4a`,
-  `${base}Make%20Some%20Sense%20of%20This/02%20I%20Choose%20Love.m4a`,
-  `${base}Make%20Some%20Sense%20of%20This/03%20Make%20Some%20Sense%20of%20This.m4a`,
-  `${base}Make%20Some%20Sense%20of%20This/04%20Ever%20Changing%20World.m4a`,
-  `${base}Make%20Some%20Sense%20of%20This/05%20See%20the%20Light.m4a`,
-  `${base}Make%20Some%20Sense%20of%20This/06%20Say%20What%20You%20Will.m4a`,
-  `${base}Make%20Some%20Sense%20of%20This/07%20Castle%20to%20the%20Sky.m4a`,
-  `${base}Make%20Some%20Sense%20of%20This/08%20Follow%20Your%20Heart.m4a`,
-  `${base}Make%20Some%20Sense%20of%20This/09%20Now%20or%20Never.m4a`,
-  `${base}Make%20Some%20Sense%20of%20This/10%20Real%20World.m4a`,
-
-  // === More To This Life mp3 version ===
-  `${base}More%20To%20This%20Life%20mp3%20version/01%20So%20Far%20Back%20in%20Time.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/02%20More%20To%20This%20Life.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/03%20I%27m%20Givin%20My%20Heart.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/04%20Who%20We%20Long%20To%20Be.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/05%20The%20Art%20of%20Letting%20Go.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/06%20Nothings%27%20Sacred%20Anymore.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/07%20Keep%20On%20Lovin%27%20You.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/08%20Lay%20Down%20My%20Arms.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/09%20Tonight%20%28I%20Will%20Dance%20With%20You%29.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/10%20Hasn%27t%20Happened%20Yet.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/11%20What%20You%20Believe.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/12%20I%20Just%20Don%27t%20Get%20It.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/13%20If%20It%20Was%20You.mp3`,
-  `${base}More%20To%20This%20Life%20mp3%20version/14%20Winnie%27s%20Song.mp3`,
-
-  // === Mystery of Love ===
-  `${base}Mystery%20of%20Love/01%20Father%20and%20Child.m4a`,
-  `${base}Mystery%20of%20Love/02%20Mystery%20of%20Love.m4a`,
-  `${base}Mystery%20of%20Love/03%20Tell%20Me%20What%20You%20Want.m4a`,
-  `${base}Mystery%20of%20Love/04%20Lead%20Us%20Back%20to%20Love.m4a`,
-  `${base}Mystery%20of%20Love/05%20I%27ve%20Got%20My%20Reasons.m4a`,
-  `${base}Mystery%20of%20Love/06%20Ready%20for%20Nothin%27.m4a`,
-  `${base}Mystery%20of%20Love/07%20Sad%20As%20It%20Seems.m4a`,
-  `${base}Mystery%20of%20Love/08%20Standing%20In%20the%20Light.m4a`,
-  `${base}Mystery%20of%20Love/09%20Next%20to%20You.m4a`,
-  `${base}Mystery%20of%20Love/10%20Soulfire.m4a`,
-
-  // === One Bright Moment ===
-  `${base}One%20Bright%20Moment/01%20All%20Good%20Things.m4a`,
-  `${base}One%20Bright%20Moment/02%20Will%20and%20a%20Way.m4a`,
-  `${base}One%20Bright%20Moment/03%20Right%20Where%20They%20Want%20You.m4a`,
-  `${base}One%20Bright%20Moment/04%20You%20Said%20It%20All.m4a`,
-  `${base}One%20Bright%20Moment/05%20Nobody%27s%20Business.m4a`,
-  `${base}One%20Bright%20Moment/06%20One%20Bright%20Moment.m4a`,
-  `${base}One%20Bright%20Moment/07%20Man%20out%20to%20Please.m4a`,
-  `${base}One%20Bright%20Moment/08%20Worst%20of%20Times.m4a`,
-  `${base}One%20Bright%20Moment/09%20Just%20Goes%20to%20Proove.m4a`,
-  `${base}One%20Bright%20Moment/10%20Till%20I%20Found%20You.m4a`,
-  `${base}One%20Bright%20Moment/11%20Let%20Me%20Believe.m4a`,
-
-  // === Remnants mp3 version ===
-  `${base}Remnants%20mp3%20version/01%20Come%20A%20Long%20Way.mp3`,
-  `${base}Remnants%20mp3%20version/02%20Anytime%20I%20Think%20of%20You.mp3`,
-  `${base}Remnants%20mp3%20version/03%20Forever%20More.mp3`,
-  `${base}Remnants%20mp3%20version/04%20Can%27t%20Seem%20To%20Let%20You%20Go.mp3`,
-  `${base}Remnants%20mp3%20version/05%20Once%20A%20Lover.mp3`,
-  `${base}Remnants%20mp3%20version/06%20Corners%20of%20My%20Mind.mp3`,
-  `${base}Remnants%20mp3%20version/07%20Tell%20Me%20What%20You%20Want%202024.mp3`,
-  `${base}Remnants%20mp3%20version/08%20Legend%20in%20Her%20Mind.mp3`,
-  `${base}Remnants%20mp3%20version/09%20Open%20Up%20Your%20Heart.mp3`,
-  `${base}Remnants%20mp3%20version/10%20There%20She%20Goes.mp3`,
-  `${base}Remnants%20mp3%20version/11%20Roadsong.mp3`,
-  `${base}Remnants%20mp3%20version/12%20Bye%20Bye%20Misery.mp3`,
-
-  // === The World Around Me ===
-  `${base}The%20World%20Around%20Me/01%20No%20Way%20Out.m4a`,
-  `${base}The%20World%20Around%20Me/02%20Only%20Game%20In%20Town.m4a`,
-  `${base}The%20World%20Around%20Me/03%20You%20Got%20Nothin%27%20On%20Me.m4a`,
-  `${base}The%20World%20Around%20Me/04%20The%20World%20Has%20Let%20You%20Down.m4a`,
-  `${base}The%20World%20Around%20Me/05%20Long%20Haul.m4a`,
-  `${base}The%20World%20Around%20Me/06%20The%20World%20Around%20Me.m4a`,
-  `${base}The%20World%20Around%20Me/07%20What%20I%20Knew%20Before.m4a`,
-  `${base}The%20World%20Around%20Me/08%20For%20a%20Little%20While.m4a`,
-  `${base}The%20World%20Around%20Me/09%20No%20Longer%20In%20My%20Dreams.m4a`,
-  `${base}The%20World%20Around%20Me/10%20White%20Lies.m4a`,
-  `${base}The%20World%20Around%20Me/11%20Nothin%27%20Left%20To%20Believe%20In.m4a`,
-  `${base}The%20World%20Around%20Me/12%20Let%20the%20Night%20Unwind.m4a`,
-
-  // === Weddington Street ===
-  `${base}Weddington%20Street/02%20Forgive%20And%20Forget.m4a`,
-  `${base}Weddington%20Street/03%20Hold%20On%20Hold%20Out.m4a`,
-  `${base}Weddington%20Street/04%20Too%20Extreme.m4a`,
-  `${base}Weddington%20Street/05%20Somewhere%20In%20The%20Night.m4a`,
-  `${base}Weddington%20Street/06%20The%20Great%20Divide.m4a`,
-  `${base}Weddington%20Street/07%20You%20Were%20There%20Too.m4a`,
-  `${base}Weddington%20Street/08%20Anaka.m4a`,
-  `${base}Weddington%20Street/09%20To%20Live%20Within%20Her%20Love.m4a`,
-  `${base}Weddington%20Street/10%20Good%20Book.m4a`,
-  `${base}Weddington%20Street/11%20One%20More%20Word.m4a`,
-  `${base}Weddington%20Street/12%20All%20I%20Really%20Want.m4a`,
-
-  // === Winnie's Song ===
-  `${base}Winnie%27s%20Song.m4a`,
-
-  // === Affair mp3 version ===
-  `${base}Affair_mp3Version/01%20Only%20Love%20Can%20Save%20Us.mp3`,
-  `${base}Affair_mp3Version/02%20Her.mp3`,
-  `${base}Affair_mp3Version/03%20Hail%20To%20Magic.mp3`,
-  `${base}Affair_mp3Version/04%20It%27s%20Not%20Up%20To%20Me.mp3`,
-  `${base}Affair_mp3Version/05%20Critics.mp3`,
-  `${base}Affair_mp3Version/06%20Affair%20of%20the%20Heart.mp3`,
-  `${base}Affair_mp3Version/07%20I%20Believe.mp3`,
-  `${base}Affair_mp3Version/08%20Autograph%20Show.mp3`,
-  `${base}Affair_mp3Version/09%20One%20and%20Only.mp3`,
-  `${base}Affair_mp3Version/10%20Mindface.mp3`,
-  `${base}Affair_mp3Version/11%20Sideman.mp3`,
-  `${base}Affair_mp3Version/12%20Rely%20On%20Your%20Grace.mp3`,
-
-  // === All in Your Mind ===
-  `${base}All%20in%20Your%20Mind/01%20Give%20Me%20Something.mp3`,
-  `${base}All%20in%20Your%20Mind/02%20All%20in%20Your%20Mind.mp3`,
-  `${base}All%20in%20Your%20Mind/03%20We%20Owe%20That%20Much%20To%20Ourselves.mp3`,
-  `${base}All%20in%20Your%20Mind/04%20Mon%20Cher.mp3`,
-  `${base}All%20in%20Your%20Mind/05%20A%20Wanting%20in%20Me.mp3`,
-  `${base}All%20in%20Your%20Mind/06%20Agree%202%20Disagree.mp3`,
-  `${base}All%20in%20Your%20Mind/07%20Without%20You.mp3`,
-
-  // === BC Radio Rarities ===
-  // Removed songs that were moved to Random mp3s
-
-  // === Miracle River ===
-  `${base}Miracle%20River.m4a`
-];
-    
     /* ---------- util helpers ---------- */
-    const shuffle=a=>a.sort(()=>Math.random()-.5);
-    let playlist=shuffle([...audioFiles]),idx=0,sound,started=false,progRAF;
-    const tidy = p => {
-      if (p.includes('Random%20mp3s')) {
-        // Show full decoded filename, including extension, with spaces and punctuation
-        return decodeURIComponent(p.split('/').pop());
-      }
-      // Otherwise, original tidy logic
-      return decodeURIComponent(p.split('/').pop())
-        .replace(/\.[^.]+$/, '')
-        .replace(/^\d{2}\s+/, '')
-        .replace(/[_-]/g, ' ');
-    };
+    let started=false;
     const $=id=>document.getElementById(id);
     const fmt=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
     
@@ -2033,19 +1724,6 @@
     };
     
     /* ---------- UI helpers ---------- */
-    function updateQueue(){
-      if(!queueEl) return;
-      // For stream mode, queue is updated by fetchMetadata
-      // This is for playlist mode (not currently used)
-    }
-    
-    function fadeTitle(txt, src){
-      if(titleEl) titleEl.textContent = txt;
-      if(titleElMain) titleElMain.textContent = txt;
-      if(artistEl) artistEl.textContent = 'Bernie Chiaravalle';
-      if(artistElMain) artistElMain.textContent = 'Bernie Chiaravalle';
-    }
-    
     function updateAlbumArt(url) {
       if(albumArtEl && url) {
         // Add fade transition
@@ -2059,176 +1737,54 @@
         }, 150);
       }
     }
-    function updateProgress(){
-      // Progress tracking removed - no longer needed
-      if(sound&&sound.playing()){
-        progRAF=requestAnimationFrame(updateProgress);
-      }
-    }
-    
-    /* ---------- playback ---------- */
-    function playTrack(){
-      if(sound) sound.unload();cancelAnimationFrame(progRAF);
-      const src=playlist[idx];
-      
-      // Update album art with flip effect
-      const cdCase = document.getElementById('cd-case');
-      const albumArt = document.getElementById('album-art');
-      
-      if (cdCase && albumArt) {
-        // Animate left fully offscreen, minimal fade/scale
-        gsap.to(cdCase, {
-          x: -window.innerWidth * 0.7,
-          opacity: 0.5,
-          scale: 0.95,
-          duration: 0.5,
-          ease: 'power2.in',
-          onComplete: () => {
-            // Change the album art
-            const artUrl = getAlbumArt(src);
-            albumArt.style.backgroundImage = `linear-gradient(rgba(255,255,255,0.15),rgba(255,255,255,0)), url('${artUrl}')`;
-            // Instantly move to right, reset scale/opacity
-            gsap.set(cdCase, { x: window.innerWidth * 0.7, opacity: 0.5, scale: 0.95 });
-            // Animate in from right, fade/scale in
-            gsap.to(cdCase, {
-              x: 0,
-              opacity: 1,
-              scale: 1,
-              duration: 0.7,
-              ease: 'power2.out'
-            });
-          }
-        });
-      }
-      
-      sound=new Howl({
-        src:[src],
-        html5:true,
-        onend: () => {
-          idx++;
-          if (idx >= playlist.length) {
-            playlist = shuffle([...audioFiles]);
-            idx = 0;
-          }
-          playTrack();
-        }
-      });
-      fadeTitle(tidy(src), src);
-      sound.play();
-      lottiePlayer.play();
-      setBtn('Pause','pause');
-      updateQueue();
-      updateProgress();
-      showShareBtn();
-    }
-    
     if(playBtn) {
       playBtn.addEventListener('click', () => {
         handlePlayPause();
       });
     }
     
-    // Shared function for play/pause logic
+    // Shared function for play/pause logic.
+    // Playback follows the shared station timeline (bcsync-v1.js), so every
+    // listener hears the same song at the same moment.
     function handlePlayPause() {
-      if(!started){
-        started=true;
-        // Show loading bar
-        document.getElementById('loadingBar').style.display = 'block';
-        setBtn('Loading...','play');
-        if(titleEl) titleEl.textContent = "Connecting to BC Radio...";
-        if(titleElMain) titleElMain.textContent = "Connecting to BC Radio...";
-        
-        // Stream BC Radio instead of playlist
-        if(sound) sound.unload();
-        sound = new Howl({
-          src: ["https://stream.bcradio.net/listen/bcradio/radio.mp3"],
-          html5: true,
-          format: ['mp3'],
-          onload: () => {
-            console.log('Stream loaded successfully');
-          },
-          onplay: () => {
-            // Hide loading bar
-            const loadingBar = document.getElementById('loadingBar');
-            if(loadingBar) loadingBar.style.display = 'none';
-            setBtn('Pause','pause');
-            updateArtworkButtonIcon();
-            if(titleEl) titleEl.textContent = "BC Radio Live Stream";
-            if(titleElMain) titleElMain.textContent = "BC Radio Live Stream";
-            
-            // Try to connect to audio context for visualization
-            try {
-              if (sound && sound._sounds && sound._sounds[0]) {
-                const audioElement = sound._sounds[0]._node;
-                if (audioElement && !audioContext) {
-                  audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                  analyser = audioContext.createAnalyser();
-                  analyser.fftSize = 256;
-                  const source = audioContext.createMediaElementSource(audioElement);
-                  source.connect(analyser);
-                  dataArray = new Uint8Array(analyser.frequencyBinCount);
-                }
-              }
-            } catch (e) {
-              console.log('Could not connect audio context:', e);
-            }
-            // Start fetching metadata
-            fetchMetadata();
-            if(!window.metadataInterval) {
-              window.metadataInterval = setInterval(fetchMetadata, 3000); // Update every 3 seconds
-            }
-          },
-          onpause: () => {
-            setBtn('Play','play');
-            showArtworkPlayButton();
-          },
-          onloaderror: (id, error) => {
-            console.error('Stream load error:', error);
-            document.getElementById('loadingBar').style.display = 'none';
-            setBtn('Error','exclamation-triangle');
-            if(titleEl) titleEl.textContent = "Error loading stream";
-            if(titleElMain) titleElMain.textContent = "Error loading stream";
-          },
-          onplayerror: (id, error) => {
-            console.error('Stream play error:', error);
-            document.getElementById('loadingBar').style.display = 'none';
-            setBtn('Error','exclamation-triangle');
-            if(titleEl) titleEl.textContent = "Error playing stream";
-            if(titleElMain) titleElMain.textContent = "Error playing stream";
-          }
-        });
-        sound.play();
+      if (BCSync.isLive()) {
+        BCSync.stop();
         return;
       }
-      
-      if(sound.playing()){
-        sound.pause();
+      started = true;
+      const loadingBar = document.getElementById('loadingBar');
+      if (loadingBar) loadingBar.style.display = 'block';
+      setBtn('Loading...','play');
+      BCSync.start().catch(err => {
+        console.error('Stream play error:', err);
+        if (loadingBar) loadingBar.style.display = 'none';
         setBtn('Play','play');
         showArtworkPlayButton();
-      }else{
-        sound.play();
-        setBtn('Pause','pause');
-        hideArtworkPlayButton();
-        
-        // Try to connect to audio context for visualization
-        try {
-          if (sound && sound._sounds && sound._sounds[0]) {
-            const audioElement = sound._sounds[0]._node;
-            if (audioElement && !audioContext) {
-              audioContext = new (window.AudioContext || window.webkitAudioContext)();
-              analyser = audioContext.createAnalyser();
-              analyser.fftSize = 256;
-              const source = audioContext.createMediaElementSource(audioElement);
-              source.connect(analyser);
-              dataArray = new Uint8Array(analyser.frequencyBinCount);
-            }
-          }
-        } catch (e) {
-          console.log('Could not connect audio context:', e);
-        }
-      }
+        if (titleEl) titleEl.textContent = "Couldn't start the stream. Tap play to try again.";
+        if (titleElMain) titleElMain.textContent = "Couldn't start the stream. Tap play to try again.";
+      });
     }
-    
+
+    BCSync.on('play', () => {
+      const loadingBar = document.getElementById('loadingBar');
+      if (loadingBar) loadingBar.style.display = 'none';
+      setBtn('Pause','pause');
+      updateArtworkButtonIcon();
+    });
+    BCSync.on('pause', () => {
+      const loadingBar = document.getElementById('loadingBar');
+      if (loadingBar) loadingBar.style.display = 'none';
+      setBtn('Play','play');
+      showArtworkPlayButton();
+    });
+    BCSync.on('buffering', b => {
+      const loadingBar = document.getElementById('loadingBar');
+      if (loadingBar) loadingBar.style.display = (b && BCSync.isLive()) ? 'block' : 'none';
+    });
+    BCSync.on('state', () => renderStation());
+    BCSync.on('track', () => renderStation());
+    setInterval(() => renderStation(), 5000);
+
     // Handle artwork play button
     if(playBtnArtwork) {
       playBtnArtwork.addEventListener('click', () => {
@@ -2241,7 +1797,7 @@
       const artworkIcon = document.getElementById('artwork-icon');
       if (!artworkIcon || !playBtnArtwork) return;
       
-      if (sound && sound.playing()) {
+      if (BCSync.isLive()) {
         // Show pause icon
         artworkIcon.className = 'fa-solid fa-pause text-zinc-950 text-3xl sm:text-4xl';
         playBtnArtwork.style.opacity = '0.5';
@@ -2460,77 +2016,55 @@
       scaleBackgroundVideo();
     }
     
-    /* ========== BC Radio Metadata Fetcher ========== */
-    async function fetchMetadata() {
-      try {
-        const response = await fetch('https://stream.bcradio.net/api/nowplaying');
-        const data = await response.json();
-        // Find station with id 1
-        const station = data.find(s => s.station && s.station.id === 1);
-        if (!station) return;
-        const nowPlaying = station.now_playing;
-        const playingNext = station.playing_next;
-        const songHistory = station.song_history || [];
-
-        // Build the queue list in new format
-        let queueHtml = '';
-        const queueItems = [];
-        if (playingNext) queueItems.push(playingNext);
-        songHistory.slice(0, 3).forEach(h => queueItems.push(h));
-        
-        queueItems.forEach((songObj, index) => {
-          if (!songObj) return;
-          const song = songObj.song || {};
-          let title = song.title || song.text || 'Unknown Track';
-          title = removePrefixedNumbers(title);
-          title = titleCaseExceptPronouns(title);
-          const artist = song.artist || 'Bernie Chiaravalle';
-          const isRequest = songObj.is_request;
-          
-          queueHtml += `
+    /* ========== BC Radio now playing + up next (shared timeline) ========== */
+    let lastRenderedKey = '';
+    let lastQueueKey = '';
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function renderStation() {
+      const cur = BCSync.onAir();
+      if (!cur) return;
+      const t = cur.track;
+      if (typeof titleCaseExceptPronouns !== 'function' || typeof removePrefixedNumbers !== 'function') return;
+      const k = cur.seq + ':' + t.id;
+      if (k !== lastRenderedKey) {
+        let songTitle = t.title || 'BC Radio Live Stream';
+        songTitle = removePrefixedNumbers(songTitle);
+        songTitle = titleCaseExceptPronouns(songTitle);
+        const artist = t.artist || 'Bernie Chiaravalle';
+        if (titleEl) titleEl.textContent = songTitle;
+        if (titleElMain) titleElMain.textContent = songTitle;
+        if (artistEl) artistEl.textContent = artist;
+        if (artistElMain) artistElMain.textContent = artist;
+        if (t.art) updateAlbumArt(t.art);
+        lastRenderedKey = k;
+      }
+      const items = BCSync.upcoming(4);
+      const qk = items.map(i => i.seq + ':' + i.track.id).join(',');
+      if (qk === lastQueueKey || !queueEl) return;
+      lastQueueKey = qk;
+      let queueHtml = '';
+      items.forEach(item => {
+        const song = item.track;
+        let title = song.title || 'Unknown Track';
+        title = removePrefixedNumbers(title);
+        title = titleCaseExceptPronouns(title);
+        const artist = song.artist || 'Bernie Chiaravalle';
+        queueHtml += `
             <div class="w-full flex items-center gap-3 sm:gap-4 py-2">
               <div class="flex-1 min-w-0">
                 <div class="flex items-center justify-between gap-2">
                   <div class="min-w-0">
-                    <p class="text-sm sm:text-base font-medium text-zinc-100 truncate">${title}</p>
-                    <p class="text-xs sm:text-sm text-zinc-400 truncate">${artist}</p>
+                    <p class="text-sm sm:text-base font-medium text-zinc-100 truncate">${escapeHtml(title)}</p>
+                    <p class="text-xs sm:text-sm text-zinc-400 truncate">${escapeHtml(artist)}</p>
                   </div>
                 </div>
               </div>
             </div>
           `;
-        });
-
-        // Update the queue element
-        if (queueEl) {
-          queueEl.innerHTML = queueHtml;
-        }
-
-        // Update main title and album art
-        let songTitle = nowPlaying.song.title || nowPlaying.song.text || 'BC Radio Live Stream';
-        songTitle = removePrefixedNumbers(songTitle);
-        songTitle = titleCaseExceptPronouns(songTitle);
-        const artist = nowPlaying.song.artist || 'Bernie Chiaravalle';
-        
-        if (titleEl) {
-          titleEl.textContent = songTitle;
-        }
-        if (titleElMain) {
-          titleElMain.textContent = songTitle;
-        }
-        if (artistEl) {
-          artistEl.textContent = artist;
-        }
-        if (artistElMain) {
-          artistElMain.textContent = artist;
-        }
-        
-        if (nowPlaying.song.art) {
-          updateAlbumArt(nowPlaying.song.art);
-        }
-      } catch (error) {
-        console.error('Error fetching metadata:', error);
-      }
+      });
+      queueEl.innerHTML = queueHtml;
     }
 
     /* ========== Song Request Modal Functionality ========== */
@@ -2548,10 +2082,27 @@
 
     // Open modal
     openModalBtn.addEventListener('click', () => {
-      console.log('Opening request modal...');
       requestModal.style.display = 'flex';
       loadAvailableSongs();
+      renderRequestTurnstile();
     });
+
+    // Spam check for requests (Cloudflare Turnstile)
+    const TURNSTILE_SITEKEY = '0x4AAAAAAEmQA4XopdRBuYWJ';
+    let turnstileWidgetId = null;
+    let turnstileToken = '';
+    function renderRequestTurnstile() {
+      if (!window.turnstile) { setTimeout(renderRequestTurnstile, 300); return; }
+      if (turnstileWidgetId !== null) { try { turnstile.reset(turnstileWidgetId); } catch (e) {} turnstileToken = ''; return; }
+      turnstileWidgetId = turnstile.render('#request-turnstile', {
+        sitekey: TURNSTILE_SITEKEY,
+        action: 'bcradio-request',
+        theme: 'dark',
+        callback: t => { turnstileToken = t; },
+        'expired-callback': () => { turnstileToken = ''; },
+        'error-callback': () => { turnstileToken = ''; },
+      });
+    }
 
     // Close modal
     closeModalBtn.addEventListener('click', () => {
@@ -2579,142 +2130,37 @@
     });
 
     // Submit request
-    submitRequestBtn.addEventListener('click', (e) => {
-      console.log('Submit button clicked!');
-      console.log('Button disabled:', submitRequestBtn.disabled);
-      console.log('Selected song:', selectedSong);
-      console.log('Event target:', e.target);
-      
-      // Force enable if somehow disabled
-      if (selectedSong && submitRequestBtn.disabled) {
-        console.log('Forcing button to be enabled');
-        submitRequestBtn.disabled = false;
-      }
-      
+    submitRequestBtn.addEventListener('click', () => {
       if (selectedSong) {
-        console.log('Calling submitSongRequest...');
         submitSongRequest(selectedSong);
       } else {
-        console.log('No song selected');
-        alert('Please select a song first');
-      }
-    });
-
-    // Also add a backup click handler
-    submitRequestBtn.addEventListener('mousedown', (e) => {
-      console.log('Mouse down on submit button');
-      if (selectedSong) {
-        console.log('Song is selected, button should work');
+        showToast('Please select a song first', 'error');
       }
     });
 
     async function loadAvailableSongs() {
-      console.log('Loading available songs...');
       songsList.innerHTML = '<div class="loading-text">Loading available songs...</div>';
-      
       try {
-        // Try to fetch directly first to see if CORS is working
-        console.log('Trying direct API call first...');
-        let response;
-        let data;
-        
-        try {
-          response = await fetch('https://stream.bcradio.net/api/station/1/requests');
-          if (response.ok) {
-            data = await response.json();
-            console.log('Direct API call succeeded!');
-          } else {
-            throw new Error('Direct call failed');
-          }
-        } catch (directError) {
-          console.log('Direct API call failed, trying proxy...', directError.message);
-          
-          // Use proxy as fallback
-          const apiUrl = 'https://stream.bcradio.net/api/station/1/requests';
-          const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
-          console.log('Proxy URL:', proxyUrl);
-          
-          response = await fetch(proxyUrl);
-          if (response.ok) {
-            data = await response.json();
-            console.log('Proxy API call succeeded!');
-          } else {
-            throw new Error(`Proxy failed with status: ${response.status}`);
-          }
-        }
-        
-        console.log('Raw API response:', data);
-        console.log('Number of requests available:', data.length);
-        
-        if (Array.isArray(data) && data.length > 0) {
-          // Map the correct API format - use request_id for the request URL
-          availableSongs = data.map(request => ({
-            id: request.request_id, // Use request_id, not song.id
-            title: request.song.title || request.song.text || 'Unknown Title',
-            artist: request.song.artist || 'Bernie Chiaravalle',
-            album: request.song.album || 'Unknown Album',
-            art: request.song.art || 'https://via.placeholder.com/50x50?text=♪',
-            genre: request.song.genre || 'Unknown'
-          }));
-          
-          console.log('Loaded songs from API:', availableSongs.length);
-          console.log('Sample song:', availableSongs[0]);
-          console.log('First few song IDs:', availableSongs.slice(0, 5).map(s => s.id));
-          
-          // Filter out songs with empty or very short titles
-          availableSongs = availableSongs.filter(song => 
-            song.title && song.title.trim().length > 3 && !song.title.startsWith(' - ')
-          );
-          
-          console.log('Filtered songs:', availableSongs.length);
-          
-          if (availableSongs.length === 0) {
-            throw new Error('No valid songs found after filtering');
-          }
-        } else {
-          throw new Error('API returned empty or invalid data');
-        }
-        
+        const response = await fetch('/api/library', { cache: 'no-store' });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const data = await response.json();
+        availableSongs = (data.songs || []).map(song => ({
+          id: song.id,
+          title: titleCaseExceptPronouns(removePrefixedNumbers(song.title || 'Unknown Title')),
+          artist: song.artist || 'Bernie Chiaravalle',
+          album: song.album || '',
+          art: song.art,
+          status: song.status,
+        })).filter(song => song.title && song.title.trim().length > 1);
+        if (!availableSongs.length) throw new Error('empty library');
         filteredSongs = [...availableSongs];
-        console.log('Total songs available for requests:', availableSongs.length);
         renderSongs(filteredSongs);
-        
       } catch (error) {
-        console.error('Error loading songs from API:', error);
-        console.log('Using mock data as final fallback');
-        
-        // Use mock data as final fallback
-        availableSongs = generateMockSongs();
-        filteredSongs = [...availableSongs];
-        console.log('Mock songs loaded:', availableSongs.length);
-        renderSongs(filteredSongs);
+        console.error('Error loading songs:', error);
+        availableSongs = [];
+        filteredSongs = [];
+        songsList.innerHTML = '<div class="error-text">Could not load the song list. Please close this and try again.</div>';
       }
-    }
-
-    function generateMockSongs() {
-      // Generate mock songs based on Bernie's discography with string IDs
-      return [
-        { id: "1a2b3c4d5e6f7890", title: "Miss That Train (Catch That Dream)", artist: "Bernie Chiaravalle", album: "Driven By Desire", art: "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/cd%20covers/Driven%20by%20Desire.jpg" },
-        { id: "2b3c4d5e6f789012", title: "Writing a Romance", artist: "Bernie Chiaravalle", album: "Driven By Desire", art: "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/cd%20covers/Driven%20by%20Desire.jpg" },
-        { id: "3c4d5e6f78901234", title: "Man Who Would Be King", artist: "Bernie Chiaravalle", album: "Driven By Desire", art: "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/cd%20covers/Driven%20by%20Desire.jpg" },
-        { id: "4d5e6f7890123456", title: "Down Down Down", artist: "Bernie Chiaravalle", album: "Driven By Desire", art: "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/cd%20covers/Driven%20by%20Desire.jpg" },
-        { id: "5e6f789012345678", title: "It Was Only Love", artist: "Bernie Chiaravalle", album: "Driven By Desire", art: "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/cd%20covers/Driven%20by%20Desire.jpg" },
-        { id: "6f78901234567890", title: "Things We Said Today", artist: "Bernie Chiaravalle", album: "Chiaro Destino", art: "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/cd%20covers/Chiaro%20Destino.jpg" },
-        { id: "789012345678901a", title: "My Back Pages", artist: "Bernie Chiaravalle", album: "Chiaro Destino", art: "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/cd%20covers/Chiaro%20Destino.jpg" },
-        { id: "89012345678901ab", title: "Isn't It A Pity", artist: "Bernie Chiaravalle", album: "Chiaro Destino", art: "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/cd%20covers/Chiaro%20Destino.jpg" },
-        { id: "9012345678901abc", title: "The Love You Want", artist: "Bernie Chiaravalle", album: "Life As We Know It", art: "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/cd%20covers/Life%20As%20We%20Know%20It.jpg" },
-        { id: "012345678901abcd", title: "Two Goodbyes Away", artist: "Bernie Chiaravalle", album: "Life As We Know It", art: "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/cd%20covers/Life%20As%20We%20Know%20It.jpg" },
-        { id: "12345678901abcde", title: "Peace of Mind", artist: "Bernie Chiaravalle", album: "Make Some Sense of This", art: "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/cd%20covers/Make%20Some%20Sense%20of%20This.jpg" },
-        { id: "2345678901abcdef", title: "I Choose Love", artist: "Bernie Chiaravalle", album: "Make Some Sense of This", art: "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/cd%20covers/Make%20Some%20Sense%20of%20This.jpg" },
-        { id: "345678901abcdef0", title: "Lonely Too Long", artist: "Bernie Chiaravalle", album: "Hideaway Tales", art: "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/cd%20covers/Hideaway%20Tales.jpg" },
-        { id: "45678901abcdef01", title: "In My Heart", artist: "Bernie Chiaravalle", album: "Hideaway Tales", art: "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/cd%20covers/Hideaway%20Tales.jpg" },
-        { id: "5678901abcdef012", title: "Mystery of Love", artist: "Bernie Chiaravalle", album: "Mystery of Love", art: "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/cd%20covers/Mystery%20of%20Love.jpg" },
-        { id: "678901abcdef0123", title: "Father and Child", artist: "Bernie Chiaravalle", album: "Mystery of Love", art: "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/cd%20covers/Mystery%20of%20Love.jpg" },
-        { id: "78901abcdef01234", title: "All Good Things", artist: "Bernie Chiaravalle", album: "One Bright Moment", art: "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/cd%20covers/One%20Bright%20Moment.jpg" },
-        { id: "8901abcdef012345", title: "One Bright Moment", artist: "Bernie Chiaravalle", album: "One Bright Moment", art: "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/cd%20covers/One%20Bright%20Moment.jpg" },
-        { id: "901abcdef0123456", title: "No Way Out", artist: "Bernie Chiaravalle", album: "The World Around Me", art: "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/cd%20covers/This%20Is%20What%20I%20See.jpg" },
-        { id: "01abcdef01234567", title: "The World Around Me", artist: "Bernie Chiaravalle", album: "The World Around Me", art: "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/cd%20covers/This%20Is%20What%20I%20See.jpg" }
-      ];
     }
 
     function renderSongs(songs) {
@@ -2722,46 +2168,33 @@
         songsList.innerHTML = '<div class="error-text">No songs found matching your search.</div>';
         return;
       }
-
+      const note = { upcoming: 'Coming up soon', recent: 'Played recently' };
       songsList.innerHTML = songs.map(song => `
-        <div class="song-item" data-song-id="${song.id}">
-          <img src="${song.art}" alt="${song.title}" class="song-artwork" onerror="this.src='https://via.placeholder.com/50x50?text=♪'">
+        <div class="song-item${song.status !== 'ok' ? ' song-unavailable' : ''}" data-song-id="${escapeHtml(song.id)}">
+          <img src="${escapeHtml(song.art)}" alt="" class="song-artwork" loading="lazy" onerror="this.style.visibility='hidden'">
           <div class="song-info">
-            <div class="song-title">${song.title}</div>
-            <div class="song-artist">${song.artist}</div>
+            <div class="song-title">${escapeHtml(song.title)}</div>
+            <div class="song-artist">${escapeHtml(song.artist)}${note[song.status] ? ' &middot; ' + note[song.status] : ''}</div>
           </div>
         </div>
       `).join('');
 
-      // Add click listeners to song items
       document.querySelectorAll('.song-item').forEach(item => {
         item.addEventListener('click', () => {
-          console.log('Song item clicked:', item.dataset.songId);
-          
-          // Remove previous selection
-          document.querySelectorAll('.song-item').forEach(i => i.classList.remove('selected'));
-          // Select current item
-          item.classList.add('selected');
-          
-          const songId = item.dataset.songId; // Don't parse as int, keep as string
-          selectedSong = songs.find(s => s.id.toString() === songId.toString());
-          
-          console.log('Selected song:', selectedSong);
-          console.log('Available songs:', songs);
-          
-          // Update submit button
-          if (selectedSong) {
-            submitRequestBtn.disabled = false;
-            submitRequestBtn.style.pointerEvents = 'auto';
-            submitRequestBtn.style.cursor = 'pointer';
-            submitRequestBtn.textContent = `Request "${selectedSong.title}"`;
-            console.log('Submit button updated - disabled:', submitRequestBtn.disabled);
-            console.log('Submit button style:', submitRequestBtn.style.pointerEvents);
-          } else {
-            console.error('Could not find song with ID:', songId);
-            console.error('Looking for ID type:', typeof songId);
-            console.error('Available song IDs:', songs.map(s => ({ id: s.id, type: typeof s.id })));
+          const songId = item.dataset.songId;
+          const song = songs.find(s => s.id === songId);
+          if (!song) return;
+          if (song.status !== 'ok') {
+            showToast(song.status === 'upcoming' ? 'That song is already coming up soon.' : 'That song was played recently. Please pick another one.', 'error');
+            return;
           }
+          document.querySelectorAll('.song-item').forEach(i => i.classList.remove('selected'));
+          item.classList.add('selected');
+          selectedSong = song;
+          submitRequestBtn.disabled = false;
+          submitRequestBtn.style.pointerEvents = 'auto';
+          submitRequestBtn.style.cursor = 'pointer';
+          submitRequestBtn.textContent = `Request "${song.title}"`;
         });
       });
     }
@@ -2803,129 +2236,40 @@
     }
 
     async function submitSongRequest(song) {
-      console.log('submitSongRequest called with:', song);
-      console.log('Song ID (request_id):', song.id);
-      
+      if (!turnstileToken) {
+        showToast('Please wait for the spam check to finish, then try again.', 'error');
+        return;
+      }
       submitRequestBtn.disabled = true;
       submitRequestBtn.textContent = 'Submitting request...';
-
-      // The request URL should use the request_id directly
-      const requestUrl = `https://stream.bcradio.net/api/station/1/request/${song.id}`;
-      console.log('Request URL:', requestUrl);
-
+      const token = turnstileToken;
       try {
-        console.log('Current origin:', window.location.origin);
-        console.log('User agent:', navigator.userAgent);
-        
-        // Close modal immediately for better UX
-        requestModal.style.display = 'none';
-        resetModal();
-        
-        // Try to match the working curl command exactly
-        const response = await fetch(requestUrl, {
+        const response = await fetch('/api/request', {
           method: 'POST',
-          body: JSON.stringify({})
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: song.id, token })
         });
-
-        console.log('API Response status:', response.status);
-        console.log('API Response headers:', response.headers);
-        
-        if (response.ok) {
-          const result = await response.json();
-          console.log('Request response:', result);
-          
-          // Show success toast with message from API
-          const message = result.formatted_message || result.message || 'Your request has been submitted!';
-          showToast(message, 'success');
-          
+        let result = {};
+        try { result = await response.json(); } catch (e) {}
+        if (response.ok && result.ok) {
+          requestModal.style.display = 'none';
+          resetModal();
+          showToast(result.message || 'Your request has been submitted!', 'success');
+          if (result.state) BCSync.setState(result.state);
+          else BCSync.refresh().catch(() => {});
         } else {
-          // Handle API errors
-          console.log('Response not OK, status:', response.status);
-          let result = {};
-          try {
-            result = await response.json();
-            console.log('Error response body:', result);
-          } catch (e) {
-            console.log('Could not parse error response as JSON');
-          }
-          
-          const errorMessage = result.formatted_message || result.message || `HTTP ${response.status}: Unable to submit request. Please try again.`;
-          console.error('API Error:', response.status, errorMessage);
-          
-          showToast(errorMessage, 'error');
+          showToast(result.message || `Unable to submit request (HTTP ${response.status}). Please try again.`, 'error');
+          submitRequestBtn.disabled = false;
+          submitRequestBtn.textContent = `Request "${song.title}"`;
         }
-        
       } catch (error) {
-        console.error('Network error details:', error);
-        console.error('Error name:', error.name);
-        console.error('Error message:', error.message);
-        
-        // If it's a CORS error, try using a CORS proxy
-        if (error.name === 'TypeError' && error.message.includes('fetch')) {
-          console.log('CORS error detected, trying with proxy...');
-          
-          try {
-            // Try with CORS proxy
-            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(requestUrl)}`;
-            console.log('Proxy URL:', proxyUrl);
-            
-            const proxyResponse = await fetch(proxyUrl, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({})
-              })
-            });
-            
-            console.log('Proxy response status:', proxyResponse.status);
-            
-            if (proxyResponse.ok) {
-              const proxyData = await proxyResponse.json();
-              console.log('Proxy data:', proxyData);
-              
-              // Parse the actual API response from the proxy
-              let result;
-              try {
-                result = JSON.parse(proxyData.contents);
-              } catch (e) {
-                console.log('Could not parse proxy contents as JSON, using raw data');
-                result = proxyData;
-              }
-              
-              console.log('Parsed API response:', result);
-              
-              // Check if the API request was successful
-              if (result.success === true || (result.code && result.code >= 200 && result.code < 300)) {
-                const message = result.formatted_message || result.message || 'Your request has been submitted via proxy!';
-                showToast(message, 'success');
-                return; // Success, exit function
-              } else {
-                // API returned an error (like 404 Record not found)
-                const errorMessage = result.formatted_message || result.message || `API Error: ${result.code || 'Unknown error'}`;
-                console.log('API returned error:', errorMessage);
-                showToast(errorMessage, 'error');
-                return; // Error handled, exit function
-              }
-            }
-          } catch (proxyError) {
-            console.error('Proxy request also failed:', proxyError);
-          }
-        }
-        
-        let errorMessage = 'Network error. Please try again.';
-        
-        // Check if it's a CORS error
-        if (error.name === 'TypeError' && error.message.includes('fetch')) {
-          errorMessage = 'CORS error: The server is not allowing requests from this domain. This might be a temporary issue with the BC Radio API.';
-        }
-        
-        showToast(errorMessage, 'error');
+        console.error('Request error:', error);
+        showToast('Network error. Please try again.', 'error');
+        submitRequestBtn.disabled = false;
+        submitRequestBtn.textContent = `Request "${song.title}"`;
+      } finally {
+        turnstileToken = '';
+        if (window.turnstile && turnstileWidgetId !== null) { try { turnstile.reset(turnstileWidgetId); } catch (e) {} }
       }
     }
 
@@ -2943,25 +2287,6 @@
       clearTimeout(rTO);rTO=setTimeout(()=>player.classList.remove('resize'),300);
     });
 
-    // Disable skip/go-back for stream
-    // document.addEventListener('keydown', e => {
-    //   if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) return;
-    //   if (e.key === 'ArrowRight') {
-    //     idx = (idx + 1) % playlist.length;
-    //     playTrack();
-    //   } else if (e.key === 'ArrowLeft') {
-    //     idx = (idx - 1 + playlist.length) % playlist.length;
-    //     playTrack();
-    //   }
-    // });
-
-    // === Auto-start stream on page load ===
-    // window.addEventListener('DOMContentLoaded', () => {
-    //   // Small delay to ensure everything is loaded
-    //   setTimeout(() => {
-    //     playBtn.click(); // Simulate clicking the play button
-    //   }, 1000);
-    // });
   </script>  
 <script>
   // Target the span
@@ -3046,16 +2371,6 @@
   
   
 
-  <!-- Full Queue Modal -->
-  <div id="queue-modal" style="display:none;position:fixed;z-index:99999;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.75);backdrop-filter:blur(2px);align-items:center;justify-content:center;">
-    <div style="background:#fff;padding:32px 24px 24px 24px;border-radius:16px;max-width:90vw;max-height:80vh;overflow:auto;box-shadow:0 8px 32px rgba(0,0,0,0.25);position:relative;">
-      <button id="close-queue-modal" style="position:absolute;top:12px;right:16px;font-size:22px;background:none;border:none;cursor:pointer;color:#888">&times;</button>
-      <h2 style="margin-top:0;text-align:center;font-size:1.5em;">Full queue</h2>
-      <ul id="queue-list" style="list-style:none;padding:0;margin:0;max-width:400px;"></ul>
-      <div style="font-size:13px;color:#888;text-align:center;margin-top:12px;">Double-click a song to play it instantly</div>
-    </div>
-  </div>
-
   <!-- Add Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
@@ -3091,197 +2406,6 @@
     document.body.classList.add('ios-device');
   }
 })();
-</script>
-
-<script>
-// === EGG: Full Queue Modal ===
-(function(){
-  let eggBuffer = '';
-  document.addEventListener('keydown', function(e) {
-    if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) return;
-    if (e.key.length === 1) {
-      eggBuffer += e.key.toLowerCase();
-      if (eggBuffer.length > 3) eggBuffer = eggBuffer.slice(-3);
-      if (eggBuffer === 'egg') showQueueModal();
-    }
-  });
-
-  function showQueueModal() {
-    const modal = document.getElementById('queue-modal');
-    const list = document.getElementById('queue-list');
-    list.innerHTML = '';
-    playlist.forEach((src, i) => {
-      const li = document.createElement('li');
-      li.textContent = (i === idx ? '▶ ' : '') + tidy(src);
-      li.style.padding = '8px 0';
-      li.style.cursor = 'pointer';
-      li.style.fontWeight = i === idx ? 'bold' : 'normal';
-      li.style.color = i === idx ? '#2F28CE' : '#222';
-      li.ondblclick = function() {
-        idx = i;
-        playTrack();
-        closeQueueModal();
-      };
-      list.appendChild(li);
-    });
-    modal.style.display = 'flex';
-    setTimeout(()=>{
-      modal.focus();
-    }, 10);
-  }
-  function closeQueueModal() {
-    document.getElementById('queue-modal').style.display = 'none';
-    eggBuffer = '';
-  }
-  document.getElementById('close-queue-modal').onclick = closeQueueModal;
-  document.getElementById('queue-modal').addEventListener('click', function(e) {
-    if (e.target === this) closeQueueModal();
-  });
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeQueueModal();
-  });
-})();
-</script>
-
-<script>
-// === Share Song Button ===
-(function(){
-  const shareBtn = document.getElementById('share-song-btn');
-  const shareIcon = document.getElementById('share-icon');
-  
-  function getCanonicalPath(url) {
-    const base = "https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/";
-    return url.startsWith(base) ? url.slice(base.length) : url;
-  }
-  
-  function getShareUrl() {
-    const url = new URL(window.location.href.split('?')[0]);
-    url.searchParams.set('song', encodeURIComponent(getCanonicalPath(playlist[idx])));
-    return url.toString();
-  }
-  
-  shareBtn.onclick = function() {
-    const shareUrl = getShareUrl();
-    const message = 'Check out this song from BC Radio!\n\n' + shareUrl;
-    
-    navigator.clipboard.writeText(message).then(function(){
-      // Animate to checkmark
-      shareIcon.className = 'fa-solid fa-check';
-      shareIcon.style.color = '#28a745';
-      
-      // Animate the checkmark
-      gsap.fromTo(shareIcon, 
-        { scale: 0.8, opacity: 0.5 },
-        { scale: 1, opacity: 1, duration: 0.3, ease: "back.out(1.7)" }
-      );
-      
-      // Return to clipboard after 2 seconds
-      setTimeout(() => {
-        gsap.to(shareIcon, {
-          scale: 0.8,
-          opacity: 0.5,
-          duration: 0.2,
-          onComplete: () => {
-            shareIcon.className = 'fa-regular fa-clipboard';
-            shareIcon.style.color = '#007aff';
-            gsap.to(shareIcon, {
-              scale: 1,
-              opacity: 1,
-              duration: 0.2
-            });
-          }
-        });
-      }, 2000);
-    });
-  };
-})();
-
-// === On page load, check for ?song= param and queue that song first ===
-(function(){
-  const params = new URLSearchParams(window.location.search);
-  const songParam = params.get('song');
-  if (songParam) {
-    try {
-      const relPath = decodeURIComponent(songParam);
-      const foundIdx = playlist.findIndex(u => getCanonicalPath(u) === relPath);
-      if (foundIdx > -1) {
-        const [song] = playlist.splice(foundIdx, 1);
-        playlist.unshift(song);
-        idx = 0;
-      }
-    } catch(e) {}
-  }
-})();
-</script>
-
-<script>
-// Show share button only after radio starts
-function showShareBtn() {
-  document.getElementById('share-song-btn').style.display = 'inline-block';
-}
-</script>
-
-<script>
-// Simple hash function for obscuring song URLs (djb2)
-function hashString(str) {
-  let hash = 5381;
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) + hash) + str.charCodeAt(i);
-  }
-  return (hash >>> 0).toString(36); // unsigned, base36 for shortness
-}
-</script>
-
-<script>
-  // Album artwork mapping
-  const albumArtMap = {
-    'Driven%20By%20Desire': 'Driven%20by%20Desire.jpg',
-    'Chiaro%20Destino%20mp3%20version': 'Chiaro%20Destino.jpg',
-    'Random%20mp3s': 'All%20or%20Nothing.jpg', // Default for unreleased tracks
-    'Here_There_and_Everywhere': 'Here%20There%20and%20Everywhere.jpg',
-    'Julian': 'Julian.jpg',
-    'Hideaway%20Tales': 'Hideaway%20Tales.jpg',
-    'Life%20As%20We%20Know%20It': 'Life%20As%20We%20Know%20It.jpg',
-    'Long%20Before%20I%20Knew%20You%20mp3s': 'Long%20Before%20I%20Knew%20You.png',
-    'Make%20Some%20Sense%20of%20This': 'Make%20Some%20Sense%20of%20This.jpg',
-    'More%20To%20This%20Life%20mp3%20version': 'More%20To%20This%20Life.jpg',
-    'Mystery%20of%20Love': 'Mystery%20of%20Love.jpg',
-    'One%20Bright%20Moment': 'One%20Bright%20Moment.jpg',
-    'Remnants%20mp3%20version': 'Remnants.jpg',
-    'The%20World%20Around%20Me': 'This%20Is%20What%20I%20See.jpg',
-    'Weddington%20Street': 'Page%20One.jpg',
-    'Winnie%27s%20Song': 'Winnie%27s%20Song.jpg',
-    'Affair_mp3Version': 'Affair%20of%20the%20Heart.jpg',
-    'All%20in%20Your%20Mind': 'All%20in%20Your%20Mind.jpg',
-    'Miracle%20River': 'Miracle%20River.jpg'
-  };
-  
-  // Function to get album art for a song
-  function getAlbumArt(songPath) {
-    const baseUrl = 'https://web-assets-acwebdev.s3.amazonaws.com/Bernie%20Chiaravalle/cd%20covers/';
-    const fallbackArt = 'https://web-assets-acwebdev.s3.amazonaws.com/bcradioSquare.jpeg';
-    // If in Random mp3s, always use fallback
-    if (songPath.includes('Random%20mp3s')) {
-      return fallbackArt;
-    }
-    // Extract album name from path
-    const pathParts = songPath.split('/');
-    const albumName = pathParts[pathParts.length - 2];
-    // Get the artwork filename from the mapping
-    const artworkFile = albumArtMap[albumName];
-    if (artworkFile) {
-      return baseUrl + artworkFile;
-    } else {
-      return fallbackArt; // Use fallback if not found or ambiguous
-    }
-  }
-  // On DOMContentLoaded, set fallback art before anything plays
-  window.addEventListener('DOMContentLoaded', function() {
-    const albumArt = document.getElementById('album-art');
-    if (albumArt) {
-      albumArt.style.backgroundImage = `linear-gradient(rgba(255,255,255,0.15),rgba(255,255,255,0)), url('https://web-assets-acwebdev.s3.amazonaws.com/bcradioSquare.jpeg')`;
-    }
-  });
 </script>
 
 <script>
