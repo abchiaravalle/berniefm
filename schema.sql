@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS schedule (
   start_ms INTEGER NOT NULL,
   dur_ms INTEGER NOT NULL,
   request_id INTEGER,
-  created_ms INTEGER NOT NULL
+  created_ms INTEGER NOT NULL,
+  writer TEXT                     -- random id of the call that wrote the slot (race-safe bookkeeping)
 );
 CREATE INDEX IF NOT EXISTS schedule_start ON schedule(start_ms);
 CREATE INDEX IF NOT EXISTS schedule_track ON schedule(track_id, start_ms);

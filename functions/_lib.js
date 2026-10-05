@@ -68,80 +68,107 @@ export async function verifyTurnstile(env, token, request, expectHost, expectAct
 
 // ---------- scheduling ----------
 
-// Pick the next rotation track: among the least-recently-played, skip anything
-// already on the upcoming schedule, avoid the album/collection of the last few
-// slots, and pick randomly among the stalest few so the order never feels mechanical.
-async function pickRotation(env, excludeIds, recentGroups) {
-  const { results } = await env.DB.prepare(
-    'SELECT id, grp, dur_ms, last_played_ms FROM tracks WHERE enabled=1 ORDER BY last_played_ms ASC, plays ASC LIMIT 60'
-  ).all();
-  let pool = results.filter(t => !excludeIds.has(t.id));
-  if (!pool.length) pool = results;
+// Pick the next rotation track (in memory): among the least-recently-played,
+// skip anything already on the upcoming schedule, avoid the album/collection of
+// the last few slots, and pick randomly among the stalest few so the order never
+// feels mechanical. `pool` is sorted stalest first.
+function pickRotation(pool, exclude, recentGroups) {
+  let cand = pool.filter(t => !exclude.has(t.id));
+  if (!cand.length) cand = pool.slice();
   for (let k = recentGroups.length; k > 0; k--) {
     const avoid = new Set(recentGroups.slice(0, k));
-    const p2 = pool.filter(t => !t.grp || !avoid.has(t.grp));
-    if (p2.length) { pool = p2; break; }
+    const c2 = cand.filter(t => !t.grp || !avoid.has(t.grp));
+    if (c2.length) { cand = c2; break; }
   }
-  pool = pool.slice(0, 10);
-  return pool[Math.floor(Math.random() * pool.length)];
+  cand = cand.slice(0, 10);
+  return cand[Math.floor(Math.random() * cand.length)];
 }
 
-// Extend the schedule so it reaches now + HORIZON_MS. Safe under concurrency:
-// each slot is INSERT OR IGNORE keyed on seq; a racing worker that loses simply
-// re-reads. Pending listener requests are slotted first (FIFO).
+// Extend the schedule so it reaches now + HORIZON_MS. The whole extension is
+// planned in memory and written in ONE transaction (a handful of D1 calls no
+// matter how many slots), so long-lived streams never run out of their
+// per-invocation call budget.
+// Safe under concurrency: every slot insert is conditional on its predecessor
+// being exactly the row we planned from (seq, start, track). If another worker
+// (or a request re-plan) wrote first, our rows stop at the first mismatch, and
+// the next round re-reads the real tail. The timeline can never get a hole or
+// an overlap. Pending listener requests are slotted first (FIFO).
 export async function ensureSchedule(env, now = Date.now(), { publish = true } = {}) {
   let added = 0;
-  for (let guard = 0; guard < 120; guard++) {
+  for (let round = 0; round < 4; round++) {
     const { results: tails } = await env.DB.prepare(
       'SELECT s.seq, s.start_ms, s.dur_ms, s.track_id, t.grp FROM schedule s LEFT JOIN tracks t ON t.id=s.track_id ORDER BY s.seq DESC LIMIT 3'
     ).all();
     const tail = tails[0];
-    const recentGroups = tails.map(t => t.grp).filter(Boolean);
-    let nextSeq, nextStart;
-    if (!tail) {
-      nextSeq = 1; nextStart = now;
-    } else {
-      nextSeq = tail.seq + 1;
-      nextStart = tail.start_ms + tail.dur_ms + GAP_MS;
-      // Station was idle (no traffic) long enough that the timeline ran out:
-      // restart the clock at now rather than "catching up" through dead slots.
-      if (nextStart < now) nextStart = now;
-    }
-    if (nextStart > now + HORIZON_MS) break;
+    // Station idle long enough that the timeline ran out: restart the clock at
+    // now rather than "catching up" through dead slots.
+    let start = tail ? Math.max(tail.start_ms + tail.dur_ms + GAP_MS, now) : now;
+    if (start > now + HORIZON_MS) break;
 
-    // Requests first
-    const req = await env.DB.prepare(
-      "SELECT r.id, r.track_id, t.dur_ms FROM requests r JOIN tracks t ON t.id=r.track_id WHERE r.status='pending' ORDER BY r.id ASC LIMIT 1"
-    ).first();
-    let trackId, durMs, requestId = null;
-    if (req) {
-      trackId = req.track_id; durMs = req.dur_ms; requestId = req.id;
-    } else {
-      const { results: upcoming } = await env.DB.prepare(
-        'SELECT track_id FROM schedule WHERE start_ms >= ?1'
-      ).bind(now - 6 * 3600 * 1000).all();
-      const t = await pickRotation(env, new Set(upcoming.map(u => u.track_id)), recentGroups);
-      if (!t) break;
-      trackId = t.id; durMs = t.dur_ms;
-    }
-    // Conditional insert: only lands if the tail we planned from still exists
-    // unchanged. If a concurrent request re-plan deleted it, nothing is written
-    // and we loop to re-read, so the timeline can never get a hole.
-    const ins = await env.DB.prepare(
-      `INSERT OR IGNORE INTO schedule(seq, track_id, start_ms, dur_ms, request_id, created_ms)
-       SELECT ?1,?2,?3,?4,?5,?6 WHERE (?7 = 0) OR EXISTS (SELECT 1 FROM schedule WHERE seq=?7 AND start_ms=?8)`
-    ).bind(nextSeq, trackId, nextStart, durMs, requestId, now, tail ? tail.seq : 0, tail ? tail.start_ms : 0).run();
-    if (ins.meta && ins.meta.changes === 1) {
-      added++;
-      const stmts = [
-        env.DB.prepare('UPDATE tracks SET last_played_ms=?1, plays=plays+1 WHERE id=?2').bind(nextStart, trackId),
-      ];
-      if (requestId) {
-        stmts.push(env.DB.prepare("UPDATE requests SET status='scheduled', seq=?1 WHERE id=?2").bind(nextSeq, requestId));
+    const [{ results: reqs }, { results: upcoming }, { results: pool }] = await env.DB.batch([
+      env.DB.prepare("SELECT r.id, r.track_id, t.dur_ms, t.grp FROM requests r JOIN tracks t ON t.id=r.track_id WHERE r.status='pending' ORDER BY r.id ASC LIMIT 20"),
+      env.DB.prepare('SELECT track_id FROM schedule WHERE start_ms >= ?1').bind(now - 6 * 3600 * 1000),
+      env.DB.prepare('SELECT id, grp, dur_ms FROM tracks WHERE enabled=1 ORDER BY last_played_ms ASC, plays ASC LIMIT 150'),
+    ]);
+    const exclude = new Set(upcoming.map(u => u.track_id));
+    const recent = tails.map(t => t.grp).filter(Boolean);    // newest first
+    const plan = [];
+    let prev = tail ? { seq: tail.seq, start: tail.start_ms, track: tail.track_id } : null;
+    let seq = tail ? tail.seq : 0;
+    while (start <= now + HORIZON_MS) {
+      let trackId, durMs, grp, requestId = null;
+      const rq = reqs.shift();
+      if (rq) {
+        trackId = rq.track_id; durMs = rq.dur_ms; grp = rq.grp; requestId = rq.id;
+      } else {
+        const t = pickRotation(pool, exclude, recent.slice(0, 3));
+        if (!t) break;
+        trackId = t.id; durMs = t.dur_ms; grp = t.grp;
       }
-      await env.DB.batch(stmts);
+      seq++;
+      plan.push({ seq, trackId, start, durMs, requestId, prev });
+      prev = { seq, start, track: trackId };
+      exclude.add(trackId);
+      recent.unshift(grp);
+      start += durMs + GAP_MS;
     }
-    // loop: re-read tail (either ours or the racer's)
+    if (!plan.length) break;
+
+    const writer = crypto.randomUUID();     // proves which slots THIS call wrote
+    const stmts = [];
+    for (const p of plan) {
+      const guard = p.prev
+        ? 'EXISTS (SELECT 1 FROM schedule WHERE seq=?7 AND start_ms=?8 AND track_id=?9)'
+        : 'NOT EXISTS (SELECT 1 FROM schedule)';
+      const st = env.DB.prepare(
+        `INSERT OR IGNORE INTO schedule(seq, track_id, start_ms, dur_ms, request_id, created_ms, writer)
+         SELECT ?1,?2,?3,?4,?5,?6,?10 WHERE ${guard}`
+      );
+      stmts.push(p.prev
+        ? st.bind(p.seq, p.trackId, p.start, p.durMs, p.requestId, now, p.prev.seq, p.prev.start, p.prev.track, writer)
+        : st.bind(p.seq, p.trackId, p.start, p.durMs, p.requestId, now, null, null, null, writer));
+      // side effects only for slots that really landed as planned
+      stmts.push(env.DB.prepare(
+        'UPDATE tracks SET last_played_ms=?1, plays=plays+1 WHERE id=?2 AND EXISTS (SELECT 1 FROM schedule WHERE seq=?3 AND writer=?4)'
+      ).bind(p.start, p.trackId, p.seq, writer));
+      if (p.requestId) {
+        stmts.push(env.DB.prepare(
+          "UPDATE requests SET status='scheduled', seq=?1 WHERE id=?2 AND EXISTS (SELECT 1 FROM schedule WHERE seq=?1 AND writer=?3)"
+        ).bind(p.seq, p.requestId, writer));
+      }
+    }
+    const res = await env.DB.batch(stmts);
+    let landed = 0;
+    for (let i = 0, k = 0; k < plan.length; k++) {
+      if (res[i].meta && res[i].meta.changes === 1) landed++;
+      i += plan[k].requestId ? 3 : 2;
+    }
+    added += landed;
+    if (landed === plan.length) {
+      // Fully written. One more cheap round only if the plan stopped early.
+      if (start > now + HORIZON_MS) break;
+    }
+    // else: lost a race part-way; loop re-reads the real tail and continues from it
   }
   if (added && publish) await publishState(env, now);
   return added;
