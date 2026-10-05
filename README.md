@@ -33,9 +33,9 @@ Media: R2 bucket `bcradio-media`, public at `https://media.bcradio.net/`
 timeline). All audio is CBR 128 kbps MP3, loudness-matched (-16 LUFS, pure gain, no
 compression) with leading/trailing silence trimmed.
 
-Library: 259 tracks, 18.7 h. 242 from the original S3 files, 16 recorded off the old
-AzuraCast stream (songs that existed only on the droplet), 1 from the original file
-Bernie sent (Man Who Would Be King 2025). Every song the old station could play is a
+Library: 261 tracks, 18.9 h. 242 from the original S3 files, 18 recorded off the old
+AzuraCast stream (songs or versions that existed only on the droplet), 1 from the original
+file Bernie sent (Man Who Would Be King 2025). Every song the old station could play is a
 track here, matched to the exact recording by audio fingerprint, not by title.
 
 ## Endpoints
