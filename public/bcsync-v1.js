@@ -163,7 +163,7 @@
     const el = A();
     if (now >= activeItem.end_ms - 60) { handoff(false); return; }
     // keep the schedule fresh while on air (a request may re-plan the future)
-    if (Date.now() - lastStateAt > 25000) { lastStateAt = Date.now(); fetchState(false).catch(() => {}); }
+    if (Date.now() - lastStateAt > 40000) { lastStateAt = Date.now(); fetchState(false).catch(() => {}); }
     const nxt = itemAfter(activeItem);
     if (nxt && key(preparedItem) !== key(nxt) && activeItem.end_ms - now < 45000) {
       preparedItem = nxt;
@@ -241,8 +241,8 @@
   }
   syncClock().catch(() => {});
   poll();
-  setInterval(() => { if (!document.hidden && !wantPlaying) poll(); }, 30000);
-  setInterval(() => syncClock(2).catch(() => {}), 120000);
+  setInterval(() => { if (!document.hidden && !wantPlaying) poll(); }, 60000);
+  setInterval(() => syncClock(2).catch(() => {}), 600000);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) return;
     syncClock(2).then(() => fetchState(true)).then(() => {

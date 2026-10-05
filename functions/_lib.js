@@ -170,7 +170,7 @@ export async function stationState(env, now = Date.now()) {
   const cols = 's.seq, s.start_ms, s.dur_ms, s.request_id, t.id, t.title, t.artist, t.album, t.art, t.file';
   const { results: around } = await env.DB.prepare(
     `SELECT ${cols} FROM schedule s JOIN tracks t ON t.id=s.track_id
-     WHERE s.start_ms > ?1 - 7200000 ORDER BY s.seq ASC LIMIT 40`
+     WHERE s.start_ms > ?1 - 7200000 ORDER BY s.start_ms ASC LIMIT 40`
   ).bind(now).all();
   const items = around.map(r => ({
     seq: r.seq, start_ms: r.start_ms, end_ms: r.start_ms + r.dur_ms, is_request: !!r.request_id, track: trackOut(r),
