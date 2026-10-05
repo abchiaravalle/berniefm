@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS tracks (
   title TEXT NOT NULL,
   artist TEXT NOT NULL DEFAULT '',
   album TEXT NOT NULL DEFAULT '',
+  grp TEXT NOT NULL DEFAULT '',   -- album/collection used to spread rotation (album, else source folder)
   genre TEXT NOT NULL DEFAULT '',
   art TEXT,                       -- R2 key, e.g. art/abcd.jpg
   file TEXT NOT NULL,             -- R2 key, e.g. t/<id>-<hash>.mp3

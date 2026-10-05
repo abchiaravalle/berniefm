@@ -67,18 +67,21 @@ export async function verifyTurnstile(env, token, request, expectHost, expectAct
 
 // ---------- scheduling ----------
 
-// Pick the next rotation track: least-recently-played, never one already in the
-// upcoming window, never the same album twice in a row when avoidable, with a
-// little randomness among the 12 stalest so the order is not mechanical.
-async function pickRotation(env, excludeIds, lastAlbum) {
+// Pick the next rotation track: among the least-recently-played, skip anything
+// already on the upcoming schedule, avoid the album/collection of the last few
+// slots, and pick randomly among the stalest few so the order never feels mechanical.
+async function pickRotation(env, excludeIds, recentGroups) {
   const { results } = await env.DB.prepare(
-    'SELECT id, album, dur_ms, last_played_ms FROM tracks WHERE enabled=1 ORDER BY last_played_ms ASC, plays ASC LIMIT 40'
+    'SELECT id, grp, dur_ms, last_played_ms FROM tracks WHERE enabled=1 ORDER BY last_played_ms ASC, plays ASC LIMIT 60'
   ).all();
   let pool = results.filter(t => !excludeIds.has(t.id));
   if (!pool.length) pool = results;
-  const diffAlbum = pool.filter(t => !lastAlbum || !t.album || t.album !== lastAlbum);
-  if (diffAlbum.length) pool = diffAlbum;
-  pool = pool.slice(0, 12);
+  for (let k = recentGroups.length; k > 0; k--) {
+    const avoid = new Set(recentGroups.slice(0, k));
+    const p2 = pool.filter(t => !t.grp || !avoid.has(t.grp));
+    if (p2.length) { pool = p2; break; }
+  }
+  pool = pool.slice(0, 10);
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
@@ -87,16 +90,17 @@ async function pickRotation(env, excludeIds, lastAlbum) {
 // re-reads. Pending listener requests are slotted first (FIFO).
 export async function ensureSchedule(env, now = Date.now()) {
   for (let guard = 0; guard < 40; guard++) {
-    const tail = await env.DB.prepare(
-      'SELECT s.seq, s.start_ms, s.dur_ms, s.track_id, t.album FROM schedule s LEFT JOIN tracks t ON t.id=s.track_id ORDER BY s.seq DESC LIMIT 1'
-    ).first();
-    let nextSeq, nextStart, lastAlbum = null;
+    const { results: tails } = await env.DB.prepare(
+      'SELECT s.seq, s.start_ms, s.dur_ms, s.track_id, t.grp FROM schedule s LEFT JOIN tracks t ON t.id=s.track_id ORDER BY s.seq DESC LIMIT 3'
+    ).all();
+    const tail = tails[0];
+    const recentGroups = tails.map(t => t.grp).filter(Boolean);
+    let nextSeq, nextStart;
     if (!tail) {
       nextSeq = 1; nextStart = now;
     } else {
       nextSeq = tail.seq + 1;
       nextStart = tail.start_ms + tail.dur_ms + GAP_MS;
-      lastAlbum = tail.album;
       // Station was idle (no traffic) long enough that the timeline ran out:
       // restart the clock at now rather than "catching up" through dead slots.
       if (nextStart < now) nextStart = now;
@@ -114,7 +118,7 @@ export async function ensureSchedule(env, now = Date.now()) {
       const { results: upcoming } = await env.DB.prepare(
         'SELECT track_id FROM schedule WHERE start_ms >= ?1'
       ).bind(now - 6 * 3600 * 1000).all();
-      const t = await pickRotation(env, new Set(upcoming.map(u => u.track_id)), lastAlbum);
+      const t = await pickRotation(env, new Set(upcoming.map(u => u.track_id)), recentGroups);
       if (!t) return;
       trackId = t.id; durMs = t.dur_ms;
     }
