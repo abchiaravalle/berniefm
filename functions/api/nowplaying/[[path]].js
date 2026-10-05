@@ -19,7 +19,23 @@ function entry(item) {
     streamer: '', is_request: item.is_request, song: song(item),
   };
 }
-export async function onRequestGet({ request, env, params }) {
+export async function onRequestGet({ request, env, params, waitUntil }) {
+  // Shared 5 s edge cache: old pages and widgets may poll this endpoint.
+  const url = new URL(request.url);
+  const cacheKey = new Request(`${url.origin}${url.pathname}?b=${Math.floor(Date.now() / 5000)}`, { method: 'GET' });
+  const hit = await caches.default.match(cacheKey);
+  if (hit) return hit;
+  const res = await build(env, params);
+  if (res.status === 200) {
+    const out = new Response(res.body, res);
+    out.headers.set('cache-control', 'public, max-age=5');
+    waitUntil(caches.default.put(cacheKey, out.clone()));
+    return out;
+  }
+  return res;
+}
+
+async function build(env, params) {
   const s = await stationState(env);
   const origin = 'https://stream.bcradio.net';
   const nowSec = Math.floor(s.now / 1000);
