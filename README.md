@@ -13,7 +13,7 @@ within ~10-40 ms of each other.
 ```
 public/            static site (Pages)            -> bcradio.net
   index.html       the player UI (design unchanged from the AzuraCast era)
-  bcsync-v1.js     sync engine (clock sync, live join, gapless handoff, drift correction)
+  bcsync-v2.js     sync engine (clock sync, live join, gapless handoff, drift correction)
 functions/         Pages Functions
   api/time.js      server clock
   api/now.js       timeline: current + next + history (edge cached 10 s)

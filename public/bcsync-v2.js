@@ -66,6 +66,12 @@
   const els = [mk(), mk()];
   let active = 0, activeItem = null, preparedItem = null;
   let wantPlaying = false, tick = null, settling = false;
+  let gen = 0;                 // bumps on stop(): stale async work checks it and bails
+  let selfOp = 0;              // >0 while WE call play()/pause(), so our own events aren't mistaken for outside ones
+  const ownPause = el => { selfOp++; try { el.pause(); } finally { setTimeout(() => selfOp--, 0); } };
+  const ownPlay = el => { selfOp++; let p; try { p = el.play(); } finally { setTimeout(() => selfOp--, 0); } return p; };
+  const chan = ('BroadcastChannel' in window) ? new BroadcastChannel('bcradio-player') : null;
+  const tabId = Math.random().toString(36).slice(2);
   const A = () => els[active];
   const B = () => els[1 - active];
 
@@ -91,15 +97,19 @@
   }
 
   async function seekAndPlay(el, item) {
+    const g = gen;
     settling = true;
     try {
       if (el.readyState < 1) await whenReady(el, 'loadedmetadata');
+      if (g !== gen) return;
       const pos = livePos(item);
       if (Math.abs(el.currentTime - pos) > 0.25) { try { el.currentTime = pos; } catch (e) {} }
       el.playbackRate = 1;
-      const p = el.play();
+      const p = ownPlay(el);
       if (p) await p;
+      if (g !== gen) { ownPause(el); return; }
       if (el.readyState < 3) await whenReady(el, 'playing');
+      if (g !== gen) { ownPause(el); return; }
       const pos2 = livePos(item);
       if (Math.abs(el.currentTime - pos2) > 0.35) { try { el.currentTime = pos2 + 0.05; } catch (e) {} }
     } finally {
@@ -117,7 +127,7 @@
     if (!item) throw new Error('nothing scheduled');
     activeItem = item; preparedItem = null;
     emit('track', item);
-    B().pause();
+    ownPause(B());
     const el = A();
     if (load(el, item, livePos(item))) el.muted = true;   // hide the first few ms until we are on position
     emit('buffering', true);
@@ -145,9 +155,9 @@
       load(A(), nxt, livePos(nxt));
       activeItem = nxt; preparedItem = null;
       emit('track', nxt);
-      if (!sameElement) setTimeout(() => old.pause(), 1500);
+      if (!sameElement) setTimeout(() => ownPause(old), 1500);
       await seekAndPlay(A(), nxt);
-      if (!sameElement) old.pause();
+      if (!sameElement) ownPause(old);
       if (!itemAfter(nxt)) fetchState(true).catch(() => {});
     } catch (err) {
       emit('error', err);
@@ -185,9 +195,8 @@
       } else if (Math.abs(drift) < 0.03 && el.playbackRate !== 1) {
         el.playbackRate = 1;
       }
-    } else if (el.paused && !settling && !handing) {
-      // something paused us (interruption, phone call, etc.): rejoin live
-      goLive().catch(err => emit('error', err));
+    } else if (el.ended && !handing) {
+      handoff(true);
     }
   }
 
@@ -201,35 +210,59 @@
       setTimeout(() => { if (wantPlaying) goLive().catch(() => {}); }, 2000);
     });
     el.addEventListener('ended', () => { if (el === A() && wantPlaying && !handing) handoff(true); });
+    // Something outside the player paused us (another tab or app took the audio,
+    // a phone call, headphones unplugged): respect it and show Play. Never fight it.
+    el.addEventListener('pause', () => {
+      if (el !== A() || !wantPlaying || selfOp || settling || handing || el.ended) return;
+      wantPlaying = false; gen++; clearInterval(tick);
+      emit('pause');
+    });
+    // ...and if the system resumes us on its own (call ended, focus regained), rejoin live.
+    el.addEventListener('play', () => {
+      if (el !== A() || wantPlaying || selfOp) return;
+      wantPlaying = true;
+      clearInterval(tick); tick = setInterval(loop, 250);
+      if (chan) chan.postMessage({ t: 'playing', id: tabId });
+      goLive().catch(err => emit('error', err));
+    });
   });
 
   // Must be called directly from a click/tap handler.
   function start() {
     wantPlaying = true;
+    const g = ++gen;
+    if (chan) chan.postMessage({ t: 'playing', id: tabId });
     // Inside the user gesture: start the element that will play, and unlock the
     // second one with a short silent clip (iOS only lets gesture-started elements play).
     const item = state ? itemAt(serverNow()) : null;
     const el = A();
     if (item) { activeItem = item; if (load(el, item, livePos(item))) el.muted = true; }
-    if (el.src) { const p = el.play(); if (p) p.catch(() => {}); }
+    if (el.src) { const p = ownPlay(el); if (p) p.catch(() => {}); }
     const b = B();
     if (!b.dataset.key && !b.dataset.unlocked) {
       b.dataset.unlocked = '1'; b.src = SILENT;
-      const p = b.play(); if (p) p.then(() => b.pause()).catch(() => {});
+      const p = ownPlay(b); if (p) p.then(() => ownPause(b)).catch(() => {});
     }
     return (async () => {
       if (!state || offsetMs === 0) await Promise.all([syncClock(3), fetchState(true)]);
+      if (g !== gen) return;
       await goLive();
+      if (g !== gen) return;
       clearInterval(tick);
       tick = setInterval(loop, 250);
-    })().catch(err => { wantPlaying = false; clearInterval(tick); emit('error', err); throw err; });
+    })().catch(err => { if (g === gen) { wantPlaying = false; clearInterval(tick); } emit('error', err); throw err; });
   }
   function stop() {
     wantPlaying = false;
+    gen++;
     clearInterval(tick);
-    els.forEach(e => e.pause());
+    els.forEach(e => ownPause(e));
     emit('pause');
   }
+  // Only one tab plays at a time: when another tab starts, this one stops.
+  if (chan) chan.onmessage = (m) => {
+    if (m.data && m.data.t === 'playing' && m.data.id !== tabId && wantPlaying) stop();
+  };
   function toggle() {
     if (wantPlaying) { stop(); return Promise.resolve(false); }
     return start().then(() => true);
@@ -248,7 +281,7 @@
     syncClock(2).then(() => fetchState(true)).then(() => {
       if (wantPlaying) {
         const cur = itemAt(serverNow());
-        if (!activeItem || !cur || key(cur) !== key(activeItem) || A().paused) goLive().catch(() => {});
+        if (!activeItem || !cur || key(cur) !== key(activeItem)) goLive().catch(() => {});
       }
     }).catch(() => {});
   });
