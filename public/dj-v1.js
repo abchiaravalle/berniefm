@@ -80,7 +80,7 @@
     return d;
   }
 
-  function open() { root.classList.add('open'); document.documentElement.style.overflow = 'hidden'; token() ? showPicker() : showLock(); }
+  function open() { view = { album: null, q: '' }; root.classList.add('open'); document.documentElement.style.overflow = 'hidden'; token() ? showPicker() : showLock(); }
   function close() { root.classList.remove('open'); document.documentElement.style.overflow = ''; }
 
   function showLock(msg = '') {
