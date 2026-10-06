@@ -33,10 +33,15 @@ Media: R2 bucket `bcradio-media`, public at `https://media.bcradio.net/`
 timeline). All audio is CBR 128 kbps MP3, loudness-matched (-16 LUFS, pure gain, no
 compression) with leading/trailing silence trimmed.
 
-Library: 261 tracks, 18.9 h. 242 from the original S3 files, 18 recorded off the old
+Library: 333 tracks, 24.2 h. 242 from the original S3 files, 22 recorded off the old
 AzuraCast stream (songs or versions that existed only on the droplet), 1 from the original
-file Bernie sent (Man Who Would Be King 2025). Every song the old station could play is a
-track here, matched to the exact recording by audio fingerprint, not by title.
+file Bernie sent (Man Who Would Be King 2025), and 68 added 2026-10-05 that the old station
+never had: All or Nothing, Dreamer, This Is What I See (from album files on Navajo) and
+Maybe One Day, Standing in the Shadows, the Driven by Desire 2025 versions and recent
+singles (from the official releases on Bernie's YouTube channel). Every track is matched
+to its exact recording by audio fingerprint, not by title; Bernie's full Apple Music
+catalog (241 tracks, 38 releases) is covered except his Christmas album (held back).
+Expansion tooling: `expansion_plan.py`, `build_expansion.py` -> `expansion_lib.json`.
 
 ## Endpoints
 - `https://bcradio.net/` player
