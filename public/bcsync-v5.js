@@ -235,7 +235,8 @@
         leadChecked = true;
         if (Math.abs(drift) < 0.6) seekLead = Math.max(0, Math.min(0.6, seekLead - drift * 0.8));
       }
-      if (Math.abs(drift) > 0.3 && Date.now() - lastFix > 8000) {
+      // big errors fixed right away; a steady small offset (>60 ms) fixed calmly, at most every 20 s
+      if ((Math.abs(drift) > 0.3 && Date.now() - lastFix > 8000) || (Math.abs(drift) > 0.06 && Date.now() - lastFix > 20000)) {
         lastFix = Date.now(); leadChecked = false;
         try { el.currentTime = (now - activeItem.start_ms) / 1000 + seekLead; } catch (e) {}
       }
