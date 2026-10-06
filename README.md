@@ -12,8 +12,10 @@ within ~10-40 ms of each other.
 
 ```
 public/            static site (Pages)            -> bcradio.net
-  index.html       the player UI (design unchanged from the AzuraCast era)
-  bcsync-v3.js     sync engine (clock sync, live join, gapless handoff, drift correction)
+  index.html       the player UI (green & gold, Bernie's studio, animated 8-track; 2026-10-05)
+  bcsync-v5.js     sync engine (clock sync, live join, gapless handoff, drift correction; Safari seeks, never changes rate)
+  dj-v1.js         hidden DJ panel (5 taps on "Upcoming in this set")
+  img/             studio photo, green-gold tritone
 functions/         Pages Functions
   api/time.js      server clock
   api/now.js       timeline straight from D1 (fallback; players read media.bcradio.net/state/now.json)
@@ -21,6 +23,8 @@ functions/         Pages Functions
   api/request.js   song requests (Turnstile + rate limits), re-plans the queue
   api/nowplaying/  AzuraCast-compatible now-playing JSON (old integrations keep working, edge cached 5 s)
   api/station/     old AzuraCast request API for pages cached from before the switch
+  api/catalog.js   every song organized by album (DJ picker)
+  api/dj/          DJ controls: unlock / check / play (now|next) / skip; needs DJ_CODE
   listen/          continuous MP3 stream at the old URL, same timeline
   _middleware.js   host redirects (bernieradio.acwebdev.net -> bcradio.net, stream.* root)
   _lib.js          scheduler + helpers
@@ -79,5 +83,12 @@ Library tooling lives outside the repo (audio masters are large):
 `/Volumes/6154577230/bcradio-work/` (`transcode2.py`, `publish.py`, `d1tool.py`).
 Add the file + metadata, run transcode2 then publish; new tracks enter rotation shuffled.
 
-## Holiday mode
-Unchanged. See `claude.md`. `?holidaymode=true` previews it.
+## DJ mode
+Tap "Upcoming in this set" 5 times within 3 seconds. The first time on a device it asks
+for the DJ code (secret env `DJ_CODE`; the value lives in `~/.hermes/secrets/bcradio.txt`).
+Changing `DJ_CODE` signs every device out. "Play now" switches every listener in 10 s,
+"Next" plays after the current song, "Skip" moves everyone on.
+
+## Old design
+The pre-2026-10-05 page (with the holiday mode toggles) is kept in `legacy/` for reference.
+It is not deployed.
