@@ -4,13 +4,16 @@ import { ensureSchedule, publishState, MEDIA, STATE_KEY } from '../_lib.js';
 // Keeps the old AzuraCast URL working for anything that has it saved
 // (https://stream.bcradio.net/listen/bcradio/radio.mp3): VLC, iTunes, smart
 // speakers, radio apps. Joins the current track at the live position (cut on an
-// MP3 frame boundary), then pipes each scheduled track from R2 in order, paced
-// to real time.
+// MP3 frame boundary), then follows the timeline song by song, paced to real time.
 //
-// Call budget: each song change reads the published timeline (R2 state file,
-// the same file every web player reads) plus the audio object. D1 is touched
-// only when that timeline is about to run out, so one connection can run for
-// many hours inside the per-invocation limits.
+// Alignment: the stream tracks the timeline time of the next byte it sends
+// ("content time"). At every song change it picks whatever the timeline has on
+// air at that content time and seeks into it if needed, so a DJ cut, a skip or
+// a re-plan can never leave it permanently out of step. While a song plays it
+// re-reads the timeline every 30 s, so a song cut short by the DJ stops on time.
+//
+// Call budget (free plan: 1000 internal calls per invocation): ~2 per song plus
+// 1 per 30 s. Connections end after MAX_MS; players reconnect on their own.
 
 const HEADERS = {
   'content-type': 'audio/mpeg',
@@ -25,10 +28,10 @@ const HEADERS = {
 };
 const BPS = 16000;                  // CBR 128 kbps
 const BURST_S = 8;                  // send this much audio at once so players start fast
-const MAX_TRACKS = 200;             // ~14 h per connection; players reconnect
-const LOW_WATER_MS = 10 * 60000;    // extend the schedule when < 10 min is planned past the current song
+const MAX_MS = 4 * 3600 * 1000;     // ~4 h per connection
+const LOW_WATER_MS = 10 * 60000;    // extend the schedule when < 10 min is planned ahead
+const RECHECK_MS = 30000;
 
-// Find the first real MPEG frame header at/after `from` for our CBR 128k/44.1k files.
 function frameStart(buf, from = 0) {
   for (let i = from; i < buf.length - 4; i++) {
     if (buf[i] === 0xFF && (buf[i + 1] & 0xE0) === 0xE0) {
@@ -55,9 +58,6 @@ async function readTimeline(env) {
     return [];
   }
 }
-
-// Published timeline, extended (and republished) first if it is running low
-// relative to `horizonFrom`.
 async function timeline(env, horizonFrom) {
   let items = await readTimeline(env);
   const lastEnd = items.length ? items[items.length - 1].end_ms : 0;
@@ -70,6 +70,7 @@ async function timeline(env, horizonFrom) {
   }
   return items;
 }
+const itemAt = (items, t) => items.find(i => i.start_ms <= t && t < i.end_ms) || items.find(i => i.start_ms > t) || null;
 
 export async function onRequest({ request, env, params }) {
   const p = Array.isArray(params.path) ? params.path.join('/') : (params.path || '');
@@ -77,58 +78,58 @@ export async function onRequest({ request, env, params }) {
   if (request.method === 'HEAD' || request.method === 'OPTIONS') return new Response(null, { headers: HEADERS });
   if (request.method !== 'GET') return new Response('Method not allowed', { status: 405 });
 
-  const now = Date.now();
-  let items = await timeline(env, now);
-  let item = items.find(i => i.start_ms <= now && now < i.end_ms) || items.find(i => i.start_ms > now);
-  if (!item) return new Response('Station starting, try again', { status: 503 });
+  const t0 = Date.now();
+  let items = await timeline(env, t0);
+  if (!itemAt(items, t0)) return new Response('Station starting, try again', { status: 503 });
 
-  // Byte-paced pipe: a burst up front so the player starts quickly, then real
-  // time (128 kbps), so this stream stays on the same clock as the website.
   const { readable, writable } = new TransformStream();
   const pump = async () => {
     const w = writable.getWriter();
-    const t0 = Date.now();
+    let content = t0;          // timeline time of the next byte we send
     let sent = 0;
     try {
-      let first = true;
-      for (let n = 0; n < MAX_TRACKS && item; n++) {
-        let opts;
-        if (first) {
-          first = false;
-          const pos = (Date.now() - item.start_ms) / (item.end_ms - item.start_ms);
-          if (pos > 0.98) {
-            // almost over: start clean at the next song
-            items = await timeline(env, item.end_ms);
-            item = items.find(i => i.start_ms >= item.end_ms - 5) || null;
-            n--; continue;
-          }
-          const off = Math.floor(Math.max(0, Date.now() - item.start_ms) / 1000 * BPS);
-          if (off > 8192) opts = { range: { offset: off } };
+      while (Date.now() - t0 < MAX_MS) {
+        let item = itemAt(items, content);
+        if (!item) { items = await timeline(env, content); item = itemAt(items, content); if (!item) break; }
+        if (item.start_ms > content) content = item.start_ms;            // idle gap: jump ahead
+        const into = content - item.start_ms;
+        if (item.end_ms - content < 1500) {                              // ~nothing left of this one
+          content = item.end_ms; continue;
         }
-        const obj = await env.MEDIA.get(keyOf(item), opts);
+        let limit = Math.floor((item.end_ms - item.start_ms) / 1000 * BPS);   // bytes of this item on air
+        let off = Math.floor(into / 1000 * BPS);
+        const obj = await env.MEDIA.get(keyOf(item), off > 8192 ? { range: { offset: off } } : undefined);
+        if (off <= 8192) off = 0;
+        let pos = off, aligned = off === 0, lastCheck = Date.now();
         if (obj && obj.body) {
           const rd = obj.body.getReader();
-          let aligned = !opts;
           for (;;) {
             const { value, done } = await rd.read();
             if (done) break;
             let chunk = value;
             if (!aligned) {
               const i = frameStart(chunk);
-              if (i < 0) continue;
-              chunk = chunk.subarray(i); aligned = true;
+              if (i < 0) { pos += chunk.length; continue; }
+              pos += i; chunk = chunk.subarray(i); aligned = true;
             }
-            await w.write(chunk);
-            sent += chunk.length;
+            if (pos + chunk.length > limit) chunk = chunk.subarray(0, Math.max(0, limit - pos));
+            if (chunk.length) {
+              await w.write(chunk);
+              pos += chunk.length; sent += chunk.length;
+            }
+            if (pos >= limit) { try { await rd.cancel(); } catch (e) {} break; }
             const ahead = sent / BPS - (Date.now() - t0) / 1000 - BURST_S;
             if (ahead > 0.5) await sleep(ahead * 1000);
+            if (Date.now() - lastCheck > RECHECK_MS) {                 // DJ cut / re-plan?
+              lastCheck = Date.now();
+              items = await readTimeline(env);
+              const same = items.find(i => i.seq === item.seq && i.start_ms === item.start_ms);
+              if (same) limit = Math.floor((same.end_ms - same.start_ms) / 1000 * BPS);
+            }
           }
         }
-        // Next song = whatever the shared timeline says follows this one
-        // (re-read every time, so listener requests show up here too).
-        const endMs = item.end_ms;
-        items = await timeline(env, endMs);
-        item = items.find(i => i.start_ms >= endMs - 5) || null;
+        content = item.start_ms + Math.round(pos / BPS * 1000);
+        items = await timeline(env, content);
       }
     } catch (e) {
       // listener went away or a read failed: end the stream

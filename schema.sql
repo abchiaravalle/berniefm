@@ -14,7 +14,14 @@ CREATE TABLE IF NOT EXISTS tracks (
   enabled INTEGER NOT NULL DEFAULT 1,
   requestable INTEGER NOT NULL DEFAULT 1,
   last_played_ms INTEGER NOT NULL DEFAULT 0,
-  plays INTEGER NOT NULL DEFAULT 0
+  plays INTEGER NOT NULL DEFAULT 0,
+  -- album picker / display (publish_catalog.py)
+  cat_section TEXT,               -- Albums | Singles | Silent Partner | Collaborations | Rarities & demos
+  cat_album TEXT,
+  cat_no REAL,                    -- track number on that album
+  cat_title TEXT,                 -- clean display title
+  cat_artist TEXT,
+  cat_year TEXT
 );
 CREATE INDEX IF NOT EXISTS tracks_rotation ON tracks(enabled, last_played_ms);
 

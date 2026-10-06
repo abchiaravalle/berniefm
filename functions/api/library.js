@@ -9,7 +9,8 @@ export async function onRequestGet({ request, env, waitUntil }) {
   if (hit) return hit;
   const now = Date.now();
   const { results } = await env.DB.prepare(
-    'SELECT id, title, artist, album, art, dur_ms, last_played_ms FROM tracks WHERE enabled=1 AND requestable=1 ORDER BY title COLLATE NOCASE'
+    `SELECT id, COALESCE(cat_title, title) AS title, COALESCE(cat_artist, artist) AS artist, COALESCE(cat_album, album) AS album,
+            art, dur_ms, last_played_ms FROM tracks WHERE enabled=1 AND requestable=1 ORDER BY 2 COLLATE NOCASE`
   ).all();
   const { results: pend } = await env.DB.prepare(
     "SELECT DISTINCT track_id FROM requests WHERE status='pending'"

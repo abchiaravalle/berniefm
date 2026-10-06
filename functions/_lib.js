@@ -6,6 +6,7 @@
 export const MEDIA = 'https://media.bcradio.net/';
 export const HORIZON_MS = 2 * 3600 * 1000;    // keep >= 2 h scheduled ahead (published to R2 as a static file)
 export const STATE_KEY = 'state/now.json';
+export const REV_KEY = 'state/rev.json';
 export const HISTORY_KEEP_MS = 3 * 24 * 3600 * 1000;
 export const NO_REPEAT_TRACK_MS = 4 * 3600 * 1000; // request blocked if played within 4h (matches old station feel)
 export const GAP_MS = 0;                      // back-to-back, no dead air
@@ -113,7 +114,7 @@ export async function ensureSchedule(env, now = Date.now(), { publish = true } =
     const exclude = new Set(upcoming.map(u => u.track_id));
     const recent = tails.map(t => t.grp).filter(Boolean);    // newest first
     const plan = [];
-    let prev = tail ? { seq: tail.seq, start: tail.start_ms, track: tail.track_id } : null;
+    let prev = tail ? { seq: tail.seq, start: tail.start_ms, track: tail.track_id, dur: tail.dur_ms } : null;
     let seq = tail ? tail.seq : 0;
     while (start <= now + HORIZON_MS) {
       let trackId, durMs, grp, requestId = null;
@@ -127,7 +128,7 @@ export async function ensureSchedule(env, now = Date.now(), { publish = true } =
       }
       seq++;
       plan.push({ seq, trackId, start, durMs, requestId, prev });
-      prev = { seq, start, track: trackId };
+      prev = { seq, start, track: trackId, dur: durMs };
       exclude.add(trackId);
       recent.unshift(grp);
       start += durMs + GAP_MS;
@@ -138,14 +139,14 @@ export async function ensureSchedule(env, now = Date.now(), { publish = true } =
     const stmts = [];
     for (const p of plan) {
       const guard = p.prev
-        ? 'EXISTS (SELECT 1 FROM schedule WHERE seq=?7 AND start_ms=?8 AND track_id=?9)'
+        ? 'EXISTS (SELECT 1 FROM schedule WHERE seq=?7 AND start_ms=?8 AND track_id=?9 AND dur_ms=?11)'
         : 'NOT EXISTS (SELECT 1 FROM schedule)';
       const st = env.DB.prepare(
         `INSERT OR IGNORE INTO schedule(seq, track_id, start_ms, dur_ms, request_id, created_ms, writer)
          SELECT ?1,?2,?3,?4,?5,?6,?10 WHERE ${guard}`
       );
       stmts.push(p.prev
-        ? st.bind(p.seq, p.trackId, p.start, p.durMs, p.requestId, now, p.prev.seq, p.prev.start, p.prev.track, writer)
+        ? st.bind(p.seq, p.trackId, p.start, p.durMs, p.requestId, now, p.prev.seq, p.prev.start, p.prev.track, writer, p.prev.dur)
         : st.bind(p.seq, p.trackId, p.start, p.durMs, p.requestId, now, null, null, null, writer));
       // side effects only for slots that really landed as planned
       stmts.push(env.DB.prepare(
@@ -174,6 +175,52 @@ export async function ensureSchedule(env, now = Date.now(), { publish = true } =
   return added;
 }
 
+// ---------- DJ (owner) controls ----------
+// Change what everyone hears. mode 'now': the current song stops DJ_LEAD_MS from
+// now and the chosen track starts for every listener at the same moment (the lead
+// gives players time to pick up the change). mode 'next': the chosen track plays
+// right after the current song. trackId null + mode 'now' = skip to the next song.
+// Everything after the cut is dropped and re-planned (listener requests keep their
+// place in line, right after the DJ pick).
+export const DJ_LEAD_MS = 10000;
+export async function djPlace(env, trackId, mode = 'now', now = Date.now()) {
+  await ensureSchedule(env, now, { publish: false });
+  let track = null;
+  if (trackId) {
+    track = await env.DB.prepare('SELECT id, dur_ms FROM tracks WHERE id=?1 AND enabled=1').bind(trackId).first();
+    if (!track) return { ok: false, message: 'Unknown song.' };
+  }
+  const cur = await env.DB.prepare(
+    'SELECT seq, start_ms, dur_ms, track_id FROM schedule WHERE start_ms <= ?1 AND start_ms + dur_ms > ?1 ORDER BY seq DESC LIMIT 1'
+  ).bind(now).first();
+  if (!cur) return { ok: false, message: 'Station is starting, try again in a moment.' };
+  const curEnd = cur.start_ms + cur.dur_ms;
+  let at = curEnd, cut = null;
+  if (mode === 'now' && curEnd > now + DJ_LEAD_MS) { at = now + DJ_LEAD_MS; cut = at - cur.start_ms; }
+  if (!track && cut === null) return { ok: true, at, message: 'The next song is about to start.', state: await publishState(env, now) };
+
+  const { results: dropped } = await env.DB.prepare('SELECT seq, track_id, request_id FROM schedule WHERE seq > ?1').bind(cur.seq).all();
+  const stmts = [env.DB.prepare('DELETE FROM schedule WHERE seq > ?1').bind(cur.seq)];
+  for (const d of dropped) {
+    if (d.request_id) stmts.push(env.DB.prepare("UPDATE requests SET status='pending', seq=NULL WHERE id=?1").bind(d.request_id));
+    stmts.push(env.DB.prepare(
+      `UPDATE tracks SET plays = MAX(plays-1,0), last_played_ms = COALESCE(
+         (SELECT MAX(start_ms) FROM schedule WHERE track_id=?1 AND seq <= ?2), 0) WHERE id=?1`
+    ).bind(d.track_id, cur.seq));
+  }
+  if (cut !== null) stmts.push(env.DB.prepare('UPDATE schedule SET dur_ms=?1 WHERE seq=?2').bind(cut, cur.seq));
+  if (track) {
+    stmts.push(env.DB.prepare(
+      "INSERT INTO schedule(seq, track_id, start_ms, dur_ms, request_id, created_ms, writer) VALUES (?1,?2,?3,?4,NULL,?5,'dj')"
+    ).bind(cur.seq + 1, track.id, at, track.dur_ms, now));
+    stmts.push(env.DB.prepare('UPDATE tracks SET last_played_ms=?1, plays=plays+1 WHERE id=?2').bind(at, track.id));
+  }
+  await env.DB.batch(stmts);
+  await ensureSchedule(env, now, { publish: false });
+  const state = await publishState(env, now);
+  return { ok: true, at, state };
+}
+
 export async function pruneHistory(env, now = Date.now()) {
   if (Math.random() < 0.02) {
     await env.DB.batch([
@@ -187,9 +234,9 @@ export function trackOut(row) {
   if (!row) return null;
   return {
     id: row.id,
-    title: row.title,
-    artist: row.artist || 'Bernie Chiaravalle',
-    album: row.album || '',
+    title: row.cat_title || row.title,
+    artist: row.cat_artist || row.artist || 'Bernie Chiaravalle',
+    album: row.cat_album || row.album || '',
     art: row.art ? MEDIA + row.art : MEDIA + 'art/default.jpg',
     url: MEDIA + row.file,
     duration: row.dur_ms / 1000,
@@ -198,7 +245,7 @@ export function trackOut(row) {
 
 // Timeline around `now`: last few finished items + everything scheduled ahead.
 export async function buildState(env, now = Date.now()) {
-  const cols = 's.seq, s.start_ms, s.dur_ms, s.request_id, t.id, t.title, t.artist, t.album, t.art, t.file';
+  const cols = 's.seq, s.start_ms, s.dur_ms, s.request_id, t.id, t.title, t.artist, t.album, t.art, t.file, t.cat_title, t.cat_artist, t.cat_album';
   const { results } = await env.DB.prepare(
     `SELECT ${cols} FROM schedule s JOIN tracks t ON t.id=s.track_id
      WHERE s.start_ms + s.dur_ms > ?1 ORDER BY s.start_ms ASC LIMIT 80`
@@ -219,6 +266,11 @@ export async function publishState(env, now = Date.now()) {
   st.generated_ms = now;
   await env.MEDIA.put(STATE_KEY, JSON.stringify(st), {
     httpMetadata: { contentType: 'application/json; charset=utf-8', cacheControl: 'public, max-age=5' },
+  });
+  // Tiny change marker: players poll this every few seconds while playing, and
+  // only re-read the full timeline when it changes (DJ picks, requests).
+  await env.MEDIA.put(REV_KEY, JSON.stringify({ rev: now }), {
+    httpMetadata: { contentType: 'application/json; charset=utf-8', cacheControl: 'no-store' },
   });
   return st;
 }

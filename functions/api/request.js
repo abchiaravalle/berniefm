@@ -12,7 +12,9 @@ const MAX_PENDING = 15;
 // track that is on air. Future rotation slots are released back to the pool.
 async function replan(env, now) {
   const cut = await env.DB.prepare(
-    'SELECT seq FROM schedule WHERE start_ms >= ?1 ORDER BY seq ASC LIMIT 1'
+    `SELECT seq FROM schedule WHERE start_ms >= ?1
+       AND seq > COALESCE((SELECT MAX(seq) FROM schedule WHERE writer='dj'), 0)
+     ORDER BY seq ASC LIMIT 1`
   ).bind(now + LOCK_MS).first();
   if (cut) {
     const { results: dropped } = await env.DB.prepare(
