@@ -257,7 +257,9 @@ a{color:inherit}
   .bg,.grain{animation:none}
   .window .spin,.playing .vu i,.onair i{animation:none!important}
 }
+html.still .bg,html.still .grain,html.still .window .spin,html.still .vu i,html.still .onair i{animation:none!important}
 </style>
+<script>if (/[?&]still=1/.test(location.search)) document.documentElement.classList.add('still');</script>
 </head>
 <body>
 <div class="bg" aria-hidden="true"></div>
