@@ -258,8 +258,11 @@ a{color:inherit}
   .window .spin,.playing .vu i,.onair i{animation:none!important}
 }
 html.still .bg,html.still .grain,html.still .window .spin,html.still .vu i,html.still .onair i{animation:none!important}
+html.lite .grain,html.lite .label::after{display:none!important}
+html.lite .card,html.lite .onair,html.lite .btn{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html.lite .card{background:rgba(8,20,13,.86)}
 </style>
-<script>if (/[?&]still=1/.test(location.search)) document.documentElement.classList.add('still');</script>
+<script>if (/[?&]still=1/.test(location.search)) document.documentElement.classList.add('still'); if (/[?&]lite=1/.test(location.search)) document.documentElement.classList.add('lite');</script>
 </head>
 <body>
 <div class="bg" aria-hidden="true"></div>
