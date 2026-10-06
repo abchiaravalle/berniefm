@@ -1,0 +1,2448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  
+  <!-- Meta for BC Radio -->
+<title>Bernie Chiaravalle Radio | Rarities & Classics</title>
+<meta name="description" content="Tune into Bernie Chiaravalle Radio -- a curated mix of rare demos, unreleased tracks, and timeless classics from the archives.">
+
+<!-- Open Graph -->
+<meta property="og:title" content="Bernie Chiaravalle Radio | Rarities & Classics">
+<meta property="og:description" content="Tune into Bernie Chiaravalle Radio -- a curated mix of rare demos, unreleased tracks, and timeless classics from the archives.">
+<meta property="og:image" content="/social_bcradio2.jpeg">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://bcradio.net">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Bernie Chiaravalle Radio | Rarities & Classics">
+<meta name="twitter:description" content="Tune into Bernie Chiaravalle Radio -- a curated mix of rare demos, unreleased tracks, and timeless classics from the archives.">
+<meta name="twitter:image" content="/social_bcradio2.jpeg">
+
+  <!-- libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="SplitText.min.js"></script>
+
+<link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="My App">
+  <link rel="apple-touch-icon" href="appleicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  
+  
+  <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js');
+  }
+  </script>
+  
+  <style>
+    *{transition:all .4s ease}
+
+    /* === light and dark mode === */
+    body{
+      margin:0;
+      min-height:100vh;
+      background: #09090b;
+      font-family:'Instrument Sans',sans-serif;
+      color:#fafafa;
+      overflow-x: hidden;
+      position: relative;
+    }
+    
+    /* Static background image (non-holiday) */
+    .bg-static {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      width: 100vw;
+      height: 100vh;
+      background-image: url('https://images.unsplash.com/photo-1657208431551-cbf415b8ef26');
+      background-size: cover;
+      background-position: center;
+      filter: blur(25px) brightness(0.5);
+      transform: scale(1.1); /* Prevent blur edge artifacts */
+    }
+
+    /* Background video styles (holiday mode) */
+    .bg-video {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+    
+    .bg-video iframe {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 200dvw;
+      height: 200dvh;
+      min-width: 200dvw;
+      min-height: 200dvh;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      filter: blur(25px) brightness(0.5);
+      object-fit: cover;
+    }
+    
+    /* JavaScript will handle dynamic scaling to ensure full coverage */
+    
+    .bg-video::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.1);
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+    }
+    
+    /* Christmas Lights Rope */
+    .christmas-lights.lightrope {
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 1000;
+      margin: -15px 0 0 0;
+      padding: 0;
+      pointer-events: none;
+      width: 100%;
+    }
+    
+    .christmas-lights.lightrope li {
+      position: relative;
+      animation-fill-mode: both;
+      animation-iteration-count: infinite;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: inline-block;
+      width: 12px;
+      height: 28px;
+      border-radius: 50%;
+      margin: 20px;
+      background: rgba(220, 20, 60, 1); /* Red */
+      box-shadow: 0px 4.67px 24px 3px rgba(220, 20, 60, 1);
+      animation-name: flash-red;
+      animation-duration: 2s;
+    }
+    
+    .christmas-lights.lightrope li:nth-child(2n+1) {
+      background: rgba(34, 139, 34, 1); /* Green */
+      box-shadow: 0px 4.67px 24px 3px rgba(34, 139, 34, 0.5);
+      animation-name: flash-green;
+      animation-duration: 0.4s;
+    }
+    
+    .christmas-lights.lightrope li:nth-child(3n+1) {
+      background: rgba(255, 215, 0, 1); /* Gold */
+      box-shadow: 0px 4.67px 24px 3px rgba(255, 215, 0, 1);
+      animation-name: flash-gold;
+      animation-duration: 1.4s;
+    }
+    
+    .christmas-lights.lightrope li:nth-child(4n+2) {
+      background: rgba(30, 144, 255, 1); /* Blue */
+      box-shadow: 0px 4.67px 24px 3px rgba(30, 144, 255, 1);
+      animation-name: flash-blue;
+      animation-duration: 1.1s;
+    }
+    
+    .christmas-lights.lightrope li:nth-child(5n+1) {
+      background: rgba(255, 255, 255, 1); /* White */
+      box-shadow: 0px 4.67px 24px 3px rgba(255, 255, 255, 1);
+      animation-name: flash-white;
+      animation-duration: 1.8s;
+    }
+    
+    .christmas-lights.lightrope li:nth-child(6n+2) {
+      background: rgba(255, 20, 147, 1); /* Deep Pink */
+      box-shadow: 0px 4.67px 24px 3px rgba(255, 20, 147, 1);
+      animation-name: flash-pink;
+      animation-duration: 1.6s;
+    }
+    
+    .christmas-lights.lightrope li:nth-child(odd) {
+      animation-duration: 1.8s;
+    }
+    
+    .christmas-lights.lightrope li:before {
+      content: "";
+      position: absolute;
+      background: #222;
+      width: 10px;
+      height: 9.33px;
+      border-radius: 3px;
+      top: -4.67px;
+      left: 1px;
+    }
+    
+    .christmas-lights.lightrope li:after {
+      content: "";
+      top: -14px;
+      left: 9px;
+      position: absolute;
+      width: 52px;
+      height: 18.67px;
+      border-bottom: solid #222 2px;
+      border-radius: 50%;
+    }
+    
+    .christmas-lights.lightrope li:last-child:after {
+      content: none;
+    }
+    
+    .christmas-lights.lightrope li:first-child {
+      margin-left: -40px;
+    }
+    
+    @keyframes flash-red {
+      0%, 100% {
+        background: rgba(220, 20, 60, 1);
+        box-shadow: 0px 4.67px 24px 3px rgba(220, 20, 60, 1);
+      }
+      50% {
+        background: rgba(220, 20, 60, 0.4);
+        box-shadow: 0px 4.67px 24px 3px rgba(220, 20, 60, 0.2);
+      }
+    }
+    
+    @keyframes flash-green {
+      0%, 100% {
+        background: rgba(34, 139, 34, 1);
+        box-shadow: 0px 4.67px 24px 3px rgba(34, 139, 34, 1);
+      }
+      50% {
+        background: rgba(34, 139, 34, 0.4);
+        box-shadow: 0px 4.67px 24px 3px rgba(34, 139, 34, 0.2);
+      }
+    }
+    
+    @keyframes flash-gold {
+      0%, 100% {
+        background: rgba(255, 215, 0, 1);
+        box-shadow: 0px 4.67px 24px 3px rgba(255, 215, 0, 1);
+      }
+      50% {
+        background: rgba(255, 215, 0, 0.4);
+        box-shadow: 0px 4.67px 24px 3px rgba(255, 215, 0, 0.2);
+      }
+    }
+    
+    @keyframes flash-blue {
+      0%, 100% {
+        background: rgba(30, 144, 255, 1);
+        box-shadow: 0px 4.67px 24px 3px rgba(30, 144, 255, 1);
+      }
+      50% {
+        background: rgba(30, 144, 255, 0.4);
+        box-shadow: 0px 4.67px 24px 3px rgba(30, 144, 255, 0.2);
+      }
+    }
+    
+    @keyframes flash-white {
+      0%, 100% {
+        background: rgba(255, 255, 255, 1);
+        box-shadow: 0px 4.67px 24px 3px rgba(255, 255, 255, 1);
+      }
+      50% {
+        background: rgba(255, 255, 255, 0.4);
+        box-shadow: 0px 4.67px 24px 3px rgba(255, 255, 255, 0.2);
+      }
+    }
+    
+    @keyframes flash-pink {
+      0%, 100% {
+        background: rgba(255, 20, 147, 1);
+        box-shadow: 0px 4.67px 24px 3px rgba(255, 20, 147, 1);
+      }
+      50% {
+        background: rgba(255, 20, 147, 0.4);
+        box-shadow: 0px 4.67px 24px 3px rgba(255, 20, 147, 0.2);
+      }
+    }
+    
+    /* Custom scrollbar for queue */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #18181b;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #3f3f46;
+      border-radius: 3px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #52525b;
+    }
+    
+    /* Tab styles */
+    .tab-button {
+      padding: 8px 12px;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    
+    .tab-button.active {
+      background: rgba(59, 130, 246, 0.1);
+    }
+    
+    .tab-button:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    
+    .tab-content {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .tab-content.hidden {
+      display: none;
+    }
+    
+    /* Elegant Toggle Switch Styles */
+    .tab-button-toggle {
+      position: relative;
+      cursor: pointer;
+      color: rgba(212, 212, 216, 0.6);
+      white-space: nowrap;
+      overflow: visible;
+      padding: 0.25rem 0.75rem;
+    }
+    
+    .tab-button-toggle.active {
+      color: rgb(212, 212, 216);
+    }
+    
+    .tab-slider {
+      pointer-events: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(16, 185, 129, 0.3));
+      border: 1px solid rgba(59, 130, 246, 0.4);
+    }
+    
+    /* Christmas animation styles */
+    .christmas-pulse {
+      animation: christmasPulse 1.5s ease-in-out infinite;
+    }
+    
+    @keyframes christmasPulse {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.6;
+        transform: scale(1.2);
+      }
+    }
+    
+    .christmas-sparkle {
+      font-size: 14px;
+      animation: sparkleFloat 2s ease-in-out infinite;
+      pointer-events: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      vertical-align: middle;
+    }
+    
+    @keyframes sparkleFloat {
+      0%, 100% {
+        opacity: 0.5;
+        transform: translateY(0) scale(1);
+      }
+      50% {
+        opacity: 1;
+        transform: translateY(-2px) scale(1.1);
+      }
+    }
+    
+    /* Stop animation when clicked */
+    .tab-button.animation-stopped .christmas-pulse,
+    .tab-button.animation-stopped .christmas-sparkle {
+      animation: none;
+      opacity: 1;
+    }
+    /* @media (prefers-color-scheme: dark) {
+      body {
+        background:linear-gradient(135deg,#0c0c0c,#1a1a1a,#2a2a2a,#111);
+        color:#fff;
+      }
+      .player {
+        background:rgba(0,0,0,0.7);
+        border:1px solid #333;
+      }
+      .button-26 {
+        background:#111;
+        border:2px solid #555;
+      }
+      .button-26__content {
+        box-shadow:inset 0 -6px #333,0 -2px #111;
+      }
+      .button-26__text {
+        color:#ddd;
+      }
+      .button-26 i {
+        color:#fff;
+      }
+      .volume-slider::-webkit-slider-thumb {
+        background:#888;
+      }
+      .progress {
+        background:#888;
+      }
+    } */
+
+    @keyframes gradientShift{0%{background-position:0 50%}50%{background-position:100% 50%}100%{background-position:0 50%}}
+
+    /* === blurred YouTube background (if enabled) === */
+    /* Removed duplicate rule - using the one at line 59 with z-index: 0 */
+
+    /* === player === */
+    .player{
+      background:rgba(255,255,255,0.7);
+      padding:40px;
+      border:1px solid #e6e6e6;
+      max-width:600px;
+      width:100%;
+      border-radius:0;
+      box-shadow:0 12px 30px rgba(0,0,0,.5);
+      text-align:center;
+      backdrop-filter:blur(12px);
+      z-index:10;
+    }
+    .player.resize{transform:scale(.97)}
+    .title{font-size:1.6rem;margin:0 0 22px;font-weight:700;opacity:0;animation:fadeIn .4s forwards}
+    @keyframes fadeIn{to{opacity:1}}
+
+    .button-26{
+      background:#fff;
+      border:2px solid #888;
+      font-size:18px;
+      cursor:pointer;
+      border-radius:10px;
+      outline:none;
+      padding:0;
+      box-shadow:0 2px 10px rgba(0,0,0,.15),5px 14px 20px rgba(0,0,0,.15);
+      display:flex;
+      align-items:center;
+      margin-left:auto!important;
+      margin-right:auto!important;
+    }
+    .button-26__content{
+      padding:24px 40px;
+      border-radius:8px;
+      box-shadow:inset 0 -6px #d5d7de,0 -2px #ffffff;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .button-26__text{color:#888;font-weight:600;transform:translateY(-4px)}
+    .button-26 i{color:#000;font-size:20px;transform:translateY(-4px)}
+    .button-26:active{box-shadow:none}
+    .button-26:active .button-26__content{box-shadow:none}
+    .button-26:active .button-26__text,
+    .button-26:active i{transform:translateY(0)}
+
+    /* === Loading Bar === */
+    .loading-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, #ff006e, #8338ec, #3a86ff);
+      background-size: 200% 100%;
+      animation: loadingGradient 1.5s ease-in-out infinite;
+      z-index: 10000;
+      display: none;
+    }
+    
+    @keyframes loadingGradient {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    @keyframes gradientFlow {
+      0%, 100% { 
+        background-position: 0% 50%; 
+      }
+      50% { 
+        background-position: 100% 50%; 
+      }
+    }
+
+    /* === Song Request Modal === */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+      backdrop-filter: blur(5px);
+    }
+
+    .modal-content {
+      background: #1a1a1a;
+      border-radius: 20px;
+      padding: 30px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      border: 1px solid #333;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #333;
+    }
+
+    .modal-title {
+      color: #fff;
+      font-size: 24px;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: #999;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 5px;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .modal-close:hover {
+      color: #fff;
+      background: #333;
+    }
+
+    .search-container {
+      margin-bottom: 25px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 15px 20px;
+      border: 2px solid #333;
+      border-radius: 12px;
+      background: #2a2a2a;
+      color: #fff;
+      font-size: 16px;
+      font-family: 'Instrument Sans', sans-serif;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .search-input:focus {
+      border-color: #2F28CE;
+    }
+
+    .search-input::placeholder {
+      color: #666;
+    }
+
+    .songs-list {
+      max-height: 400px;
+      overflow-y: auto;
+      margin-bottom: 20px;
+    }
+
+    .song-item {
+      display: flex;
+      align-items: center;
+      padding: 15px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      background: #2a2a2a;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .song-item:hover {
+      background: #333;
+      border-color: #2F28CE;
+    }
+
+    .song-item.song-unavailable {
+      opacity: 0.45;
+    }
+
+    .song-item.selected {
+      background: #2F28CE;
+      border-color: #2F28CE;
+    }
+
+    .song-artwork {
+      width: 50px;
+      height: 50px;
+      border-radius: 8px;
+      margin-right: 15px;
+      background: #333;
+      flex-shrink: 0;
+      object-fit: cover;
+    }
+
+    .song-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .song-title {
+      color: #fff;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 0 0 5px 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .song-artist {
+      color: #999;
+      font-size: 14px;
+      margin: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .request-button {
+      background: #2F28CE;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.2s ease;
+      font-family: 'Instrument Sans', sans-serif;
+      pointer-events: auto;
+    }
+
+    .request-button:hover:not(:disabled) {
+      background: #1F18BE;
+      transform: translateY(-2px);
+      cursor: pointer;
+    }
+
+    .request-button:disabled {
+      background: #666;
+      cursor: not-allowed;
+      transform: none;
+      pointer-events: auto;
+    }
+
+    .loading-text {
+      text-align: center;
+      color: #999;
+      padding: 40px;
+      font-size: 16px;
+    }
+
+    .error-text {
+      text-align: center;
+      color: #ff4444;
+      padding: 20px;
+      font-size: 16px;
+    }
+
+    .success-text {
+      text-align: center;
+      color: #44ff44;
+      padding: 20px;
+      font-size: 16px;
+    }
+
+    .request-song-btn {
+      background: linear-gradient(135deg, #2F28CE 0%, #5B4FE8 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-left: 15px;
+      font-family: 'Instrument Sans', sans-serif;
+    }
+
+    .request-song-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(47, 40, 206, 0.3);
+    }
+
+    /* === sliders & progress === */
+    .volume-slider{
+      appearance:none;
+      width:180px;
+      height:6px;
+      border-radius:5px;
+      background:#fff;
+      outline:none;
+      margin-top:24px;
+      cursor:pointer;
+    }
+    .volume-slider::-webkit-slider-thumb{
+      appearance:none;
+      width:18px;
+      height:18px;
+      background:#2F28CE;
+      border-radius:50%;
+      cursor:pointer;
+    }
+    .progress-wrap{width:100%;height:6px;background:rgba(255,255,255,.25);border-radius:5px;margin:18px auto 4px;pointer-events:none}
+    .progress{height:100%;width:0%;background:#2F28CE;border-radius:5px}
+    .time-info{font-size:.85rem;opacity:.85}
+
+    /* === queue === */
+    #upcoming{margin-top:26px;font-size:.95rem;line-height:1.5;opacity:0;animation:fadeIn .4s .05s forwards}
+
+    /* === mobile tweaks === */
+    @media(max-width:600px){
+      .player{width:88%;padding:32px;overflow-y:auto;max-height:100vh;}
+      .volume-slider,.progress-wrap{width:150px}
+    }
+
+    .player img{height:100px;aspect-ratio:1/1;object-fit:contain;background:#fff;margin-bottom:20px;border-radius:500px}
+    .player p{font-size:10px;margin-bottom:20px}
+    .player .title{margin-bottom:0}
+    
+    /* Main Layout Container */
+    .main-layout-container {
+      display: grid;
+      grid-template-columns: 1fr 350px;
+      grid-template-rows: auto auto;
+      gap: 30px;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 30px 20px;
+      align-items: start;
+      min-height: calc(100vh - 60px);
+      box-sizing: border-box;
+    }
+    
+    .player {
+      width: 100%;
+      max-width: 800px;
+      background-color: white;
+      border: none!important;
+      box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px;
+      border-radius: 20px!important;
+      padding: 30px!important;
+      grid-column: 1;
+      grid-row: 1;
+    }
+    
+    /* Sidebar Section */
+    .sidebar-section {
+      grid-column: 2;
+      grid-row: 1;
+      background-color: white;
+      border-radius: 20px;
+      padding: 25px;
+      box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px;
+      align-self: start;
+      position: sticky;
+      top: 30px;
+      max-height: calc(100vh - 60px);
+      overflow-y: auto;
+    }
+    
+    .sidebar-content {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .queue-section {
+      margin-bottom: 20px;
+    }
+    
+    /* Footer Section */
+    .footer-section {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      background-color: white;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px;
+      text-align: center;
+    }
+    
+    .left-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .right-column {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    
+    .player img {
+      height: 300px;
+      width: 300px;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+    
+    .visualizer-container {
+      width: 100%;
+      height: 100px;
+      margin: 20px 0;
+    }
+    
+    .title-container {
+      /* margin-bottom: 30px; */
+    }
+    
+    .button-container {
+      margin: 20px 0;
+    }
+    
+    @media screen and (max-width: 1200px) {
+      .main-layout-container {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+      }
+      
+      .sidebar-section {
+        grid-column: 1;
+        grid-row: 2;
+        max-height: none;
+        position: static;
+        top: auto;
+      }
+      
+      .footer-section {
+        grid-column: 1;
+        grid-row: 3;
+      }
+      
+      .player {
+        max-width: 100%;
+      }
+    }
+    
+    @media screen and (max-width: 768px) {
+      .main-layout-container {
+        padding: 15px;
+        gap: 20px;
+      }
+      
+      .player {
+        padding: 20px!important;
+        max-width: 100%;
+      }
+      
+      .sidebar-section {
+        padding: 20px;
+      }
+      
+      .footer-section {
+        padding: 20px;
+      }
+      
+      .right-column {
+        margin-top: 20px;
+      }
+      
+      .player img {
+        height: 200px;
+        width: 200px;
+      }
+    }
+    
+    
+    .player:hover {
+    /*     transform: scale(1.05); */
+    /*     transition: 1.5s ease  all!important */
+    }
+    
+    .button-26__content:hover {
+        box-shadow: inset 0 -3px #d5d7de, 0 -2px #ffffff;
+        transition: .2s ease all!important
+    }
+    
+    #current-time {
+        display: block!important;;
+        position: fixed;
+        bottom: 00px; left: 20px;
+        font-size: 48px;
+    /*     font-weight: 800 */
+        line-height: 1.2em
+    }
+    
+    #current-time * {
+      line-height: 1em
+    }
+    
+    .time, .tick-date { 
+        font-size: 8rem!important;
+        font-weight: 800;
+    }
+    
+    @media screen and (max-width: 990px) {
+    
+    .time, .tick-date { 
+        font-size: 4rem!important;
+    
+    }
+        
+        #current-time {
+                font-size: 32px;
+    
+        }
+    }
+    
+    .player dotlottie-player {
+        height: 25px!important;
+        margin-bottom: 25px;
+        opacity: .20;
+    
+    }
+    
+    #play-label {
+        color: black!important;
+        letter-spacing: 5px!important
+    }
+    
+    .title {
+        font-family: "bookmania", serif;
+        font-size: 22px!important;
+        line-height: 1em!important;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+        word-break: break-word;
+        hyphens: auto;
+    }
+    
+    .button-26__content {
+        min-width: 125px;
+        justify-content: center
+    }
+    
+    #upcoming strong {
+    /*     font-family: "bookmania", serif; */
+        text-transform: uppercase;
+        letter-spacing: 3px;
+        font-weight: 800!important;
+    }
+    
+    .tick-date {
+        font-family: "bookmania", serif;
+        font-weight: 600;
+        margin-top: 10px;
+    /*     display: inline-block!important; */
+    }
+    
+    .player {
+            width: 800px;
+            max-width: unset;
+            background-color: white;
+            border: none!important;
+            box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px;
+            border-radius: 20px!important;
+        }
+
+    
+    .title {
+        font-size: 40px
+    }
+    
+    * {
+        text-wrap: balance
+    }
+    
+    .fa-sharp fa-light:before {
+        color: rgba(0,0,0,.1);
+    }
+    
+    .fa-sharp fa-light:after {
+        color: #000000;
+        opacity: .3
+    }
+    
+            
+            @media screen and (max-width: 990px) {
+    
+                .player {
+                    max-width: 375px;
+                    padding: 25px
+                }
+    }
+     
+    /* iOS-specific margin for player */
+    body.ios-device .player {
+      margin: 24px auto !important;
+    }
+    
+    .album-art {
+      width: 300px;
+      height: 300px;
+      object-fit: cover;
+      border-radius: 50%;
+      transition: opacity 0.5s ease;
+    }
+    
+    .album-art.fade-out {
+      opacity: 0;
+    }
+    
+    .album-art.fade-in {
+      opacity: 1;
+    }
+    
+    .cd-case {
+      height: 320px;
+      width: 320px;
+      margin: 20px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      /* border-radius: 3px; */
+      /* background: rgba(0,0,0,0);
+      box-shadow: 0px 2px 10px 1px rgba(0,0,0,0.6), 
+                  inset 0px 0px 20px 2px rgba(0,0,0,0.4), 
+                  inset 0px 0px 5px 1px rgba(255,255,255,0.6), 
+                  inset 0px 0px 0px 1px rgba(255,255,255,0.2); */
+      transform-style: preserve-3d;
+      transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      /* overflow: hidden; */
+      /* Skeuomorphic 3D skew - opposite direction */
+      transform: perspective(800px) rotateY(18deg) skewY(2deg);
+      z-index: 1;
+    }
+    .cd-case::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      bottom: -18px;
+      width: 180px;
+      height: 38px;
+      background: radial-gradient(ellipse at center, rgba(0,0,0,0.22) 60%, rgba(0,0,0,0.05) 100%);
+      filter: blur(7px);
+      transform: translateX(-50%) skewX(22deg) rotate(-4deg);
+      opacity: 0.65;
+      z-index: 0;
+      pointer-events: none;
+    }
+    
+    .cd-case.flipping {
+      /* Keep the 3D skew during flip */
+      transform: perspective(800px) rotateY(198deg) skewY(2deg);
+    }
+    
+    .album-art {
+      height: 270px;
+      width: 270px;
+      border-radius: 3px;
+      /* background: rgba(0,0,0,0); */
+      /* box-shadow: 0px 0px 5px 1px rgba(0,0,0,0.5),
+                  inset 0px 0px 16px 2px rgba(0,0,0,0.1), 
+                  inset 0px 0px 0px 1px rgba(255,255,255,0.3); */
+      background-size: cover;
+      background-position: center;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1;
+      backface-visibility: hidden;
+      border:1px solid #e6e6e6
+    }
+    
+    .spine {
+      height: 120px;
+      width: 15px;
+      /* background: -webkit-linear-gradient(rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.07) 100%); */
+      /* box-shadow: 3px 0px 5px 0px rgba(0,0,0,0.23), 
+                  inset 0px 0px 7px 0px rgba(0,0,0,0.22), 
+                  inset 0px 0px 0px 1px rgba(255,255,255,0.22); */
+      position: absolute;
+      top: 43px;
+      left: 0;
+      border-radius: 0 50% 50% 0;
+      z-index: 0;
+    }
+    
+    .sup {
+      height: 10px;
+      width: 20px;
+      /* background: rgba(255,255,255,0.15); */
+      /* box-shadow: inset 0px 0px 6px 1px rgba(0,0,0,0.22), 
+                  inset 0px 0px 1px 1px rgba(255,255,255,0.17); */
+      position: absolute;
+      z-index: 2;
+    }
+    
+    .pos-tl { top: 0; left: 20px; border-radius: 0 0 5px 5px; }
+    .pos-tr { top: 0; left: 160px; border-radius: 0 0 5px 5px; }
+    .pos-bl { bottom: 0; left: 20px; border-radius: 5px 5px 0 0; }
+    .pos-br { bottom: 0; left: 160px; border-radius: 5px 5px 0 0; }
+
+    /* Toast notification styles */
+    .toast-notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 16px 24px;
+      border-radius: 12px;
+      color: white;
+      font-weight: 600;
+      font-size: 14px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      backdrop-filter: blur(10px);
+      z-index: 99999;
+      transform: translateX(400px);
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      max-width: 350px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .toast-notification.show {
+      transform: translateX(0);
+      opacity: 1;
+    }
+
+    .toast-notification.success {
+      background: linear-gradient(135deg, #00c851, #007e33);
+      border: 1px solid rgba(0, 200, 81, 0.3);
+    }
+
+    .toast-notification.error {
+      background: linear-gradient(135deg, #ff3547, #cc1e2d);
+      border: 1px solid rgba(255, 53, 71, 0.3);
+    }
+
+    .toast-notification .toast-icon {
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .toast-notification .toast-message {
+      flex: 1;
+      line-height: 1.4;
+    }
+
+    .listener-request {
+      color: #8338ec !important;
+      font-weight: 700;
+      font-family: 'Instrument Sans', sans-serif !important;
+    }
+    .listener-request-prefix {
+      color: #8338ec;
+      font-size: 12px;
+      font-weight: 700;
+      margin-right: 6px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      font-family: 'Instrument Sans', sans-serif !important;
+    }
+    .queue-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      text-align: left;
+    }
+    .queue-list li {
+      margin-bottom: 8px;
+      font-size: 1rem;
+      line-height: 1.4;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .queue-list .current-song {
+      font-weight: 800;
+      color: #2F28CE;
+    }
+    .queue-list .song-art {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      object-fit: cover;
+      margin-right: 8px;
+      background: #eee;
+      flex-shrink: 0;
+    }
+
+    /* Add CSS for centering queue items */
+    .queue-centered {
+      text-align: center;
+    }
+    .queue-centered li {
+      justify-content: center;
+    }
+
+    /* Unset max-width for .max-w-lg */
+    .max-w-lg {
+      max-width: unset !important;
+    }
+
+  </style>
+  
+  <style>
+      .icon-row {
+          display: flex;
+          gap: 20px;
+          justify-content: center;
+          align-items: center;
+          padding: 20px;
+          padding-bottom: 0;
+      }
+      .icon-row a {
+          text-decoration: none;
+          color: inherit;
+          transition: color 0.3s ease;
+      }
+      .icon-row a:hover .fa-apple {
+          color: #FF4259; /* Apple black */
+      }
+      .icon-row a:hover .fa-spotify {
+          color: #1DB954!important; /* Spotify green */
+      }
+      .icon-row a:hover .fa-facebook {
+          color: #1877F2; /* Facebook blue original */
+          filter: brightness(1.3); /* a little brighter */
+      }
+      .icon-row a:hover .fa-instagram {
+          color: #E1306C; /* Instagram pinkish */
+          filter: brightness(1.3); /* a little brighter */
+      }
+      
+      .icon-row a:hover .fa-link {
+          color: #a1077d; /* Instagram pinkish */
+          filter: brightness(1.3); /* a little brighter */
+      }
+
+
+
+.tick-date {
+    font-size: 64px!important
+}
+
+.tick-time { 
+    font-size: 32px!important;
+    line-height: 1em!important;
+}
+
+#current-time {
+    line-height: 1.2em!important
+}
+
+@media screen and (max-width: 990px) {
+    .title a {
+        margin: 0!important;
+        max-width: unset!important;
+        margin-top: 10px!important;
+        margin-bottom: 15px!important
+
+    }
+}
+
+
+@media screen and (max-width: 990px) {
+  .player {
+    position: fixed!important;
+    width: 100dvw!important;
+    max-width: unset!important;
+    margin: 0!important;
+    height: 100dvh!important;
+    border-radius: 0!important;
+    z-index: 100;
+  }
+  
+  .sidebar-section,
+  .footer-section {
+    display: none!important;
+  }
+
+  #current-time {
+    display: none!important
+  }
+}
+
+.modal-content {
+    background-color: rgba(0,0,0,.8)!important
+}
+
+  </style>
+  
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@dotlottie/player-component@latest/dist/dotlottie-player.mjs"></script>
+  <link rel="stylesheet" href="https://use.typekit.net/ihj1dwh.css">
+
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+
+<script src="https://kit.fontawesome.com/6f464c9e30.js" crossorigin="anonymous"></script>
+
+
+<script type="text/javascript">
+  (function(c,l,a,r,i,t,y){
+      c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+      t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+      y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+  })(window, document, "clarity", "script", "rbimvwhure");
+</script>
+
+<!-- Add Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="/bcsync-v4.js"></script>
+<script src="/dj-v1.js" defer></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+</head>
+
+<body>
+
+  <!-- ============================================================
+       HOLIDAY MODE - SNOWFLAKES
+       To re-enable: Remove 'hidden' class from the snowflakes div below
+       ============================================================ -->
+  <style>
+    /* customizable snowflake styling */
+    .snowflake {
+      color: #fff;
+      font-size: 1em;
+      font-family: Arial, sans-serif;
+      text-shadow: 0 0 5px #000;
+    }
+
+    .snowflake,.snowflake .inner{animation-iteration-count:infinite;animation-play-state:running}@keyframes snowflakes-fall{0%{transform:translateY(0)}100%{transform:translateY(110vh)}}@keyframes snowflakes-shake{0%,100%{transform:translateX(0)}50%{transform:translateX(80px)}}.snowflake{position:fixed;top:-10%;z-index:9999;-webkit-user-select:none;user-select:none;cursor:default;pointer-events:none;animation-name:snowflakes-shake;animation-duration:3s;animation-timing-function:ease-in-out}.snowflake .inner{animation-duration:10s;animation-name:snowflakes-fall;animation-timing-function:linear}.snowflake:nth-of-type(0){left:1%;animation-delay:0s}.snowflake:nth-of-type(0) .inner{animation-delay:0s}.snowflake:first-of-type{left:10%;animation-delay:1s}.snowflake:first-of-type .inner,.snowflake:nth-of-type(8) .inner{animation-delay:1s}.snowflake:nth-of-type(2){left:20%;animation-delay:.5s}.snowflake:nth-of-type(2) .inner,.snowflake:nth-of-type(6) .inner{animation-delay:6s}.snowflake:nth-of-type(3){left:30%;animation-delay:2s}.snowflake:nth-of-type(11) .inner,.snowflake:nth-of-type(3) .inner{animation-delay:4s}.snowflake:nth-of-type(4){left:40%;animation-delay:2s}.snowflake:nth-of-type(10) .inner,.snowflake:nth-of-type(4) .inner{animation-delay:2s}.snowflake:nth-of-type(5){left:50%;animation-delay:3s}.snowflake:nth-of-type(5) .inner{animation-delay:8s}.snowflake:nth-of-type(6){left:60%;animation-delay:2s}.snowflake:nth-of-type(7){left:70%;animation-delay:1s}.snowflake:nth-of-type(7) .inner{animation-delay:2.5s}.snowflake:nth-of-type(8){left:80%;animation-delay:0s}.snowflake:nth-of-type(9){left:90%;animation-delay:1.5s}.snowflake:nth-of-type(9) .inner{animation-delay:3s}.snowflake:nth-of-type(10){left:25%;animation-delay:0s}.snowflake:nth-of-type(11){left:65%;animation-delay:2.5s}
+    </style>
+    <!-- Snowflakes (HOLIDAY MODE - add/remove 'hidden' class to enable/disable) -->
+    <div class="snowflakes hidden" aria-hidden="true">
+      <div class="snowflake">
+        <div class="inner">❅</div>
+      </div>
+      <div class="snowflake">
+        <div class="inner">❅</div>
+      </div>
+      <div class="snowflake">
+        <div class="inner">❅</div>
+      </div>
+      <div class="snowflake">
+        <div class="inner">❅</div>
+      </div>
+      <div class="snowflake">
+        <div class="inner">❅</div>
+      </div>
+      <div class="snowflake">
+        <div class="inner">❅</div>
+      </div>
+      <div class="snowflake">
+        <div class="inner">❅</div>
+      </div>
+      <div class="snowflake">
+        <div class="inner">❅</div>
+      </div>
+      <div class="snowflake">
+        <div class="inner">❅</div>
+      </div>
+      <div class="snowflake">
+        <div class="inner">❅</div>
+      </div>
+      <div class="snowflake">
+        <div class="inner">❅</div>
+      </div>
+      <div class="snowflake">
+        <div class="inner">❅</div>
+      </div>
+    </div>
+    
+  <!-- ============================================================
+       HOLIDAY MODE - CHRISTMAS LIGHTS & FIREPLACE BACKGROUND
+       To re-enable for the holidays:
+       1. Remove 'hidden' class from the snowflakes div (above)
+       2. Remove 'hidden' class from the christmas-lights ul below
+       3. Remove 'hidden' class from the bg-video div below
+       4. See additional steps in the "Mode Toggle" and "Tab System" sections
+       5. See claude.md for complete instructions
+       ============================================================ -->
+
+  <!-- Christmas Lights Rope (HOLIDAY MODE - add/remove 'hidden' class to enable/disable) -->
+  <ul class="christmas-lights lightrope hidden">
+    <li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li>
+    <li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li>
+    <li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li>
+    <li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li>
+  </ul>
+
+  <!-- Static Background Image (non-holiday mode) -->
+  <!-- HOLIDAY MODE: Add 'hidden' class to this div when enabling holiday mode -->
+  <div class="bg-static"></div>
+
+  <!-- Background Video - Fireplace (HOLIDAY MODE - add/remove 'hidden' class to enable/disable) -->
+  <div class="bg-video hidden" style="position: fixed; inset: 0; z-index: 0; overflow: hidden; width: 100vw; height: 100vh;">
+    <iframe
+      src="https://www.youtube.com/embed/mSX3OyW9Rao?autoplay=1&loop=1&mute=1&playlist=mSX3OyW9Rao&controls=0&modestbranding=1&playsinline=1&rel=0&showinfo=0"
+      frameborder="0"
+      allow="autoplay; encrypted-media"
+      allowfullscreen
+      style="position: absolute; top: 50%; left: 50%; width: 200dvw; height: 200dvh; min-width: 200dvw; min-height: 200dvh; transform: translate(-50%, -50%); pointer-events: none; filter: blur(25px) brightness(0.5); object-fit: cover;"
+    ></iframe>
+    <div style="position: absolute; inset: 0; background: rgba(0, 0, 0, 0.1); z-index: 1; width: 100%; height: 100%;"></div>
+  </div>
+  
+  <span id="current-time"></span>
+
+  <!-- iOS Add to Home Screen Notification -->
+  <div id="ios-pwa-notice" style="
+    display:none;
+    position:fixed;
+    left:0; right:0; bottom:0;
+    z-index:9999;
+    background:rgba(255,255,255,0.97);
+    color:#222;
+    font-family:'Instrument Sans',sans-serif;
+    font-size:15px;
+    box-shadow:0 -2px 16px rgba(0,0,0,0.08);
+    padding:14px 18px 14px 18px;
+    text-align:center;
+    border-top:1px solid #eee;
+    line-height:1.5em;
+  ">
+    <span style="vertical-align:middle;">
+      To install this app, tap
+      <svg style="height:1.2em;vertical-align:middle;margin:0 2px;" viewBox="0 0 24 24"><path fill="#007aff" d="M12 16a1 1 0 0 1-1-1V6.41l-3.3 3.3a1 1 0 1 1-1.4-1.42l5-5a1 1 0 0 1 1.4 0l5 5a1 1 0 1 1-1.4 1.42l-3.3-3.3V15a1 1 0 0 1-1 1Z"/><rect fill="#007aff" x="4" y="18" width="16" height="2" rx="1"/></svg>
+      then <b>Add to Home Screen</b>.
+    </span>
+    <div style="margin-top:8px;font-size:13px;color:#666;">
+      <b>Note:</b> Due to iOS limitations, music will stop if you leave the app or lock your screen. For uninterrupted background listening, try this site on a desktop or Android device.
+    </div>
+    <button id="ios-pwa-close" style="
+      background:none;
+      border:none;
+      color:#888;
+      font-size:20px;
+      font-weight:700;
+      position:absolute;
+      right:12px;
+      top:8px;
+      cursor:pointer;
+      line-height:1;
+    ">&times;</button>
+  </div>
+
+  <div class="loading-bar" id="loadingBar"></div>
+  
+  <!-- Song Request Modal -->
+  <div class="modal-overlay" id="requestModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Request a song</h2>
+        <button class="modal-close" id="closeModal">×</button>
+      </div>
+      
+      <div class="search-container">
+        <input type="text" class="search-input" id="songSearch" placeholder="Search for songs, artists, or albums...">
+      </div>
+      
+      <div class="songs-list" id="songsList">
+        <div class="loading-text">Loading available songs...</div>
+      </div>
+      
+      <div id="request-turnstile" style="display:flex;justify-content:center;margin:0 0 16px 0;min-height:65px;"></div>
+      <button class="request-button" id="submitRequest" disabled>
+        Select a song to request
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Player Interface -->
+  <div class="min-h-screen text-zinc-100 antialiased flex items-center justify-center p-4 sm:p-6 lg:p-10" style="position: relative; z-index: 10; background: transparent;">
+    <div class="w-full max-w-5xl mx-auto" style="position: relative; z-index: 10;">
+      <!-- Shell -->
+      <div class="bg-zinc-900/80 border border-zinc-800 rounded-3xl shadow-2xl shadow-black/40 backdrop-blur-xl overflow-hidden" style="  position: relative; z-index: 10;">
+        <!-- ============================================================
+             HOLIDAY MODE - TAB TOGGLE
+             To re-enable for the holidays:
+             1. Remove 'hidden' from the tab toggle container below (the one with tab-upnext and tab-christmas)
+             2. Add 'hidden' back to the non-holiday header bar (the simpler one with just the Request button)
+             ============================================================ -->
+
+        <!-- Non-holiday header bar (just Request button, no tab toggle) -->
+        <div class="flex items-center justify-end py-3 sm:py-4 px-3 sm:px-4 lg:px-6 border-b border-zinc-800/80 gap-2">
+          <button id="openRequestModal" class="inline-flex items-center gap-1 sm:gap-1.5 rounded-full border border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/20 transition-colors text-[0.6rem] sm:text-[0.65rem] lg:text-xs text-sky-200 font-medium px-2 sm:px-3 py-1 sm:py-1.5">
+            <i class="fa-solid fa-music text-xs sm:text-sm"></i>
+            <span class="hidden xs:inline">Request</span>
+          </button>
+        </div>
+
+        <!-- Mode Toggle - Front and Center (HOLIDAY MODE - remove 'hidden' to show tab toggle) -->
+        <div class="flex items-center justify-between py-3 sm:py-4 px-3 sm:px-4 lg:px-6 border-b border-zinc-800/80 gap-2 hidden">
+          <div class="flex-1 hidden sm:block"></div>
+          <div class="relative inline-flex items-center rounded-full bg-zinc-800/80 p-1 sm:p-1.5 border border-zinc-700/50 overflow-visible">
+            <button id="tab-upnext" class="tab-button-toggle relative z-10 flex items-center gap-1.5 sm:gap-2.5 px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-full text-xs sm:text-sm lg:text-base font-medium transition-all duration-300 ease-out">
+              <span>Live radio</span>
+            </button>
+            <button id="tab-christmas" class="tab-button-toggle active relative z-10 flex items-center gap-1 sm:gap-2 px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-full text-xs sm:text-sm lg:text-base font-medium transition-all duration-300 ease-out overflow-visible">
+              <span class="christmas-sparkle" style="animation-delay: 0s;">🎄</span>
+              <span class="whitespace-nowrap">Christmas</span>
+              <span class="christmas-sparkle" style="animation-delay: 0.3s;">✨</span>
+            </button>
+            <div class="tab-slider absolute top-1 sm:top-1.5 rounded-full transition-all duration-300 ease-out" style="height: calc(100% - 8px);"></div>
+          </div>
+          <div class="flex-1 flex justify-end sm:flex-1">
+            <button id="openRequestModal-holiday" class="inline-flex items-center gap-1 sm:gap-1.5 rounded-full border border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/20 transition-colors text-[0.6rem] sm:text-[0.65rem] lg:text-xs text-sky-200 font-medium px-2 sm:px-3 py-1 sm:py-1.5">
+              <i class="fa-solid fa-music text-xs sm:text-sm"></i>
+              <span class="hidden xs:inline">Request</span>
+            </button>
+          </div>
+        </div>
+        
+        <!-- Top bar -->
+        <div id="top-bar-title" class="flex flex-col items-center justify-center gap-2 border-b border-zinc-800/80 px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
+          <div class="flex flex-col items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap justify-center">
+              <h1 id="main-title" class="text-xl sm:text-2xl font-semibold tracking-tight text-zinc-50" style="font-size: clamp(32px, 8vw, 52px)!important; font-weight: 800!important; line-height: 1.25em!important; margin-top: 10px!important; margin-bottom: 10px!important; word-break: break-word;">
+                BC Radio
+              </h1>
+              <span class="inline-flex items-center rounded-full border border-emerald-500/50 bg-emerald-500/10 text-emerald-300 text-[0.65rem] sm:text-xs font-medium leading-none px-1.5 py-0.5 gap-1" id="live-indicator">
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                Live
+              </span>
+            </div>
+            <p class="text-xs sm:text-sm text-zinc-400 text-center px-2">
+              Rarities &amp; Classics from Bernie Chiaravalle
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(0,2.4fr)]">
+          <!-- Christmas Playlist Container (HOLIDAY MODE - remove 'hidden' to enable) -->
+          <div id="christmas-playlist-container" class="border-b lg:border-b-0 lg:border-r border-zinc-800/80 p-4 sm:p-6 lg:p-8 hidden" style="min-height: 400px; display: none;">
+            <!-- Christmas player embed will load here -->
+            <div id="acwebdev-player-70454fd3"></div>
+            <script src="https://player.acwebdev.net/embed.js?id=70454fd3" async></script>
+          </div>
+          
+          <!-- Now playing / artwork -->
+          <div id="main-player-section" class="border-b lg:border-b-0 lg:border-r border-zinc-800/80">
+            <div class="flex flex-col lg:flex-row gap-6 lg:gap-8 p-4 sm:p-6 lg:p-8">
+              <!-- Artwork & controls -->
+              <div class="relative w-full lg:w-2/5 flex flex-col">
+                <div class="relative w-full aspect-square max-w-sm mx-auto">
+                  <div class="aspect-square rounded-3xl bg-gradient-to-br from-violet-500 via-sky-400 to-emerald-400 overflow-hidden shadow-xl shadow-blue-900/50" id="album-art-container">
+                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(255,255,255,0.25),transparent_55%),radial-gradient(circle_at_80%_100%,rgba(15,23,42,0.96),rgba(15,23,42,1))]"></div>
+                    <div class="absolute inset-5 sm:inset-7 rounded-2xl border border-white/10 bg-zinc-950/30 backdrop-blur-md flex flex-col justify-between p-4 sm:p-5">
+                      <div class="flex flex-col gap-1.5">
+                        <span class="text-[0.65rem] sm:text-xs tracking-[0.18em] text-zinc-400 font-medium">
+                          Now playing
+                        </span>
+                        <span class="text-base sm:text-lg lg:text-xl font-semibold tracking-tight text-zinc-50 line-clamp-2" id="track-title">
+                          BC Radio Live Stream
+                        </span>
+                        <span class="text-xs sm:text-sm text-zinc-300" id="track-artist">
+                          Bernie Chiaravalle
+                        </span>
+                      </div>
+                      <div class="flex justify-between items-end">
+                        <div class="flex flex-col gap-1">
+                          <span class="text-[0.6rem] sm:text-xs text-zinc-400">
+                            BC Radio
+                          </span>
+                          <span class="text-xs sm:text-sm text-zinc-200">
+                            Live Stream
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="absolute inset-0" id="album-art" style="background-size: cover; background-position: center; opacity: 1;"></div>
+                    
+                    <!-- Prominent centered play/pause toggle button -->
+                    <button id="playpause-artwork" class="absolute inset-0 flex items-center justify-center z-10 group transition-opacity duration-300" style="opacity: 0.5;">
+                      <div class="h-24 w-24 sm:h-32 sm:w-32 rounded-full bg-zinc-50/95 backdrop-blur-sm shadow-2xl shadow-black/50 flex items-center justify-center hover:scale-110 transition-transform duration-200 border-4 border-zinc-100">
+                        <i class="fa-solid fa-play text-zinc-950 text-3xl sm:text-4xl ml-1" id="artwork-icon"></i>
+                      </div>
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- Meta + waveform -->
+              <div class="flex-1 flex flex-col justify-between gap-4 pt-8 lg:pt-0">
+                <div class="space-y-4">
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="flex flex-col">
+                      <span class="text-lg sm:text-xl lg:text-2xl font-semibold tracking-tight text-zinc-50" id="track-title-main">
+                        BC Radio Live Stream
+                      </span>
+                      <span class="text-sm sm:text-base text-zinc-300" id="track-artist-main">
+                        Bernie Chiaravalle
+                      </span>
+                      <span class="text-xs text-zinc-400 tracking-[0.18em] mt-2" data-dj-trigger style="-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation">
+                        Upcoming in this set
+                      </span>
+                      <!-- Upcoming queue list -->
+                      <div class="mt-3 divide-y divide-zinc-800/80" id="queue-list">
+                        <!-- Items populated dynamically -->
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
+                <!-- Bottom info row -->
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <div class="flex items-center gap-3">
+                    <div class="h-8 w-8 rounded-full bg-zinc-800 flex items-center justify-center">
+                      <i class="fa-solid fa-globe w-4 h-4 text-zinc-300"></i>
+                    </div>
+                    <div class="flex flex-col">
+                      <span class="text-xs text-zinc-400 tracking-[0.18em]">
+                        Broadcast
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Upcoming queue -->
+          <div class="bg-zinc-950/40 h-full overflow-hidden">
+            <div class="h-full flex flex-col">
+
+              <!-- BC Radio Tab Content -->
+              <div id="tab-content-upnext" class="tab-content hidden flex-1 overflow-y-auto custom-scrollbar">
+                <!-- Queue list moved to main player area -->
+              </div>
+
+              <!-- Christmas Tab Content -->
+              <div id="tab-content-christmas" class="tab-content flex-1 overflow-y-auto custom-scrollbar">
+                <!-- Christmas player is in the visualizer area above -->
+              </div>
+
+              <!-- Footer -->
+              <div class="border-t border-zinc-800/80 px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2 text-[0.65rem] sm:text-xs text-zinc-400">
+                  <i class="fa-solid fa-clock"></i>
+                  <span id="session-info">Streaming 24/7</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <a href="https://music.apple.com/us/artist/bernie-chiaravalle/80848772" target="_blank" class="inline-flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900/80 hover:bg-zinc-800 transition-colors text-[0.65rem] sm:text-xs text-zinc-300 font-medium px-2.5 py-1.5">
+                    <i class="fab fa-apple"></i>
+                  </a>
+                  <a href="https://open.spotify.com/artist/4xt2hzGfXdXqKR2msI2gOj" target="_blank" class="inline-flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900/80 hover:bg-zinc-800 transition-colors text-[0.65rem] sm:text-xs text-zinc-300 font-medium px-2.5 py-1.5">
+                    <i class="fab fa-spotify"></i>
+                  </a>
+                  <a href="https://www.facebook.com/berniechiaravalle/" target="_blank" class="inline-flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900/80 hover:bg-zinc-800 transition-colors text-[0.65rem] sm:text-xs text-zinc-300 font-medium px-2.5 py-1.5">
+                    <i class="fab fa-facebook"></i>
+                  </a>
+                  <a href="https://www.instagram.com/bvchiaravalle/" target="_blank" class="inline-flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900/80 hover:bg-zinc-800 transition-colors text-[0.65rem] sm:text-xs text-zinc-300 font-medium px-2.5 py-1.5">
+                    <i class="fab fa-instagram"></i>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+  
+  <!-- <div style="margin-top:24px;text-align:center;">
+    <button id="toggle-theme" class="button-26" aria-label="Toggle Theme">
+      <div class="button-26__content">
+        <i class="fa-solid fa-circle-half-stroke"></i>
+        <span class="button-26__text">Toggle theme</span>
+      </div>
+    </button>
+  </div> -->
+
+  <script>
+    /* ---------- util helpers ---------- */
+    let started=false;
+    const $=id=>document.getElementById(id);
+    const fmt=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+    
+    /* ---------- dom refs ---------- */
+    const playBtn=$('playpause'),
+          playBtnArtwork=$('playpause-artwork'),
+          label=$('play-label'),
+          icon=$('btn-icon'),
+          titleEl=$('track-title'),
+          titleElMain=$('track-title-main'),
+          artistEl=$('track-artist'),
+          artistElMain=$('track-artist-main'),
+          queueEl=$('queue-list'),
+          queueContainer=$('tab-content-upnext'),
+          albumArtEl=$('album-art');
+    
+    const setBtn=(txt,ico)=>{
+      if(label) label.textContent=txt;
+      if(icon) icon.className=`fa-solid fa-${ico}`;
+      updateArtworkButtonIcon();
+    };
+    
+    /* ---------- UI helpers ---------- */
+    function updateAlbumArt(url) {
+      if(albumArtEl && url) {
+        // Add fade transition
+        albumArtEl.style.transition = 'opacity 0.3s ease-in-out';
+        albumArtEl.style.opacity = '0';
+        setTimeout(() => {
+          albumArtEl.style.backgroundImage = `linear-gradient(rgba(255,255,255,0.15),rgba(255,255,255,0)), url('${url}')`;
+          albumArtEl.style.backgroundSize = 'cover';
+          albumArtEl.style.backgroundPosition = 'center';
+          albumArtEl.style.opacity = '1';
+        }, 150);
+      }
+    }
+    if(playBtn) {
+      playBtn.addEventListener('click', () => {
+        handlePlayPause();
+      });
+    }
+    
+    // Shared function for play/pause logic.
+    // Playback follows the shared station timeline (bcsync-v4.js), so every
+    // listener hears the same song at the same moment.
+    function handlePlayPause() {
+      if (BCSync.isLive()) {
+        BCSync.stop();
+        return;
+      }
+      started = true;
+      const loadingBar = document.getElementById('loadingBar');
+      if (loadingBar) loadingBar.style.display = 'block';
+      setBtn('Loading...','play');
+      BCSync.start().catch(err => {
+        console.error('Stream play error:', err);
+        if (loadingBar) loadingBar.style.display = 'none';
+        setBtn('Play','play');
+        showArtworkPlayButton();
+        if (titleEl) titleEl.textContent = "Couldn't start the stream. Tap play to try again.";
+        if (titleElMain) titleElMain.textContent = "Couldn't start the stream. Tap play to try again.";
+      });
+    }
+
+    BCSync.on('play', () => {
+      const loadingBar = document.getElementById('loadingBar');
+      if (loadingBar) loadingBar.style.display = 'none';
+      setBtn('Pause','pause');
+      updateArtworkButtonIcon();
+    });
+    BCSync.on('pause', () => {
+      const loadingBar = document.getElementById('loadingBar');
+      if (loadingBar) loadingBar.style.display = 'none';
+      setBtn('Play','play');
+      showArtworkPlayButton();
+    });
+    BCSync.on('buffering', b => {
+      const loadingBar = document.getElementById('loadingBar');
+      if (loadingBar) loadingBar.style.display = (b && BCSync.isLive()) ? 'block' : 'none';
+    });
+    BCSync.on('state', () => renderStation());
+    BCSync.on('track', () => renderStation());
+    setInterval(() => renderStation(), 5000);
+
+    // Handle artwork play button
+    if(playBtnArtwork) {
+      playBtnArtwork.addEventListener('click', () => {
+        handlePlayPause();
+      });
+    }
+    
+    // Update artwork play button icon based on play state
+    function updateArtworkButtonIcon() {
+      const artworkIcon = document.getElementById('artwork-icon');
+      if (!artworkIcon || !playBtnArtwork) return;
+      
+      if (BCSync.isLive()) {
+        // Show pause icon
+        artworkIcon.className = 'fa-solid fa-pause text-zinc-950 text-3xl sm:text-4xl';
+        playBtnArtwork.style.opacity = '0.5';
+        playBtnArtwork.style.pointerEvents = 'auto';
+      } else {
+        // Show play icon
+        artworkIcon.className = 'fa-solid fa-play text-zinc-950 text-3xl sm:text-4xl ml-1';
+        playBtnArtwork.style.opacity = '0.5';
+        playBtnArtwork.style.pointerEvents = 'auto';
+      }
+    }
+    
+    // Keep for backward compatibility
+    function hideArtworkPlayButton() {
+      updateArtworkButtonIcon();
+    }
+    
+    function showArtworkPlayButton() {
+      updateArtworkButtonIcon();
+    }
+    
+    /* space-bar hotkey */
+    document.addEventListener('keydown',e=>{
+      if(e.code==='Space'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){
+        e.preventDefault();playBtn.click();
+      }
+    });
+    
+    /* ========== Tab System ========== */
+    let christmasScriptLoaded = false;
+    const tabUpnext = document.getElementById('tab-upnext');
+    const tabChristmas = document.getElementById('tab-christmas');
+    const contentUpnext = document.getElementById('tab-content-upnext');
+    const contentChristmas = document.getElementById('tab-content-christmas');
+    const christmasContainer = document.getElementById('christmas-player-container');
+    
+    function switchTab(tab) {
+      // Remove active class from all tabs
+      if(tabUpnext) tabUpnext.classList.remove('active');
+      if(tabChristmas) tabChristmas.classList.remove('active');
+      
+      // Hide all content
+      if(contentUpnext) contentUpnext.classList.add('hidden');
+      if(contentChristmas) contentChristmas.classList.add('hidden');
+      
+      // Update slider position based on actual button dimensions
+      const slider = document.querySelector('.tab-slider');
+      if (slider) {
+        const activeButton = tab === 'upnext' ? tabUpnext : tabChristmas;
+        if (activeButton) {
+          // Use requestAnimationFrame to ensure layout is complete
+          requestAnimationFrame(() => {
+            const container = activeButton.parentElement;
+            if (container) {
+              const buttonRect = activeButton.getBoundingClientRect();
+              const containerRect = container.getBoundingClientRect();
+              const relativeLeft = buttonRect.left - containerRect.left;
+              const padding = 3; // Match the padding in the container (p-1.5 = 6px, so 3px on each side)
+              slider.style.width = `${buttonRect.width - (padding * 2)}px`;
+              slider.style.left = `${relativeLeft + padding}px`;
+            }
+          });
+        }
+      }
+      
+      // Get player elements
+      const mainPlayerSection = document.getElementById('main-player-section');
+      const christmasPlaylistContainer = document.getElementById('christmas-playlist-container');
+      const christmasPlayerContainer = document.getElementById('christmas-player-container');
+      
+      // Update title based on active tab and show/hide top bar
+      const topBarTitle = document.getElementById('top-bar-title');
+      const mainTitle = document.getElementById('main-title');
+      
+      if (tab === 'upnext') {
+        // Hide top bar title section on Live radio tab
+        if(topBarTitle) topBarTitle.classList.add('hidden');
+        if (mainTitle) {
+          mainTitle.textContent = 'BC Radio';
+        }
+      } else if (tab === 'christmas') {
+        // Show top bar title section on Christmas tab
+        if(topBarTitle) topBarTitle.classList.remove('hidden');
+        if (mainTitle) {
+          mainTitle.textContent = 'BC Radio: Holiday edition';
+        }
+      }
+      
+      if (tab === 'upnext') {
+        if(tabUpnext) tabUpnext.classList.add('active');
+        if(contentUpnext) contentUpnext.classList.remove('hidden');
+        
+        // Show main player, hide Christmas players
+        if(mainPlayerSection) mainPlayerSection.classList.remove('hidden');
+        if(christmasPlaylistContainer) {
+          christmasPlaylistContainer.classList.add('hidden');
+          christmasPlaylistContainer.style.display = 'none';
+        }
+        if(christmasPlayerContainer) christmasPlayerContainer.classList.add('hidden');
+      } else if (tab === 'christmas') {
+        if(tabChristmas) tabChristmas.classList.add('active');
+        if(contentChristmas) contentChristmas.classList.remove('hidden');
+        
+        // Stop animation on click
+        if(tabChristmas) tabChristmas.classList.add('animation-stopped');
+        
+        // Hide main player, show Christmas players
+        if(mainPlayerSection) mainPlayerSection.classList.add('hidden');
+        if(christmasPlaylistContainer) {
+          christmasPlaylistContainer.classList.remove('hidden');
+          christmasPlaylistContainer.style.display = '';
+        }
+        if(christmasPlayerContainer) christmasPlayerContainer.classList.remove('hidden');
+      }
+    }
+    
+    if (tabUpnext) {
+      tabUpnext.addEventListener('click', () => switchTab('upnext'));
+    }
+    
+    if (tabChristmas) {
+      tabChristmas.addEventListener('click', () => switchTab('christmas'));
+    }
+    
+    // Scale background video to always fill screen
+    function scaleBackgroundVideo() {
+      const iframe = document.querySelector('.bg-video iframe');
+      if (!iframe) return;
+      
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const videoWidth = viewportWidth * 2; // 200dvw = 2x viewport width
+      const videoHeight = viewportHeight * 2; // 200dvh = 2x viewport height
+      
+      // Calculate scale to ensure video always covers viewport
+      const scaleX = viewportWidth / videoWidth;
+      const scaleY = viewportHeight / videoHeight;
+      const scale = Math.max(scaleX, scaleY) * 1.1; // 1.1 for extra coverage
+      
+      iframe.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    }
+    
+    // Update scale on window resize
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(scaleBackgroundVideo, 100);
+    });
+    
+    /* ============================================================
+       HOLIDAY MODE - URL PARAMETER OVERRIDE
+       Add ?holidaymode=true to the URL to preview holiday mode any time
+       ============================================================ */
+    function checkHolidayMode() {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('holidaymode') === 'true';
+    }
+
+    function enableHolidayMode() {
+      // Show holiday elements
+      const snowflakes = document.querySelector('.snowflakes');
+      const christmasLights = document.querySelector('.christmas-lights');
+      const bgVideo = document.querySelector('.bg-video');
+      const bgStatic = document.querySelector('.bg-static');
+      const holidayTabToggle = document.querySelectorAll('.flex.items-center.justify-between')[0];
+      const simpleHeader = document.querySelectorAll('.flex.items-center.justify-end')[0];
+
+      if (snowflakes) snowflakes.classList.remove('hidden');
+      if (christmasLights) christmasLights.classList.remove('hidden');
+      if (bgVideo) bgVideo.classList.remove('hidden');
+      if (bgStatic) bgStatic.classList.add('hidden');
+
+      // Show tab toggle, hide simple header (find by checking for tab-christmas button)
+      document.querySelectorAll('[class*="border-b"][class*="border-zinc-800"]').forEach(el => {
+        if (el.querySelector('#tab-christmas')) {
+          el.classList.remove('hidden');
+        } else if (el.querySelector('#openRequestModal') && !el.querySelector('#tab-upnext')) {
+          el.classList.add('hidden');
+        }
+      });
+    }
+
+    /* ============================================================
+       HOLIDAY MODE - DEFAULT TAB SETTING
+       To re-enable for the holidays:
+       1. Change switchTab('upnext') to switchTab('christmas') in both places below
+       2. Change the condition from (tabUpnext) to (tabChristmas && contentChristmas)
+       ============================================================ */
+
+    // Set Live Radio (upnext) as default on page load
+    // HOLIDAY MODE: Change 'upnext' to 'christmas' and update conditions to enable holiday default
+    const isHolidayMode = checkHolidayMode();
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        if (isHolidayMode) {
+          enableHolidayMode();
+          if (tabChristmas && contentChristmas) {
+            switchTab('christmas');
+          }
+        } else if (tabUpnext) {
+          switchTab('upnext');
+        }
+        scaleBackgroundVideo();
+      });
+    } else {
+      // DOM already loaded
+      if (isHolidayMode) {
+        enableHolidayMode();
+        if (tabChristmas && contentChristmas) {
+          switchTab('christmas');
+        }
+      } else if (tabUpnext) {
+        switchTab('upnext');
+      }
+      scaleBackgroundVideo();
+    }
+    
+    /* ========== BC Radio now playing + up next (shared timeline) ========== */
+    let lastRenderedKey = '';
+    let lastQueueKey = '';
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function renderStation() {
+      const cur = BCSync.onAir();
+      if (!cur) return;
+      const t = cur.track;
+      if (typeof titleCaseExceptPronouns !== 'function' || typeof removePrefixedNumbers !== 'function') return;
+      const k = cur.seq + ':' + t.id;
+      if (k !== lastRenderedKey) {
+        let songTitle = t.title || 'BC Radio Live Stream';
+        songTitle = removePrefixedNumbers(songTitle);
+        songTitle = titleCaseExceptPronouns(songTitle);
+        const artist = t.artist || 'Bernie Chiaravalle';
+        if (titleEl) titleEl.textContent = songTitle;
+        if (titleElMain) titleElMain.textContent = songTitle;
+        if (artistEl) artistEl.textContent = artist;
+        if (artistElMain) artistElMain.textContent = artist;
+        if (t.art) updateAlbumArt(t.art);
+        lastRenderedKey = k;
+      }
+      const items = BCSync.upcoming(4);
+      const qk = items.map(i => i.seq + ':' + i.track.id).join(',');
+      if (qk === lastQueueKey || !queueEl) return;
+      lastQueueKey = qk;
+      let queueHtml = '';
+      items.forEach(item => {
+        const song = item.track;
+        let title = song.title || 'Unknown Track';
+        title = removePrefixedNumbers(title);
+        title = titleCaseExceptPronouns(title);
+        const artist = song.artist || 'Bernie Chiaravalle';
+        queueHtml += `
+            <div class="w-full flex items-center gap-3 sm:gap-4 py-2">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="text-sm sm:text-base font-medium text-zinc-100 truncate">${escapeHtml(title)}</p>
+                    <p class="text-xs sm:text-sm text-zinc-400 truncate">${escapeHtml(artist)}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+      });
+      queueEl.innerHTML = queueHtml;
+    }
+
+    /* ========== Song Request Modal Functionality ========== */
+    let availableSongs = [];
+    let filteredSongs = [];
+    let selectedSong = null;
+
+    // Modal elements
+    const requestModal = document.getElementById('requestModal');
+    const openModalBtn = document.getElementById('openRequestModal');
+    const closeModalBtn = document.getElementById('closeModal');
+    const songSearch = document.getElementById('songSearch');
+    const songsList = document.getElementById('songsList');
+    const submitRequestBtn = document.getElementById('submitRequest');
+
+    // Open modal
+    openModalBtn.addEventListener('click', () => {
+      requestModal.style.display = 'flex';
+      loadAvailableSongs();
+      renderRequestTurnstile();
+    });
+
+    // Spam check for requests (Cloudflare Turnstile)
+    const TURNSTILE_SITEKEY = '0x4AAAAAAEmQA4XopdRBuYWJ';
+    let turnstileWidgetId = null;
+    let turnstileToken = '';
+    function renderRequestTurnstile() {
+      if (!window.turnstile) { setTimeout(renderRequestTurnstile, 300); return; }
+      if (turnstileWidgetId !== null) { try { turnstile.reset(turnstileWidgetId); } catch (e) {} turnstileToken = ''; return; }
+      turnstileWidgetId = turnstile.render('#request-turnstile', {
+        sitekey: TURNSTILE_SITEKEY,
+        action: 'bcradio-request',
+        theme: 'dark',
+        callback: t => { turnstileToken = t; },
+        'expired-callback': () => { turnstileToken = ''; },
+        'error-callback': () => { turnstileToken = ''; },
+      });
+    }
+
+    // Close modal
+    closeModalBtn.addEventListener('click', () => {
+      requestModal.style.display = 'none';
+      resetModal();
+    });
+
+    // Close modal when clicking outside
+    requestModal.addEventListener('click', (e) => {
+      if (e.target === requestModal) {
+        requestModal.style.display = 'none';
+        resetModal();
+      }
+    });
+
+    // Search functionality
+    songSearch.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase();
+      filteredSongs = availableSongs.filter(song => 
+        song.title.toLowerCase().includes(query) ||
+        song.artist.toLowerCase().includes(query) ||
+        song.album.toLowerCase().includes(query)
+      );
+      renderSongs(filteredSongs);
+    });
+
+    // Submit request
+    submitRequestBtn.addEventListener('click', () => {
+      if (selectedSong) {
+        submitSongRequest(selectedSong);
+      } else {
+        showToast('Please select a song first', 'error');
+      }
+    });
+
+    async function loadAvailableSongs() {
+      songsList.innerHTML = '<div class="loading-text">Loading available songs...</div>';
+      try {
+        const response = await fetch('/api/library', { cache: 'no-store' });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const data = await response.json();
+        availableSongs = (data.songs || []).map(song => ({
+          id: song.id,
+          title: titleCaseExceptPronouns(removePrefixedNumbers(song.title || 'Unknown Title')),
+          artist: song.artist || 'Bernie Chiaravalle',
+          album: song.album || '',
+          art: song.art,
+          status: song.status,
+        })).filter(song => song.title && song.title.trim().length > 1);
+        if (!availableSongs.length) throw new Error('empty library');
+        filteredSongs = [...availableSongs];
+        renderSongs(filteredSongs);
+      } catch (error) {
+        console.error('Error loading songs:', error);
+        availableSongs = [];
+        filteredSongs = [];
+        songsList.innerHTML = '<div class="error-text">Could not load the song list. Please close this and try again.</div>';
+      }
+    }
+
+    function renderSongs(songs) {
+      if (songs.length === 0) {
+        songsList.innerHTML = '<div class="error-text">No songs found matching your search.</div>';
+        return;
+      }
+      const note = { upcoming: 'Coming up soon', recent: 'Played recently' };
+      songsList.innerHTML = songs.map(song => `
+        <div class="song-item${song.status !== 'ok' ? ' song-unavailable' : ''}" data-song-id="${escapeHtml(song.id)}">
+          <img src="${escapeHtml(song.art)}" alt="" class="song-artwork" loading="lazy" onerror="this.style.visibility='hidden'">
+          <div class="song-info">
+            <div class="song-title">${escapeHtml(song.title)}</div>
+            <div class="song-artist">${escapeHtml(song.artist)}${note[song.status] ? ' &middot; ' + note[song.status] : ''}</div>
+          </div>
+        </div>
+      `).join('');
+
+      document.querySelectorAll('.song-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const songId = item.dataset.songId;
+          const song = songs.find(s => s.id === songId);
+          if (!song) return;
+          if (song.status !== 'ok') {
+            showToast(song.status === 'upcoming' ? 'That song is already coming up soon.' : 'That song was played recently. Please pick another one.', 'error');
+            return;
+          }
+          document.querySelectorAll('.song-item').forEach(i => i.classList.remove('selected'));
+          item.classList.add('selected');
+          selectedSong = song;
+          submitRequestBtn.disabled = false;
+          submitRequestBtn.style.pointerEvents = 'auto';
+          submitRequestBtn.style.cursor = 'pointer';
+          submitRequestBtn.textContent = `Request "${song.title}"`;
+        });
+      });
+    }
+
+    // Toast notification function
+    function showToast(message, type = 'success') {
+      // Remove any existing toasts
+      const existingToasts = document.querySelectorAll('.toast-notification');
+      existingToasts.forEach(toast => toast.remove());
+      
+      // Create toast element
+      const toast = document.createElement('div');
+      toast.className = `toast-notification ${type}`;
+      
+      const icon = type === 'success' ? 'fa-solid fa-check-circle' : 'fa-solid fa-exclamation-triangle';
+      
+      toast.innerHTML = `
+        <i class="${icon} toast-icon"></i>
+        <div class="toast-message">${message}</div>
+      `;
+      
+      // Add to page
+      document.body.appendChild(toast);
+      
+      // Trigger animation
+      setTimeout(() => {
+        toast.classList.add('show');
+      }, 100);
+      
+      // Auto remove after 4 seconds
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+          if (toast.parentNode) {
+            toast.remove();
+          }
+        }, 400);
+      }, 4000);
+    }
+
+    async function submitSongRequest(song) {
+      if (!turnstileToken) {
+        showToast('Please wait for the spam check to finish, then try again.', 'error');
+        return;
+      }
+      submitRequestBtn.disabled = true;
+      submitRequestBtn.textContent = 'Submitting request...';
+      const token = turnstileToken;
+      try {
+        const response = await fetch('/api/request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: song.id, token })
+        });
+        let result = {};
+        try { result = await response.json(); } catch (e) {}
+        if (response.ok && result.ok) {
+          requestModal.style.display = 'none';
+          resetModal();
+          showToast(result.message || 'Your request has been submitted!', 'success');
+          if (result.state) BCSync.setState(result.state);
+          else BCSync.refresh().catch(() => {});
+        } else {
+          showToast(result.message || `Unable to submit request (HTTP ${response.status}). Please try again.`, 'error');
+          submitRequestBtn.disabled = false;
+          submitRequestBtn.textContent = `Request "${song.title}"`;
+        }
+      } catch (error) {
+        console.error('Request error:', error);
+        showToast('Network error. Please try again.', 'error');
+        submitRequestBtn.disabled = false;
+        submitRequestBtn.textContent = `Request "${song.title}"`;
+      } finally {
+        turnstileToken = '';
+        if (window.turnstile && turnstileWidgetId !== null) { try { turnstile.reset(turnstileWidgetId); } catch (e) {} }
+      }
+    }
+
+    function resetModal() {
+      selectedSong = null;
+      songSearch.value = '';
+      submitRequestBtn.disabled = true;
+      submitRequestBtn.textContent = 'Select a song to request';
+      document.querySelectorAll('.song-item').forEach(item => item.classList.remove('selected'));
+    }
+    
+    /* resize micro-fx */
+    let rTO;window.addEventListener('resize',()=>{
+      player.classList.add('resize');
+      clearTimeout(rTO);rTO=setTimeout(()=>player.classList.remove('resize'),300);
+    });
+
+  </script>  
+<script>
+  // Target the span
+  const currentTimeSpan = document.getElementById('current-time');
+  
+  // Function to update time
+  function updateTime() {
+    const now = new Date();
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  
+    const day = days[now.getDay()];
+    const date = now.getDate();
+    const month = months[now.getMonth()];
+    const year = now.getFullYear();
+    
+    let hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'p' : 'a';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // the hour '0' should be '12'
+  
+    // Set HTML
+    currentTimeSpan.innerHTML = `
+      <span class="tick-time">${hours}:${minutes}${ampm}</span><br>
+      <span class="tick-date">${day} ${month} ${date}</span>
+    `;
+  
+    // Animate the new text each time it updates
+    gsap.fromTo(".tick-time", 
+      { opacity: 1, y: 10 }, 
+      { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }
+    );
+    gsap.fromTo(".tick-date", 
+      { opacity: 1, y: 10 }, 
+      { opacity: 1, y: 0, duration: 0.4, ease: "power2.out", delay: 0.1 }
+    );
+  
+    // Little "tick" animation every second
+    gsap.fromTo(currentTimeSpan, 
+      { scale: 1 }, 
+      { scale: 1, duration: 0.15, yoyo: true, repeat: 1, ease: "power1.inOut" }
+    );
+  }
+  
+  // Initial call
+  updateTime();
+  
+  // Update every second
+  setInterval(updateTime, 1000);
+  </script>
+  
+  
+  
+  
+<script>
+  </script>  
+  <script>
+    gsap.registerPlugin(SplitText);
+  
+    // loop through every .wordanim element on the page
+    document.querySelectorAll('.wordanim').forEach(target=>{
+      const split = new SplitText(target,{type:"words,chars"});
+      gsap.set(split.chars,{opacity:0,y:10});
+      gsap.to(split.chars,{
+        opacity:1,
+        y:0,
+        duration:.5,
+        ease:"power3.out",
+        stagger:0.01,
+        delay: 2
+        
+      });
+    });
+  </script>
+  
+  
+  <script>
+    AOS.init();
+  </script>
+  
+  
+
+  <!-- Add Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
+<script>
+// iOS PWA Add to Home Screen Notification
+(function(){
+  function isIos() {
+    return /iphone|ipad|ipod/i.test(navigator.userAgent);
+  }
+  function isSafari() {
+    return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  }
+  function isInStandaloneMode() {
+    return (window.navigator.standalone === true) || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  }
+  if (isIos() && isSafari() && !isInStandaloneMode() && !localStorage.getItem('hideIosPwaNotice')) {
+    var notice = document.getElementById('ios-pwa-notice');
+    notice.style.display = 'block';
+    document.getElementById('ios-pwa-close').onclick = function() {
+      notice.style.display = 'none';
+      localStorage.setItem('hideIosPwaNotice', '1');
+    };
+  }
+})();
+</script>
+
+<script>
+// Add iOS-specific class to body for styling
+(function(){
+  if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
+    document.body.classList.add('ios-device');
+  }
+})();
+</script>
+
+<script>
+  // Utility: Title case except pronouns, but always capitalize first word and after boundaries
+  function titleCaseExceptPronouns(str) {
+    const pronouns = [
+      'i','me','my','you','your','he','him','his','she','her','hers','we','us','our','they','them','their','it','its',
+      'who','whom','whose','which','that','this','these','those'
+    ];
+    const boundaryChars = '([{"\'';
+    let result = '';
+    let lastNonWhitespace = '';
+    str.split(/(\s+)/).forEach((word, idx, arr) => {
+      const clean = word.replace(/[^a-zA-Z']/g, '').toLowerCase();
+      if (word.trim() === '') {
+        result += word;
+        return;
+      }
+      // Capitalize if first word or after boundary
+      if (
+        result === '' ||
+        (lastNonWhitespace && boundaryChars.includes(lastNonWhitespace.slice(-1)))
+      ) {
+        result += word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      } else if (pronouns.includes(clean)) {
+        result += word.toLowerCase();
+      } else {
+        result += word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      }
+      lastNonWhitespace = word;
+    });
+    return result;
+  }
+  // Utility: Remove prefixed numbers
+  function removePrefixedNumbers(str) {
+    return str.replace(/^\s*\d+\s*[-.:)]*\s*/,'');
+  }
+</script>
+
