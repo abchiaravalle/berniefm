@@ -140,6 +140,8 @@ a{color:inherit}
   box-shadow:0 0 0 4px rgba(11,26,18,.6),0 0 0 5px var(--line-strong),0 10px 22px rgba(0,0,0,.5);
   display:flex;align-items:center;justify-content:center;transition:transform .15s}
 .playbtn:hover{transform:scale(1.05)}.playbtn:active{transform:scale(.95)}
+.deck .slot:not(.playing):not(.loading) .playbtn{opacity:0;pointer-events:none}
+.playbtn{transition:transform .15s,opacity .35s}
 .playbtn svg{width:26px;height:26px;fill:var(--ink)}
 .playbtn .pause{display:none}
 .playing .playbtn .play{display:none}.playing .playbtn .pause{display:block}
@@ -330,13 +332,13 @@ a{color:inherit}
             </svg>
           </div>
           <span class="notch" aria-hidden="true"></span>
-          <button class="bigplay" id="bigplay" aria-label="Play" tabindex="-1">
+          <button class="bigplay" id="playpause-artwork" aria-label="Play">
             <svg viewBox="0 0 24 24"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z"/></svg>
           </button>
         </div>
         <div class="knobs">
           <div class="prog-sel"><small>Program</small><div class="chs" aria-hidden="true"><span>1</span><span>2</span><span>3</span><span>4</span></div></div>
-          <button class="playbtn" id="playpause-artwork" aria-label="Play">
+          <button class="playbtn" id="playpause" aria-label="Play">
             <svg class="play" viewBox="0 0 24 24"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z"/></svg>
             <svg class="pause" viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>
           </button>
@@ -411,6 +413,7 @@ a{color:inherit}
     deck.classList.toggle('playing', on);
     onair.classList.toggle('off', !on);
     playBtn.setAttribute('aria-label', on ? 'Pause' : 'Play');
+    document.getElementById('playpause').setAttribute('aria-label', on ? 'Pause' : 'Play');
   }
   function handlePlayPause() {
     if (BCSync.isLive()) { BCSync.stop(); return; }
@@ -422,7 +425,7 @@ a{color:inherit}
     });
   }
   playBtn.addEventListener('click', handlePlayPause);
-  document.getElementById('bigplay').addEventListener('click', handlePlayPause);
+  document.getElementById('playpause').addEventListener('click', handlePlayPause);
   document.addEventListener('keydown', e => {
     if (e.code === 'Space' && !['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(document.activeElement.tagName)) { e.preventDefault(); handlePlayPause(); }
   });
