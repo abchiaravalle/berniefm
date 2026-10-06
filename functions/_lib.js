@@ -198,6 +198,20 @@ export async function djPlace(env, trackId, mode = 'now', now = Date.now()) {
   let at = curEnd, cut = null;
   if (mode === 'now' && curEnd > now + DJ_LEAD_MS) { at = now + DJ_LEAD_MS; cut = at - cur.start_ms; }
   if (!track && cut === null) return { ok: true, at, message: 'The next song is about to start.', state: await publishState(env, now) };
+  if (!track) {
+    // Skip: keep the queue exactly as it is (DJ "next" picks, requests), just
+    // end the current song early and pull everything after it forward.
+    const shift = curEnd - at;
+    await env.DB.batch([
+      env.DB.prepare('UPDATE schedule SET dur_ms=?1 WHERE seq=?2').bind(cut, cur.seq),
+      env.DB.prepare('UPDATE schedule SET start_ms = start_ms - ?1 WHERE seq > ?2').bind(shift, cur.seq),
+      env.DB.prepare(`UPDATE tracks SET last_played_ms = last_played_ms - ?1
+                        WHERE id IN (SELECT track_id FROM schedule WHERE seq > ?2)
+                          AND last_played_ms = (SELECT MAX(s.start_ms) + ?1 FROM schedule s WHERE s.track_id = tracks.id)`).bind(shift, cur.seq),
+    ]);
+    await ensureSchedule(env, now, { publish: false });
+    return { ok: true, at, state: await publishState(env, now) };
+  }
 
   const { results: dropped } = await env.DB.prepare('SELECT seq, track_id, request_id FROM schedule WHERE seq > ?1').bind(cur.seq).all();
   const stmts = [env.DB.prepare('DELETE FROM schedule WHERE seq > ?1').bind(cur.seq)];
