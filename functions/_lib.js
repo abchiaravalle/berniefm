@@ -251,6 +251,7 @@ export function trackOut(row) {
     title: row.cat_title || row.title,
     artist: row.cat_artist || row.artist || 'Bernie Chiaravalle',
     album: row.cat_album || row.album || '',
+    year: row.cat_year || null,
     art: row.art ? MEDIA + row.art : MEDIA + 'art/default.jpg',
     url: MEDIA + row.file,
     duration: row.dur_ms / 1000,
