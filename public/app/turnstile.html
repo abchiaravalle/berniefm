@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="robots" content="noindex">
+<title>BC Radio request check</title>
+<!-- Used only inside the BC Radio iPhone app: shows the same Turnstile check as the
+     website's request form (same sitekey, same action) and hands the token to the app. -->
+<style>
+  html,body{margin:0;padding:0;background:transparent;overflow:hidden}
+  body{display:flex;justify-content:center;align-items:center;min-height:70px}
+  #ts{width:100%;display:flex;justify-content:center}
+</style>
+</head>
+<body>
+<div id="ts"></div>
+<script>
+  var id = null;
+  function post(m) { try { window.webkit.messageHandlers.bc.postMessage(m); } catch (e) {} }
+  function go() {
+    id = turnstile.render('#ts', {
+      sitekey: '0x4AAAAAAEmQA4XopdRBuYWJ',
+      action: 'bcradio-request',
+      theme: 'dark',
+      size: 'flexible',
+      callback: function (t) { post({ t: 'token', token: t }); },
+      'expired-callback': function () { post({ t: 'expired' }); },
+      'timeout-callback': function () { post({ t: 'expired' }); },
+      'error-callback': function (c) { post({ t: 'error', code: String(c) }); }
+    });
+    post({ t: 'ready' });
+  }
+  window.bcReset = function () { if (id !== null) { try { turnstile.reset(id); } catch (e) {} } };
+</script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=go" async defer></script>
+</body>
+</html>

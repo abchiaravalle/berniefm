@@ -244,6 +244,10 @@ export async function pruneHistory(env, now = Date.now()) {
   }
 }
 
+// Large cover for the iPhone app's full-screen background (art/hd/<file>, up to 2000 px,
+// built by art_hd.py). New covers may not have one yet: the app falls back to `art`.
+export const artHd = key => (key && key.startsWith('art/')) ? MEDIA + 'art/hd/' + key.slice(4) : null;
+
 export function trackOut(row) {
   if (!row) return null;
   return {
@@ -253,6 +257,7 @@ export function trackOut(row) {
     album: row.cat_album || row.album || '',
     year: row.cat_year || null,
     art: row.art ? MEDIA + row.art : MEDIA + 'art/default.jpg',
+    art_hd: artHd(row.art),
     url: MEDIA + row.file,
     duration: row.dur_ms / 1000,
   };

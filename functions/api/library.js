@@ -1,4 +1,4 @@
-import { json, MEDIA, NO_REPEAT_TRACK_MS } from '../_lib.js';
+import { json, MEDIA, NO_REPEAT_TRACK_MS, artHd } from '../_lib.js';
 
 // Requestable songs with availability. Edge-cached 30s.
 export async function onRequestGet({ request, env, waitUntil }) {
@@ -22,7 +22,7 @@ export async function onRequestGet({ request, env, waitUntil }) {
     else if (t.last_played_ms > now - NO_REPEAT_TRACK_MS) status = 'recent';
     return {
       id: t.id, title: t.title, artist: t.artist || 'Bernie Chiaravalle', album: t.album || '',
-      art: t.art ? MEDIA + t.art : MEDIA + 'art/default.jpg', duration: Math.round(t.dur_ms / 1000), status,
+      art: t.art ? MEDIA + t.art : MEDIA + 'art/default.jpg', art_hd: artHd(t.art), duration: Math.round(t.dur_ms / 1000), status,
     };
   });
   const res = json({ songs }, 200, { 'cache-control': 'public, max-age=30' });

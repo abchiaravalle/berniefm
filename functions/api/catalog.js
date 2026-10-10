@@ -1,5 +1,8 @@
 import { json, MEDIA } from '../_lib.js';
 
+// Big cover for the iPhone app (art/hd/<file>); same file name as the regular cover.
+const hd = url => url && url.startsWith(MEDIA + 'art/') && !url.endsWith('/default.jpg') ? url.replace(MEDIA + 'art/', MEDIA + 'art/hd/') : null;
+
 // Every song, organized: sections > albums > tracks (track order, cover art).
 // Built from the catalog columns on `tracks` (written by publish_catalog.py).
 // Public data (same songs as the request list). Edge-cached 60 s.
@@ -26,7 +29,7 @@ export async function onRequestGet({ request, env, waitUntil }) {
     a.artists[artist] = (a.artists[artist] || 0) + 1;
     a.arts[art] = (a.arts[art] || 0) + 1;
     if (t.cat_year && (!a.year || t.cat_year > a.year)) a.year = t.cat_year;
-    a.tracks.push({ id: t.id, title: t.cat_title || t.title, artist, no: t.cat_no, dur: Math.round(t.dur_ms / 1000), art });
+    a.tracks.push({ id: t.id, title: t.cat_title || t.title, artist, no: t.cat_no, dur: Math.round(t.dur_ms / 1000), art, art_hd: hd(art) });
   }
   const top = o => Object.entries(o).sort((x, y) => y[1] - x[1])[0][0];
   const sections = ORDER.map(name => ({ name, albums: [] }));
@@ -34,7 +37,7 @@ export async function onRequestGet({ request, env, waitUntil }) {
     const singles = a.name === 'Singles';
     a.tracks.sort((x, y) => singles ? x.title.localeCompare(y.title)
       : ((x.no ?? 1e9) - (y.no ?? 1e9)) || x.title.localeCompare(y.title));
-    const out = { name: a.name, artist: top(a.artists), year: a.year, art: top(a.arts), tracks: a.tracks };
+    const out = { name: a.name, artist: top(a.artists), year: a.year, art: top(a.arts), art_hd: hd(top(a.arts)), tracks: a.tracks };
     (sections.find(s => s.name === a.section) || sections[sections.length - 1]).albums.push(out);
   }
   for (const s of sections) {
