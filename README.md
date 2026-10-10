@@ -89,6 +89,13 @@ for the DJ code (secret env `DJ_CODE`; the value lives in `~/.hermes/secrets/bcr
 Changing `DJ_CODE` signs every device out. "Play now" switches every listener in 10 s,
 "Next" plays after the current song, "Skip" moves everyone on.
 
+## iPhone app
+Native app in `~/gits/ios-apps/BCRadio` (installed from the tailnet install page). It follows the same
+timeline as the website. Two small server pieces exist for it:
+- `art_hd` on every song in `/api/now`, `/api/library`, `/api/catalog`: big covers at `art/hd/<file>` on R2
+  (built by `art_hd.py` in the work folder; re-run it after adding new covers).
+- `public/app/turnstile.html` (`/app/turnstile`): the request check shown inside the app (same sitekey and action).
+
 ## Old design
 The pre-2026-10-05 page (with the holiday mode toggles) is kept in `legacy/` for reference.
 It is not deployed.
