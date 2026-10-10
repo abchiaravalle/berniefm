@@ -24,10 +24,13 @@
       action: 'bcradio-request',
       theme: 'dark',
       size: 'flexible',
+      appearance: 'interaction-only',
       callback: function (t) { post({ t: 'token', token: t }); },
       'expired-callback': function () { post({ t: 'expired' }); },
       'timeout-callback': function () { post({ t: 'expired' }); },
-      'error-callback': function (c) { post({ t: 'error', code: String(c) }); }
+      'error-callback': function (c) { post({ t: 'error', code: String(c) }); },
+      'before-interactive-callback': function () { post({ t: 'show' }); },
+      'after-interactive-callback': function () { post({ t: 'hide' }); }
     });
     post({ t: 'ready' });
   }
