@@ -37,7 +37,13 @@ def secret_names():
     r = subprocess.run([WR, "secret", "list", "--format", "json"], cwd=MAN, env=WENV, capture_output=True, text=True)
     try: return [x["name"] for x in json.loads(r.stdout)]
     except Exception: return ["?" + r.stdout[:80]]
-def req(path, cid, csec, method="GET", body=None, extra=None):
+def req(path, cid, csec, method="GET", body=None, extra=None, tries=4):
+    for t in range(tries):
+        st, bd = _req(path, cid, csec, method, body, extra)
+        if method != "GET" or (st == 200 and bd[:1] in (b"{", b"[", b"<")) or t == tries - 1: return st, bd
+        time.sleep(3)
+
+def _req(path, cid, csec, method="GET", body=None, extra=None):
     h = {"User-Agent": UA, "CF-Access-Client-Id": cid, "CF-Access-Client-Secret": csec, **(extra or {})}
     data = None
     if body is not None: h["content-type"] = "application/json"; data = json.dumps(body).encode()
@@ -65,7 +71,15 @@ try:
         s, body = req("/api/me", cid, csec)
         if s == 200 and b'"email":"automated-check"' in body: break
         time.sleep(4)
-    check("signed in through Access (service token) and the Worker's own JWT check", b'"email":"automated-check"' in body, f"{s} {body[:60]!r}")
+    # a new secret reaches every Cloudflare location over a few seconds: wait for 5 sign-ins in a row before reading
+    ok_run = 0
+    for i in range(60):
+        s2, b2 = req("/api/me", cid, csec)
+        ok_run = ok_run + 1 if (s2 == 200 and b'"email":"automated-check"' in b2) else 0
+        if ok_run >= 5: break
+        time.sleep(2)
+    print("sign-in steady after", i + 1, "tries", flush=True)
+    check("signed in through Access (service token) and the Worker's own JWT check", b'"email":"automated-check"' in body and ok_run >= 5, f"{s} {body[:60]!r}")
     me = json.loads(body) if s == 200 else {}
     check("app name from the one config constant", me.get("app") == "Control Room", me.get("app"))
     s, b = req("/api/songs", cid, csec)
@@ -78,7 +92,9 @@ try:
     pub = json.loads(urllib.request.urlopen(urllib.request.Request("https://bcradio.net/api/now", headers={"User-Agent": UA}), timeout=30).read())
     check("booth shows the same song as bcradio.net", pub.get("current") and bo.get("current") and pub["current"]["track"]["id"] == bo["current"]["track"]["id"])
     s, b = req("/api/features", cid, csec)
-    check("live featured times readable (none yet)", s == 200 and json.loads(b).get("features") == [], b[:80].decode(errors="replace"))
+    try: feats = json.loads(b).get("features") if s == 200 else None
+    except ValueError: feats = None
+    check("live featured times readable (none yet)", feats == [], f"{s} {b[:120].decode(errors='replace')!r}")
     s, b = req("/api/activity", cid, csec)
     check("live history readable", s == 200 and "activity" in json.loads(b))
     # wrong origin: refused by the CSRF check before the handler runs (body would be a no-op anyway)
