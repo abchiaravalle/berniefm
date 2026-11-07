@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Privacy | BC Radio</title>
+<meta name="description" content="Privacy policy for the BC Radio iPhone app and bcradio.net.">
+<meta name="theme-color" content="#0b1a12">
+<link rel="icon" href="/appleicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Instrument+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{--green-950:#06110b;--green-900:#0b1a12;--green-800:#163322;--gold-300:#f3dda0;--gold-400:#e7c36f;--gold-500:#d4a646;--cream:#f4ead2;--cream-dim:#cbbf9f;--line:rgba(231,195,111,.18)}
+  html,body{margin:0}
+  body{font-family:'Instrument Sans',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--cream);background:radial-gradient(1200px 600px at 50% -200px,var(--green-800),var(--green-950) 70%) fixed,var(--green-950);line-height:1.6;-webkit-font-smoothing:antialiased}
+  main{max-width:680px;margin:0 auto;padding:56px 22px 80px}
+  .brand{font-family:'Fraunces',Georgia,serif;color:var(--gold-400);letter-spacing:.08em;text-transform:uppercase;font-size:13px;margin:0 0 10px}
+  h1{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:40px;line-height:1.1;margin:0 0 8px;color:var(--gold-300)}
+  .updated{color:var(--cream-dim);font-size:14px;margin:0 0 36px}
+  h2{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:22px;color:var(--gold-400);margin:36px 0 8px;padding-top:24px;border-top:1px solid var(--line)}
+  p,li{font-size:17px}
+  ul{padding-left:20px}
+  li{margin:6px 0}
+  a{color:var(--gold-400)}
+  a:hover{color:var(--gold-300)}
+  footer{margin-top:48px;color:var(--cream-dim);font-size:14px}
+</style>
+</head>
+<body>
+<main>
+  <p class="brand">BC Radio</p>
+  <h1>Privacy</h1>
+  <p class="updated">Last updated November 6, 2026</p>
+
+  <p>This page covers the BC Radio iPhone app ("BC Radio: Bernie Chiaravalle") and the bcradio.net website. BC Radio plays Bernie Chiaravalle's music around the clock. Adam Chiaravalle runs the station and made the app.</p>
+
+  <h2>The short version</h2>
+  <p>The app doesn't collect personal data. It has no accounts, no ads, no analytics and no tracking. It doesn't ask for your name, email, location, contacts or photos.</p>
+
+  <h2>What the app sends</h2>
+  <ul>
+    <li><strong>Listening.</strong> To play the station in sync with everyone else, the app downloads the schedule, the clock time and the songs from bcradio.net and media.bcradio.net. These are ordinary web requests and don't carry anything that identifies you.</li>
+    <li><strong>Song requests.</strong> When you request a song, the app sends the id of that song and the result of a Cloudflare Turnstile check, which keeps bots off the request line. To stop one person from flooding the queue, the station server keeps a salted, one-way hash of your IP address with the request for a few days and then deletes it. The station never stores your IP address itself.</li>
+    <li><strong>Cloudflare.</strong> The station runs on Cloudflare, and the Turnstile check runs in the request screen. Cloudflare handles these requests under its own <a href="https://www.cloudflare.com/privacypolicy/">privacy policy</a> and <a href="https://www.cloudflare.com/turnstile-privacy-policy/">Turnstile privacy addendum</a>.</li>
+  </ul>
+
+  <h2>What stays on your phone</h2>
+  <p>The app doesn't keep a profile or a listening history. Anything it saves stays on your phone, and deleting the app removes it.</p>
+
+  <h2>The website</h2>
+  <p>The bcradio.net website uses Microsoft Clarity to see, in aggregate, how visitors use the page (clicks and scrolling). The iPhone app doesn't include Clarity or any other analytics.</p>
+
+  <h2>Children</h2>
+  <p>BC Radio is a music station for all ages and doesn't knowingly collect information from anyone, including children.</p>
+
+  <h2>Changes and questions</h2>
+  <p>If this policy changes, this page will show the new date at the top. Questions go to Adam Chiaravalle at <a href="mailto:adam@amplifi.studio">adam@amplifi.studio</a>.</p>
+
+  <footer>
+    <a href="/support">Support</a> &middot; <a href="/">bcradio.net</a>
+  </footer>
+</main>
+</body>
+</html>
