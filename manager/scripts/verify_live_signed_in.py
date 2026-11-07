@@ -28,7 +28,7 @@ def cf(method, path, body=None):
     except urllib.error.HTTPError as e: return json.loads(e.read())
 def secret(name, value=None):
     if value is None:
-        r = subprocess.run([WR, "secret", "delete", name, "--force"], cwd=MAN, env=WENV, capture_output=True, text=True, input="y\n")
+        r = subprocess.run([WR, "secret", "delete", name], cwd=MAN, env=WENV, capture_output=True, text=True, input="y\n")   # (this wrangler has no --force)
     else:
         r = subprocess.run([WR, "secret", "put", name], cwd=MAN, env=WENV, capture_output=True, text=True, input=value)
     out = r.stdout + r.stderr
@@ -100,7 +100,8 @@ try:
             ctx.route("**/*", lambda route: (blocked.append(route.request.method + " " + route.request.url), route.abort()) if route.request.method not in ("GET", "HEAD") else route.continue_())
             pg = ctx.new_page(); errs = []
             pg.on("pageerror", lambda e: errs.append(str(e)))
-            pg.on("console", lambda m: errs.append(m.text) if m.type == "error" else None)
+            # Cloudflare Web Analytics is auto-injected on the zone; the page's CSP blocks it on purpose (private page, no analytics)
+            pg.on("console", lambda m: errs.append(m.text) if m.type == "error" and "cloudflareinsights.com" not in m.text else None)
             pg.goto(H + "/#booth", wait_until="domcontentloaded")
             pg.wait_for_function("() => document.querySelectorAll('#up-list li img').length >= 5", timeout=40000)
             pg.wait_for_function("() => document.querySelector('#now-art').complete && document.querySelector('#now-art').naturalWidth > 0", timeout=20000)
@@ -133,7 +134,9 @@ try:
 finally:
     if pol: print("delete temp policy", cf("DELETE", f"/accounts/{A}/access/apps/{APP}/policies/{pol['id']}").get("success"), flush=True)
     if tok: print("delete temp token", cf("DELETE", f"/accounts/{A}/access/service_tokens/{tok['id']}").get("success"), flush=True)
-    print("delete temp worker secret", secret("TEST_SERVICE_CLIENT_ID"), flush=True)
+    ok = secret("TEST_SERVICE_CLIENT_ID")
+    if not ok and "TEST_SERVICE_CLIENT_ID" in secret_names(): ok = secret("TEST_SERVICE_CLIENT_ID")
+    print("delete temp worker secret", ok, flush=True)
     pols = cf("GET", f"/accounts/{A}/access/apps/{APP}/policies").get("result") or []
     left = [(x["name"], x["decision"]) for x in pols]
     check("only the people policy remains on the Access app", left == [("allowed people", "allow")], str(left))

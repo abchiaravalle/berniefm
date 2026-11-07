@@ -27,7 +27,8 @@ functions/         Pages Functions
   api/dj/          DJ controls: unlock / check / play (now|next) / skip; needs DJ_CODE
   listen/          continuous MP3 stream at the old URL, same timeline
   _middleware.js   host redirects (bernieradio.acwebdev.net -> bcradio.net, stream.* root)
-  _lib.js          scheduler + helpers
+  _lib.js          scheduler + helpers (featured periods, replanFuture)
+manager/           Control Room: private manager Worker at controlroom.amplifi.studio (see below)
 schema.sql         D1 schema
 wrangler.jsonc     bindings: DB (D1 bcradio), MEDIA (R2 bcradio-media)
 ```
@@ -99,3 +100,75 @@ timeline as the website. Two small server pieces exist for it:
 ## Old design
 The pre-2026-10-05 page (with the holiday mode toggles) is kept in `legacy/` for reference.
 It is not deployed.
+
+## Control Room (the manager)
+Private, amplifi-branded manager for the station: **https://controlroom.amplifi.studio**
+(Worker `bcradio-controlroom`, code in `manager/`, added 2026-11-06). The name lives in ONE place:
+`APP_NAME` in `manager/src/config.js` (the page title and header read it).
+
+**Who can sign in.** Cloudflare Access app "BC Radio Control Room" covers the WHOLE hostname
+(there is no public page): One-time PIN (emailed code), 30-day session. The allowed list is kept
+out of this public repo in `~/.hermes/secrets/controlroom-emails.txt` (Adam's two addresses and
+Bernie's). To change it: edit that file (one email per line), then run
+`python3 manager/scripts/setup_access.py`. App id + audience tag: `~/.hermes/secrets/controlroom-access.txt`.
+Defense in depth: the Worker verifies the Access JWT itself on every request (RS256 signature,
+exp, nbf, aud, iss), answers an empty 403 without it, refuses any other hostname (workers.dev and
+preview URLs are off), and refuses writes from another origin.
+
+**What it does.**
+- *On the air*: the song playing now with live progress (same shared timeline as the site),
+  the next 10, the last 5. Play now (everyone switches in 10 s, `djPlace` 'now'), Play next,
+  Skip, a search-to-play picker. Every one of these asks first, in plain words.
+- *Songs*: every song with cover, title, album, section, length, plays, last played, on/off,
+  requests on/off. Search, filters, sorting, bulk switch on/off and requests on/off. Edit display
+  title/album/artist/year/section/track number, replace the cover (saved to `art/<sha1>.jpg` +
+  `art/hd/`). Switching off a song that is coming up re-plans the future part of the schedule.
+- *Add songs*: drop MP3/WAV/AIFF/M4A/FLAC. The browser converts each one with ffmpeg.wasm
+  (self-hosted in the Worker's assets, `manager/public/assets/ff/`, checksum-verified; no CDN) using
+  the library recipe: pure gain to -16 LUFS (true peak kept under -1 dBTP), leading/trailing
+  silence trimmed (-50 dBFS, 0.15 s / 0.6 s, short fades), CBR 128 kbps 44.1 kHz stereo MP3, no
+  tags, Info header. `dur_ms` = decoded sample count, cross-checked against the Info header; the
+  Worker re-checks the stored file (format, size, length, SHA-1) before adding it. Upload goes in
+  8 MiB parts (R2 multipart). Title/album/artist/year/track/cover come from the file's tags.
+  New songs stay switched off until **Publish** (then they get a shuffled rotation spot).
+- *Featured times*: a name, start/end (time zone shown, Pacific by default), songs/albums/sections,
+  and a mode: *more often* (2x/3x/5x), *only these* (normal rotation fills in when they run out
+  under the no-repeat rules), or *let switched-off songs play* (e.g. the Christmas album joins the
+  mix only inside the window). Optional yearly repeat. Calendar of the next 6 months. When a
+  rule touches the next 2 h it re-plans the not-yet-started part (`replanFuture` in `_lib.js`:
+  keeps the song on air, the next 90 s, DJ picks and listener requests).
+- *History*: who (Access email) did what and when; undo for edits, on/off, publish, bulk changes,
+  removals of never-aired uploads, and featured times. Play now / skip are logged only.
+
+**How featured times work in the engine** (`functions/_lib.js`). `ensureSchedule` loads the
+rules whose window touches the stretch it is planning (tables `features` + `feature_tracks`) and
+checks each planned slot's start time: no active rule = the old `pickRotation`, byte for byte;
+an active rule widens or narrows the candidate pool and makes boosted songs look `weight` times
+"staler", so they come round more often while the 6 h no-repeat and album-spread rules still hold.
+
+**Tests** (run before any engine change; the first one is the hard gate):
+```
+cd manager && npm install && npm run assets          # ffmpeg.wasm into public/assets/ff/
+node --no-warnings test/sched_equiv.mjs              # old vs new engine on the real prod export, same seeded random: identical (27 checks)
+node --no-warnings test/sched_features.mjs           # more/only/unlock, windows, DST, yearly, replanFuture (42 checks)
+LIB=$PWD/../functions/_lib.js SCHEMA=$PWD/../schema.sql node --no-warnings test/sched_test_orig.mjs   # the 2026-10-05 scheduler test
+bash scripts/seed_local.sh && bash scripts/dev_local.sh    # LOCAL D1/R2 only (background), http://localhost:8813
+BASE=http://localhost:8813 node --no-warnings test/test_api_local.mjs                  # API, 41 checks
+~/.hermes/hermes-agent/venv313/bin/python test/verify_ui_local.py http://localhost:8813   # real Chrome, upload->publish->feature->play->skip->undo, 50 checks
+python3 scripts/verify_gate_live.py                  # live: every path refuses anonymous + forged tokens
+~/.hermes/hermes-agent/venv313/bin/python scripts/verify_live_signed_in.py   # live, READ-ONLY, temp service token (removed after)
+python3 scripts/verify_station_live.py               # live station health (read-only)
+```
+Never test writes on a Pages preview URL: previews share the prod D1.
+
+**Deploy the manager**
+```
+set -a; source ~/.hermes/secrets/cloudflare.env; set +a; export CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID
+cd manager && npm install && npm run assets
+umask 077; printf '{"ACCESS_AUD":"%s"}' "$(sed -n 's/^AUD=//p' ~/.hermes/secrets/controlroom-access.txt)" > /tmp/cr.secrets.json
+../node_modules/.bin/wrangler deploy --secrets-file /tmp/cr.secrets.json; rm /tmp/cr.secrets.json
+python3 scripts/verify_gate_live.py
+```
+Schema changes for the manager are additive only (`manager/migrations/0001_controlroom.sql`, same
+block as the end of `schema.sql`). Backup + rollback from before the first prod change:
+`/Volumes/6154577230/client-backups/bcradio-d1-2026-11-06/` (MANIFEST.md, ROLLBACK.md).
