@@ -1,0 +1,6 @@
+node_modules/
+.wrangler/
+public/assets/ff/
+.dev.vars
+*.secrets.env
+test/out/

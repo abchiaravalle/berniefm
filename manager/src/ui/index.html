@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>{{APP_NAME}} · BC Radio · amplifi.studio</title>
+<link rel="icon" href="/assets/amplifi-mark.png">
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="bar-in">
+    <div class="brand">
+      <img class="brand-logo" src="/assets/amplifi-logo-color-dark.svg" alt="amplifi.studio" width="65" height="26">
+      <div class="brand-txt"><span class="brand-t" id="app-name">{{APP_NAME}}</span><span class="brand-s">{{APP_TAGLINE}}</span></div>
+    </div>
+    <div class="bar-meta"><span id="me"></span><a class="signout" href="/cdn-cgi/access/logout">Sign out</a></div>
+  </div>
+  <nav class="tabs-bar" aria-label="Sections">
+    <div class="bar-in tabs-in">
+      <button class="tabb on" data-tab="booth"><span class="live-dot" aria-hidden="true"></span>On the air</button>
+      <button class="tabb" data-tab="songs">Songs <b id="t-count"></b></button>
+      <button class="tabb" data-tab="upload">Add songs</button>
+      <button class="tabb" data-tab="featured">Featured times <b id="t-feat"></b></button>
+      <button class="tabb" data-tab="activity">History</button>
+    </div>
+  </nav>
+</header>
+
+<main id="app">
+  <!-- ON THE AIR -->
+  <section data-panel="booth">
+    <div id="feat-banner"></div>
+    <div class="booth">
+      <div class="card now-card" id="now-card">
+        <div class="now-art-wrap"><img id="now-art" class="now-art" alt=""></div>
+        <div class="now-info">
+          <div class="eyebrow"><span class="live-dot" aria-hidden="true"></span> Playing now on bcradio.net</div>
+          <h1 id="now-title">Loading…</h1>
+          <p class="now-sub" id="now-sub"></p>
+          <div class="prog" aria-hidden="true"><div class="prog-bar" id="now-bar"></div></div>
+          <div class="prog-t"><span id="now-pos">0:00</span><span id="now-left"></span></div>
+          <div class="now-actions">
+            <button class="btn big" id="btn-skip" type="button">Skip this song</button>
+          </div>
+        </div>
+      </div>
+      <div class="card pad pick-card">
+        <h2>Play a song</h2>
+        <p class="muted">Find a song, then play it right now for everyone, or have it play next.</p>
+        <input id="pick-q" type="search" placeholder="Type a song or album name" aria-label="Find a song to play" autocomplete="off">
+        <div id="pick-results" class="pick-results"></div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-h pad-h"><h2>Coming up</h2><span class="muted small" id="up-note"></span></div>
+        <ol class="qlist" id="up-list"></ol>
+      </div>
+      <div class="card">
+        <div class="card-h pad-h"><h2>Just played</h2></div>
+        <ol class="qlist" id="hist-list"></ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- SONGS -->
+  <section data-panel="songs" hidden>
+    <div class="stats" id="stats"></div>
+    <div class="card">
+      <div class="lbar">
+        <div class="lsearch"><input id="q" type="search" placeholder="Search songs, albums, artists" aria-label="Search songs" autocomplete="off"></div>
+        <select id="f-show" aria-label="Show">
+          <option value="">All songs</option><option value="on">On the air</option><option value="off">Switched off</option>
+          <option value="never">Never played</option><option value="featured">In a featured time</option><option value="new">Added here</option><option value="noreq">Requests off</option>
+        </select>
+        <select id="f-section" aria-label="Section"><option value="">All sections</option></select>
+        <select id="f-sort" aria-label="Sort">
+          <option value="az">Title A to Z</option><option value="album">Album</option><option value="plays">Most played</option>
+          <option value="fewest">Least played</option><option value="recent">Played most recently</option><option value="longago">Not played in a while</option>
+          <option value="added">Newest first</option><option value="long">Longest</option>
+        </select>
+      </div>
+      <div class="bulk" id="bulk" hidden>
+        <span id="bulk-n"></span>
+        <button class="btn sm" data-bulk="enable">Switch on</button>
+        <button class="btn sm" data-bulk="disable">Switch off</button>
+        <button class="btn sm" data-bulk="requests_on">Allow requests</button>
+        <button class="btn sm" data-bulk="requests_off">Stop requests</button>
+        <button class="btn sm ghost" id="bulk-clear">Clear selection</button>
+      </div>
+      <div class="ltable" role="table" aria-label="Songs">
+        <div class="lrow lhead" role="row">
+          <label class="ck" role="columnheader"><input type="checkbox" id="ck-all" aria-label="Select all shown"></label>
+          <span role="columnheader">Song</span><span role="columnheader" class="c-len">Length</span><span role="columnheader" class="c-plays">Plays</span><span role="columnheader" class="c-last">Last played</span><span role="columnheader">On the air</span>
+        </div>
+        <div id="rows"></div>
+      </div>
+      <p class="foot" id="list-foot"></p>
+    </div>
+  </section>
+
+  <!-- ADD SONGS -->
+  <section data-panel="upload" hidden>
+    <div class="card pad">
+      <h2>Add songs</h2>
+      <p class="muted">Drop one or more songs (MP3, WAV, AIFF, M4A or FLAC). Each one is made ready for the station on this computer: same volume as every other song, quiet bits at the start and end trimmed, saved as a radio MP3. New songs stay off the air until you press <b>Publish</b>.</p>
+      <label class="drop" id="drop">
+        <input type="file" id="files" accept=".mp3,.wav,.aif,.aiff,.m4a,.flac,.mp4,.aac,audio/*" multiple hidden>
+        <span class="drop-icon" aria-hidden="true">♪</span>
+        <span class="drop-t">Drop songs here</span>
+        <span class="drop-s">or <u>choose files</u> from this computer</span>
+      </label>
+      <p class="muted small" id="conv-note">The first song takes a little longer: the converter (about 32 MB) loads once.</p>
+    </div>
+    <div id="up-cards"></div>
+  </section>
+
+  <!-- FEATURED -->
+  <section data-panel="featured" hidden>
+    <div class="card pad">
+      <div class="card-h"><h2>Featured times</h2><button class="btn primary big" id="feat-new" type="button">+ New featured time</button></div>
+      <p class="muted">Play some songs more often during a stretch of time, play only them, or let songs that are normally off (like the Christmas album) join in, only during those dates. When it ends, the station goes back to normal by itself.</p>
+      <div class="cal" id="cal"></div>
+    </div>
+    <div id="feat-list"></div>
+  </section>
+
+  <!-- HISTORY -->
+  <section data-panel="activity" hidden>
+    <div class="card">
+      <div class="card-h pad-h"><h2>History</h2><span class="muted small">Every change, who made it, and an undo where it makes sense.</span></div>
+      <div id="act"></div>
+    </div>
+  </section>
+</main>
+
+<!-- SONG DRAWER -->
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" aria-hidden="true" aria-labelledby="dr-title" role="dialog">
+  <div class="dr-head">
+    <div><h2 id="dr-title">Song</h2><p class="muted small" id="dr-sub"></p></div>
+    <button class="icon-btn" id="dr-close" aria-label="Close">&times;</button>
+  </div>
+  <form id="dr-form" class="dr-body stack" novalidate>
+    <div class="dr-top">
+      <div class="cover-edit">
+        <img id="dr-art" alt="">
+        <label class="btn sm file">Change cover<input type="file" id="dr-cover" accept="image/jpeg,image/png,image/webp" hidden></label>
+      </div>
+      <div class="dr-top-r">
+        <audio id="dr-audio" controls preload="none"></audio>
+        <div class="pubrow">
+          <label class="switch"><input type="checkbox" name="enabled"><span></span> On the air (in the rotation)</label>
+          <label class="switch"><input type="checkbox" name="requestable"><span></span> Listeners can request it</label>
+        </div>
+        <div class="dr-play">
+          <button class="btn" type="button" id="dr-playnow">Play now</button>
+          <button class="btn" type="button" id="dr-playnext">Play next</button>
+        </div>
+      </div>
+    </div>
+    <div class="newbox" id="dr-new" hidden>
+      <b>This song is not on the air yet.</b> Check the details, then publish it to add it to the rotation.
+      <div class="actions"><button class="btn primary big" type="button" id="dr-publish">Publish</button></div>
+    </div>
+    <label>Title<input name="title" required maxlength="160"></label>
+    <div class="two"><label>Album<input name="album" maxlength="160" list="albums"></label><label>Artist<input name="artist" maxlength="120" list="artists"></label></div>
+    <div class="three">
+      <label>Section<select name="section" id="dr-section"></select></label>
+      <label>Year<input name="year" inputmode="numeric" maxlength="4" placeholder="e.g. 2024"></label>
+      <label>Track number<input name="no" inputmode="decimal" maxlength="5"></label>
+    </div>
+    <div class="facts" id="dr-facts"></div>
+  </form>
+  <div class="dr-foot">
+    <button class="btn danger ghost" id="dr-delete" type="button" hidden>Remove</button>
+    <span class="msg" id="dr-msg"></span>
+    <button class="btn" id="dr-cancel" type="button">Close</button>
+    <button class="btn primary" id="dr-save" type="button">Save</button>
+  </div>
+</aside>
+
+<!-- FEATURE DRAWER -->
+<aside class="drawer wide" id="fdrawer" aria-hidden="true" aria-labelledby="fd-title" role="dialog">
+  <div class="dr-head">
+    <div><h2 id="fd-title">New featured time</h2><p class="muted small">Times are in the time zone you pick (Pacific unless you change it).</p></div>
+    <button class="icon-btn" id="fd-close" aria-label="Close">&times;</button>
+  </div>
+  <form id="fd-form" class="dr-body stack" novalidate>
+    <div class="presets" id="fd-presets"></div>
+    <label>Name<input name="name" required maxlength="80" placeholder="e.g. Christmas"></label>
+    <div class="two">
+      <fieldset class="when"><legend>Starts</legend><div class="dt"><input type="date" name="sd" aria-label="Start date"><input type="time" name="st" aria-label="Start time" step="60"></div></fieldset>
+      <fieldset class="when"><legend>Ends</legend><div class="dt"><input type="date" name="ed" aria-label="End date"><input type="time" name="et" aria-label="End time" step="60"></div></fieldset>
+    </div>
+    <div class="two">
+      <label>Time zone<select name="tz" id="fd-tz"></select></label>
+      <label class="check big-check"><input type="checkbox" name="yearly"> Repeat every year</label>
+    </div>
+    <fieldset class="modes"><legend>What should happen</legend>
+      <label class="mode"><input type="radio" name="mode" value="more"><span><b>Play these more often</b><small>The rest of the station keeps playing too.</small></span></label>
+      <label class="mode"><input type="radio" name="mode" value="only"><span><b>Play only these</b><small>Nothing else plays. If they run out, the regular mix fills in until they can repeat.</small></span></label>
+      <label class="mode"><input type="radio" name="mode" value="unlock"><span><b>Let switched-off songs play</b><small>For songs that are normally off, like the Christmas album. They join the mix only during these dates.</small></span></label>
+    </fieldset>
+    <div class="weights" id="fd-weights"><span class="lbl">How much more often</span>
+      <div class="seg" role="radiogroup" aria-label="How much more often">
+        <label class="seg-1"><input type="radio" name="weight" value="1"><span>Normal</span></label>
+        <label><input type="radio" name="weight" value="2"><span>2×</span></label>
+        <label><input type="radio" name="weight" value="3"><span>3×</span></label>
+        <label><input type="radio" name="weight" value="5"><span>5×</span></label>
+      </div>
+    </div>
+    <div class="field">
+      <span class="lbl">Which songs</span>
+      <div class="pick-tabs" role="tablist">
+        <button type="button" class="ptab on" data-ptab="albums">Albums</button>
+        <button type="button" class="ptab" data-ptab="songs">Songs</button>
+        <button type="button" class="ptab" data-ptab="sections">Sections</button>
+      </div>
+      <input id="fd-q" type="search" placeholder="Search" aria-label="Search albums or songs" autocomplete="off">
+      <div class="pick-list" id="fd-pick"></div>
+      <p class="pick-sum" id="fd-sum"></p>
+    </div>
+    <label>Note (optional)<input name="note" maxlength="400" placeholder="Anything to remember about this"></label>
+    <p class="warn-box" id="fd-warn" hidden></p>
+  </form>
+  <div class="dr-foot">
+    <span class="msg" id="fd-msg"></span>
+    <button class="btn" id="fd-cancel" type="button">Cancel</button>
+    <button class="btn primary" id="fd-save" type="button">Save</button>
+  </div>
+</aside>
+
+<!-- CONFIRM -->
+<div class="modal-scrim" id="cf-scrim" hidden>
+  <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="cf-title" aria-describedby="cf-body">
+    <h2 id="cf-title"></h2>
+    <p id="cf-body"></p>
+    <div class="modal-actions"><button class="btn big" id="cf-no" type="button">Cancel</button><button class="btn primary big" id="cf-yes" type="button">Yes</button></div>
+  </div>
+</div>
+
+<datalist id="albums"></datalist><datalist id="artists"></datalist>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  // BC Radio Control Room: private manager for bcradio.net. See ../README.md ("Control Room").
+  "name": "bcradio-controlroom",
+  "main": "src/worker.js",
+  // The manager UI is bundled INTO the Worker and served only after the Access check.
+  "rules": [{ "type": "Text", "globs": ["**/*.html", "**/*.txt"], "fallthrough": true }],
+  "compatibility_date": "2026-09-15",
+  // workers.dev and preview URLs OFF: the Access app covers controlroom.amplifi.studio ONLY, so a
+  // second hostname would bypass it. The Worker also refuses every other hostname (fail closed).
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "controlroom.amplifi.studio", "custom_domain": true }],
+  // Static files (logo, font, self-hosted ffmpeg.wasm) also go through the Worker's sign-in check.
+  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": true },
+  // SAME database + bucket as the station (bcradio.net Pages project `berniefm`).
+  "d1_databases": [{ "binding": "DB", "database_name": "bcradio", "database_id": "58a51119-1d5a-4dbb-b3ea-3b704c004472" }],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "bcradio-media" }],
+  "vars": {
+    "CANONICAL_HOST": "controlroom.amplifi.studio",
+    "ACCESS_TEAM_DOMAIN": "falling-brook-6a64.cloudflareaccess.com",
+    "MEDIA_BASE": "https://media.bcradio.net/"
+  },
+  // ACCESS_AUD is a secret (set at deploy with --secrets-file, value in ~/.hermes/secrets/controlroom-access.txt).
+  "observability": { "enabled": true }
+}

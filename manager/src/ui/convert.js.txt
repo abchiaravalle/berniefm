@@ -1,0 +1,213 @@
+// Control Room: turn any song file into the station's format, in the browser.
+// Same recipe as the library tooling (bcradio-work/transcode.py + transcode2.py):
+//   1. measure integrated loudness + true peak (EBU R128)
+//   2. pure gain to -16 LUFS, never pushing true peak above -1 dBTP, gain kept in -20..+24 dB
+//   3. trim leading/trailing silence: start 0.15 s before the first 50 ms window above -50 dBFS,
+//      end 0.6 s after the last one, 15 ms fade-in / 400 ms fade-out so cuts never click
+//   4. encode CBR 128 kbps, 44.1 kHz stereo MP3, no tags, with the Info header (exact length)
+//   5. decode the result again and count the samples: that is dur_ms (the shared timeline
+//      depends on it), cross-checked against the Info header; measure the result's loudness
+// ffmpeg.wasm is self-hosted under /assets/ff/<version>/ (no third-party CDN).
+const VER = '/*FF_VERSION*/';
+const BASE = `/assets/ff/${VER}/`;
+let ff = null, loading = null, logLines = [];
+
+async function wasmBlobUrl(onStep) {
+  const man = await (await fetch(BASE + 'core/manifest.json', { credentials: 'same-origin' })).json();
+  const parts = [];
+  let got = 0;
+  for (const p of man.parts) {
+    const r = await fetch(BASE + 'core/' + p, { credentials: 'same-origin' });
+    if (!r.ok) throw new Error('Could not load the converter (' + r.status + ')');
+    const reader = r.body.getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      parts.push(value); got += value.length;
+      onStep && onStep('Loading the converter (first time only)', got / man.bytes);
+    }
+  }
+  const blob = new Blob(parts, { type: 'application/wasm' });
+  if (blob.size !== man.bytes) throw new Error('Converter download was incomplete');
+  const sha = [...new Uint8Array(await crypto.subtle.digest('SHA-256', await blob.arrayBuffer()))].map(b => b.toString(16).padStart(2, '0')).join('');
+  if (sha !== man.sha256) throw new Error('Converter file is damaged (checksum)');
+  return URL.createObjectURL(blob);
+}
+
+export async function load(onStep) {
+  if (ff) return ff;
+  if (loading) return loading;
+  loading = (async () => {
+    const { FFmpeg } = await import(BASE + 'ffmpeg/index.js');
+    const inst = new FFmpeg();
+    inst.on('log', ({ message }) => { logLines.push(message); if (logLines.length > 4000) logLines.splice(0, 2000); });
+    const wasmURL = await wasmBlobUrl(onStep);
+    onStep && onStep('Starting the converter', 1);
+    await inst.load({ coreURL: location.origin + BASE + 'core/ffmpeg-core.js', wasmURL });
+    ff = inst;
+    return inst;
+  })();
+  try { return await loading; } catch (e) { loading = null; throw e; }
+}
+export function _debug() { return { ff, logs: logLines }; }
+export function reset() { try { ff && ff.terminate(); } catch (e) { /* ignore */ } ff = null; loading = null; }
+
+async function run(args, label) {
+  logLines = [];
+  const rc = await ff.exec(args);
+  if (rc !== 0) {
+    const tail = logLines.filter(l => !/^\s*(Stream|Metadata|Duration|Input|Output|configuration|built with|lib\w+\s)/.test(l)).slice(-4).join(' / ');
+    throw new Error(label + ' failed' + (tail ? ': ' + tail.slice(0, 300) : ''));
+  }
+  return logLines.slice();
+}
+const num = (re, lines) => { for (let i = lines.length - 1; i >= 0; i--) { const m = re.exec(lines[i]); if (m) return parseFloat(m[1]); } return null; };
+function loudness(lines) {
+  // ebur128 summary: "I:  -16.4 LUFS" ... "Peak:  -6.9 dBFS" (true peak)
+  const si = lines.findIndex(l => /Summary:/.test(l));
+  const s = si >= 0 ? lines.slice(si) : lines;
+  return { I: num(/^\s*I:\s+(-?[\d.]+|-inf)\s+LUFS/, s), TP: num(/^\s*Peak:\s+(-?[\d.]+|-inf)\s+dBFS/, s) };
+}
+function parseMeta(txt) {
+  const out = {};
+  for (const line of txt.split('\n')) {
+    const i = line.indexOf('=');
+    if (i < 1 || line[0] === ';') continue;
+    out[line.slice(0, i).toLowerCase()] = line.slice(i + 1).replace(/\\(.)/g, '$1').trim();
+  }
+  return out;
+}
+function fromFilename(name) {
+  let base = name.replace(/\.[^.]+$/, '').replace(/_/g, ' ').trim();
+  let no = null;
+  const m = /^(\d{1,2})[\s.\-]+(.+)$/.exec(base);
+  if (m) { no = parseInt(m[1], 10); base = m[2]; }
+  return { title: base.replace(/\s+/g, ' ').trim(), no };
+}
+async function imageToJpeg(blob, maxPx, quality) {
+  const bmp = await createImageBitmap(blob);
+  const scale = Math.min(1, maxPx / Math.max(bmp.width, bmp.height));
+  const w = Math.max(1, Math.round(bmp.width * scale)), h = Math.max(1, Math.round(bmp.height * scale));
+  const c = new OffscreenCanvas(w, h);
+  const g = c.getContext('2d');
+  g.fillStyle = '#000'; g.fillRect(0, 0, w, h);
+  g.drawImage(bmp, 0, 0, w, h);
+  const out = await c.convertToBlob({ type: 'image/jpeg', quality });
+  return { blob: out, w, h, srcW: bmp.width, srcH: bmp.height };
+}
+// Cover art: regular (max 1500 px, like the library) + big one for the iPhone app (max 2000 px).
+export async function makeCover(blob) {
+  const main = await imageToJpeg(blob, 1500, 0.9);
+  const hd = await imageToJpeg(blob, 2000, 0.88);
+  const sha = [...new Uint8Array(await crypto.subtle.digest('SHA-1', await main.blob.arrayBuffer()))].map(b => b.toString(16).padStart(2, '0')).join('');
+  return { name: sha.slice(0, 16), main: main.blob, hd: hd.blob, w: main.srcW, h: main.srcH };
+}
+
+// The library tooling capped gain at +12 dB; here it is +24 dB so quiet home recordings still reach
+// -16 LUFS. The true-peak ceiling (-1 dBTP) stays the real limit, so nothing is ever clipped.
+export const TARGET = -16, TP_CEIL = -1, MAX_GAIN = 24, TH_DB = -50, WIN = 400, SR_ENV = 8000;
+
+export async function convert(file, onStep) {
+  await load(onStep);
+  const ext = (file.name.match(/\.([a-z0-9]{1,5})$/i) || [, 'bin'])[1].toLowerCase();
+  const IN = 'in.' + ext, OUT = 'out.mp3';
+  const step = (s, p) => onStep && onStep(s, p);
+  const cleanup = async () => { for (const f of [IN, OUT, 'env.raw', 'meta.txt', 'cover.img']) { try { await ff.deleteFile(f); } catch (e) { /* not there */ } } };
+  await cleanup();
+  try {
+    step('Reading the file', 0);
+    await ff.writeFile(IN, new Uint8Array(await file.arrayBuffer()));
+
+    // tags + embedded cover
+    step('Reading the song details', 0.05);
+    let tags = {};
+    try { await run(['-i', IN, '-f', 'ffmetadata', 'meta.txt'], 'Reading tags'); tags = parseMeta(new TextDecoder().decode(await ff.readFile('meta.txt'))); } catch (e) { tags = {}; }
+    let cover = null;
+    try {
+      await run(['-i', IN, '-map', '0:v:0', '-frames:v', '1', '-c', 'copy', '-f', 'image2', 'cover.img'], 'Reading cover');
+      const img = await ff.readFile('cover.img');
+      if (img && img.length > 500) cover = await makeCover(new Blob([img]));
+    } catch (e) { cover = null; }
+    const fn = fromFilename(file.name);
+    const trk = parseInt(String(tags.track || '').split('/')[0], 10);
+    const meta = {
+      title: tags.title || fn.title,
+      album: tags.album || '',
+      artist: tags.artist || tags.album_artist || '',
+      year: (String(tags.date || tags.year || '').match(/\d{4}/) || [''])[0],
+      no: Number.isFinite(trk) ? trk : fn.no,
+    };
+
+    // 1. loudness of the original
+    step('Measuring loudness', 0.1);
+    const L0 = loudness(await run(['-i', IN, '-map', '0:a:0', '-af', 'ebur128=peak=true:framelog=verbose', '-f', 'null', '-'], 'Measuring loudness'));
+    if (L0.I == null) throw new Error('Could not measure the loudness. Is this an audio file?');
+    let gain;
+    if (!(L0.I > -60)) gain = 0;                    // silence / broken
+    else {
+      gain = TARGET - L0.I;
+      if (L0.TP != null && Number.isFinite(L0.TP)) gain = Math.min(gain, TP_CEIL - L0.TP);
+      gain = Math.max(Math.min(gain, MAX_GAIN), -20);
+    }
+
+    // 3. silence trim on an 8 kHz mono envelope, after the gain (transcode2.py)
+    step('Finding the start and end', 0.3);
+    await run(['-i', IN, '-map', '0:a:0', '-ac', '1', '-ar', String(SR_ENV), '-f', 'f32le', 'env.raw'], 'Reading the audio');
+    const raw = await ff.readFile('env.raw');
+    const x = new Float32Array(raw.buffer, raw.byteOffset, Math.floor(raw.byteLength / 4));
+    const g = Math.pow(10, gain / 20);
+    const n = Math.floor(x.length / WIN);
+    let first = -1, last = -1;
+    for (let w = 0; w < n; w++) {
+      let s = 0;
+      for (let i = w * WIN, e = i + WIN; i < e; i++) { const v = x[i] * g; s += v * v; }
+      const db = 20 * Math.log10(Math.sqrt(s / WIN) + 1e-12);
+      if (db > TH_DB) { if (first < 0) first = w; last = w; }
+    }
+    const dur = x.length / SR_ENV;
+    try { await ff.deleteFile('env.raw'); } catch (e) { /* ignore */ }
+    if (first < 0) throw new Error('The song seems to be silent');
+    const start = Math.max(0, first * WIN / SR_ENV - 0.15);
+    const end = Math.min(dur, (last + 1) * WIN / SR_ENV + 0.6);
+    const length = end - start;
+    if (length < 5) throw new Error('The song is shorter than 5 seconds after trimming silence');
+    const fo = Math.min(0.4, length / 4), fi = 0.015;
+
+    // 4. encode
+    step('Converting to the station format', 0.4);
+    const onProg = ({ time }) => { if (time > 0) step('Converting to the station format', 0.4 + 0.45 * Math.min(1, time / 1e6 / length)); };
+    ff.on('progress', onProg);
+    try {
+      await run(['-ss', start.toFixed(3), '-t', length.toFixed(3), '-i', IN, '-map', '0:a:0',
+        '-af', `volume=${gain.toFixed(2)}dB,afade=t=in:st=0:d=${fi},afade=t=out:st=${Math.max(0, length - fo).toFixed(3)}:d=${fo}`,
+        '-ar', '44100', '-ac', '2', '-c:a', 'libmp3lame', '-b:a', '128k', '-map_metadata', '-1',
+        '-id3v2_version', '0', '-write_id3v1', '0', '-write_xing', '1', OUT], 'Converting');
+    } finally { ff.off('progress', onProg); }
+    try { await ff.deleteFile(IN); } catch (e) { /* ignore */ }
+
+    // 5. check the result: decode it, count samples, measure loudness
+    step('Checking the result', 0.88);
+    const chk = await run(['-i', OUT, '-af', 'ebur128=peak=true:framelog=verbose,astats=metadata=0:measure_perchannel=none', '-f', 'null', '-'], 'Checking');
+    const L1 = loudness(chk);
+    const samples = num(/Number of samples:\s+(\d+)/, chk);
+    const mp3 = await ff.readFile(OUT);
+    const bytes = new Uint8Array(mp3);
+    const { parseMp3 } = await import('/mp3.js');
+    const info = parseMp3(bytes);
+    if (!info.ok) throw new Error('Converted file failed the format check: ' + info.why);
+    if (!samples || Math.abs(samples - info.samples) > 0) throw new Error(`Length check failed (decoded ${samples} samples, header says ${info.samples})`);
+    const sha1 = [...new Uint8Array(await crypto.subtle.digest('SHA-1', bytes))].map(b => b.toString(16).padStart(2, '0')).join('');
+    await cleanup();
+    step('Converted', 1);
+    return {
+      mp3: new Blob([bytes], { type: 'audio/mpeg' }), sha1, bytes: bytes.length,
+      dur_ms: Math.round(samples * 1000 / 44100), samples,
+      lufs_in: L0.I, tp_in: L0.TP, gain_db: Math.round(gain * 100) / 100, lufs: L1.I, tp: L1.TP,
+      trim_start: Math.round(start * 1000) / 1000, trim_end: Math.round((dur - end) * 1000) / 1000, orig_dur: dur,
+      peak_limited: gain < TARGET - L0.I - 0.05, meta, cover,
+    };
+  } catch (e) {
+    await cleanup().catch(() => {});
+    throw e;
+  }
+}

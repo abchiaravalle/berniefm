@@ -1,0 +1,788 @@
+/* BC Radio Control Room: on the air, songs, add songs, featured times, history. No dependencies. */
+(function () {
+  'use strict';
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return [].slice.call((r || document).querySelectorAll(s)); };
+  var S = { me: null, songs: [], byId: {}, features: [], sel: {}, filter: { q: '', show: '', section: '', sort: 'az' }, edit: null, booth: null, skew: 0, tab: 'booth' };
+
+  // ---------- basics ----------
+  function api(path, opts) {
+    opts = opts || {};
+    var h = { 'x-cr': '1' };
+    var body = opts.body;
+    if (body && !(body instanceof Blob) && !(body instanceof ArrayBuffer)) { h['content-type'] = 'application/json'; body = JSON.stringify(body); }
+    if (opts.type) h['content-type'] = opts.type;
+    return fetch('/api' + path, { method: opts.method || 'GET', headers: h, body: body, credentials: 'same-origin' }).then(function (r) {
+      if (r.status === 403 && r.headers.get('x-cr-auth')) { location.reload(); throw new Error('Signed out'); }
+      return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.error || ('Something went wrong (' + r.status + ')')); return j; });
+    });
+  }
+  function el(tag, attrs, kids) {
+    var n = document.createElement(tag);
+    if (attrs) for (var k in attrs) {
+      var v = attrs[k];
+      if (v == null || v === false) continue;
+      if (k === 'text') n.textContent = v; else if (k === 'html') n.innerHTML = v;
+      else if (k === 'style') n.style.cssText = v;   // CSSOM: allowed by the page's strict CSP (style attributes are not)
+      else if (k.slice(0, 2) === 'on') n.addEventListener(k.slice(2), v);
+      else n.setAttribute(k, v === true ? '' : v);
+    }
+    (kids || []).forEach(function (c) { if (c != null) n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    return n;
+  }
+  var toastT;
+  function toast(msg, undoFn) {
+    var t = $('#toast');
+    t.textContent = msg;
+    if (undoFn) t.appendChild(el('button', { type: 'button', text: 'Undo', onclick: function () { t.hidden = true; undoFn(); } }));
+    t.hidden = false;
+    clearTimeout(toastT); toastT = setTimeout(function () { t.hidden = true; }, undoFn ? 9000 : 4500);
+  }
+  // Big plain-words confirm (used before anything listeners hear right away).
+  function confirmBox(title, text, yes) {
+    return new Promise(function (resolve) {
+      $('#cf-title').textContent = title; $('#cf-body').textContent = text || ''; $('#cf-yes').textContent = yes || 'Yes';
+      $('#cf-scrim').hidden = false; setTimeout(function () { $('#cf-yes').focus(); }, 30);
+      function done(v) { $('#cf-scrim').hidden = true; $('#cf-yes').onclick = $('#cf-no').onclick = null; document.removeEventListener('keydown', key); resolve(v); }
+      function key(e) { if (e.key === 'Escape') done(false); }
+      $('#cf-yes').onclick = function () { done(true); };
+      $('#cf-no').onclick = function () { done(false); };
+      document.addEventListener('keydown', key);
+    });
+  }
+  function nowMs() { return Date.now() + S.skew; }
+  function mmss(ms) { ms = Math.max(0, Math.round(ms / 1000)); return Math.floor(ms / 60) + ':' + String(ms % 60).padStart(2, '0'); }
+  var TZ = 'America/Los_Angeles';
+  function clock(ms) { return new Date(ms).toLocaleTimeString('en-US', { timeZone: TZ, hour: 'numeric', minute: '2-digit' }); }
+  function when(ms) {
+    if (!ms) return 'never';
+    var d = nowMs() - ms;
+    if (d < 0) return 'coming up';
+    if (d < 3600e3) return Math.max(1, Math.round(d / 60000)) + ' min ago';
+    if (d < 86400e3) return Math.round(d / 3600e3) + ' h ago';
+    if (d < 30 * 86400e3) return Math.round(d / 86400e3) + ' days ago';
+    return new Date(ms).toLocaleDateString('en-US', { timeZone: TZ, month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  function fullWhen(ms) { return new Date(ms).toLocaleString('en-US', { timeZone: TZ, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); }
+  function natural(a, b) { return String(a).localeCompare(String(b), 'en', { sensitivity: 'base', numeric: true }); }
+  function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
+
+  // ---------- tabs ----------
+  function show(tab) {
+    S.tab = tab;
+    $$('.tabb').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-tab') === tab); });
+    $$('[data-panel]').forEach(function (p) { p.hidden = p.getAttribute('data-panel') !== tab; });
+    if (tab === 'booth') loadBooth();
+    if (tab === 'activity') loadActivity();
+    if (tab === 'featured') loadFeatures();
+    if (location.hash !== '#' + tab) history.replaceState(null, '', '#' + tab);
+  }
+  $$('.tabb').forEach(function (b) { b.addEventListener('click', function () { show(b.getAttribute('data-tab')); }); });
+  var TABS = ['booth', 'songs', 'upload', 'featured', 'activity'];
+  window.addEventListener('hashchange', function () { var t = location.hash.slice(1); if (S.me && TABS.indexOf(t) > -1 && t !== S.tab) show(t); });
+
+  // ---------- songs ----------
+  function index() { S.byId = {}; S.songs.forEach(function (s) { S.byId[s.id] = s; }); }
+  function loadSongs() { return api('/songs').then(function (j) { S.skew = j.now - Date.now(); S.songs = j.songs; index(); renderList(); fillLists(); }); }
+  function featuredIds() {
+    var m = {};
+    S.features.forEach(function (f) { if (f.active && !f.finished) f.song_ids.forEach(function (id) { (m[id] = m[id] || []).push(f.name); }); });
+    return m;
+  }
+  function filtered() {
+    var f = S.filter, words = f.q.toLowerCase().split(/\s+/).filter(Boolean), fids = featuredIds();
+    var rows = S.songs.filter(function (s) {
+      if (f.show === 'on' && !s.enabled) return false;
+      if (f.show === 'off' && s.enabled) return false;
+      if (f.show === 'never' && s.plays) return false;
+      if (f.show === 'featured' && !fids[s.id]) return false;
+      if (f.show === 'new' && !s.uploaded) return false;
+      if (f.show === 'noreq' && s.requestable) return false;
+      if (f.section && s.section !== f.section) return false;
+      if (!words.length) return true;
+      var hay = [s.title, s.album, s.artist, s.year, s.section, s.raw_title].join(' ').toLowerCase();
+      return words.every(function (w) { return hay.indexOf(w) > -1; });
+    });
+    var by = {
+      az: function (a, b) { return natural(a.title, b.title); },
+      album: function (a, b) { return natural(a.album, b.album) || ((a.no == null ? 1e9 : a.no) - (b.no == null ? 1e9 : b.no)) || natural(a.title, b.title); },
+      plays: function (a, b) { return b.plays - a.plays || natural(a.title, b.title); },
+      fewest: function (a, b) { return a.plays - b.plays || natural(a.title, b.title); },
+      recent: function (a, b) { return b.last_played_ms - a.last_played_ms; },
+      longago: function (a, b) { return a.last_played_ms - b.last_played_ms; },
+      added: function (a, b) { return b.added - a.added; },
+      long: function (a, b) { return b.dur_ms - a.dur_ms; },
+    };
+    rows.sort(by[f.sort] || by.az);
+    return rows;
+  }
+  function renderStats() {
+    var L = S.songs, on = L.filter(function (s) { return s.enabled; }).length, fids = featuredIds();
+    var never = L.filter(function (s) { return !s.plays; }).length, feat = L.filter(function (s) { return fids[s.id]; }).length;
+    var hours = L.filter(function (s) { return s.enabled; }).reduce(function (a, s) { return a + s.dur_ms; }, 0) / 3600e3;
+    var cards = [['on', on, 'On the air (' + hours.toFixed(1) + ' h)'], ['off', L.length - on, 'Switched off'], ['never', never, 'Never played'], ['featured', feat, 'In a featured time'], ['new', L.filter(function (s) { return s.uploaded; }).length, 'Added here']];
+    var box = $('#stats'); box.textContent = '';
+    cards.forEach(function (c) {
+      box.appendChild(el('button', { type: 'button', class: 'stat' + (S.filter.show === c[0] ? ' on' : ''),
+        onclick: function () { S.filter.show = S.filter.show === c[0] ? '' : c[0]; $('#f-show').value = S.filter.show; renderList(); } },
+        [el('div', { class: 'stat-n', text: String(c[1]) }), el('div', { class: 'stat-l', text: c[2] })]));
+    });
+    $('#t-count').textContent = String(L.length);
+  }
+  var renderCap = 120;
+  function renderList() {
+    renderStats();
+    var rows = filtered(), box = $('#rows'), fids = featuredIds();
+    box.textContent = '';
+    if (!rows.length) box.appendChild(el('div', { class: 'empty', text: 'No songs match.' }));
+    rows.slice(0, renderCap).forEach(function (s) {
+      var ck = el('input', { type: 'checkbox', 'aria-label': 'Select ' + s.title });
+      ck.checked = !!S.sel[s.id];
+      ck.addEventListener('click', function (e) { e.stopPropagation(); if (ck.checked) S.sel[s.id] = 1; else delete S.sel[s.id]; renderBulk(); });
+      var onBtn = el('button', { type: 'button', class: 'tog', title: s.enabled ? 'Switch off (take out of the rotation)' : 'Switch on (put in the rotation)',
+        onclick: function (e) { e.stopPropagation(); quickToggle(s); } },
+        [el('span', { class: 'pill ' + (s.enabled ? 'on' : 'off'), text: s.enabled ? 'On' : 'Off' })]);
+      var flags = el('div', { class: 'flags' }, [onBtn,
+        s.uploaded && !s.plays && !s.enabled ? el('span', { class: 'pill new', text: 'New' }) : null,
+        fids[s.id] ? el('span', { class: 'pill feat', text: 'Featured', title: fids[s.id].join(', ') }) : null,
+        !s.requestable ? el('span', { class: 'pill warn', text: 'No requests' }) : null]);
+      var row = el('div', { class: 'lrow' + (s.enabled ? '' : ' off'), role: 'row', tabindex: '0', 'data-id': s.id, onclick: function () { openEdit(s.id); },
+        onkeydown: function (e) { if (e.key === 'Enter') openEdit(s.id); } }, [
+        el('label', { class: 'ck', onclick: function (e) { e.stopPropagation(); } }, [ck]),
+        el('div', { class: 'l-main' }, [
+          el('img', { class: 'l-thumb', src: s.art, alt: '', loading: 'lazy' }),
+          el('div', { class: 'l-txt' }, [el('div', { class: 'l-name', text: s.title }), el('div', { class: 'l-sub', text: [s.album, s.artist !== 'Bernie Chiaravalle' ? s.artist : null, s.year].filter(Boolean).join(' · ') || s.section || '' })]),
+        ]),
+        el('div', { class: 'c-len', text: mmss(s.dur_ms) }),
+        el('div', { class: 'c-plays', text: String(s.plays) }),
+        el('div', { class: 'c-last', text: when(s.last_played_ms) }),
+        flags,
+      ]);
+      box.appendChild(row);
+    });
+    if (rows.length > renderCap) box.appendChild(el('div', { class: 'empty' }, [el('button', { class: 'btn', type: 'button', text: 'Show all ' + rows.length, onclick: function () { renderCap = 1e9; renderList(); } })]));
+    $('#list-foot').textContent = 'Showing ' + Math.min(rows.length, renderCap) + ' of ' + rows.length + (rows.length !== S.songs.length ? ' (' + S.songs.length + ' songs in total)' : '') + '. Tap a song to edit it, change its cover, or play it.';
+    $('#ck-all').checked = rows.length > 0 && rows.every(function (s) { return S.sel[s.id]; });
+    renderBulk();
+  }
+  function renderBulk() {
+    var n = Object.keys(S.sel).length;
+    $('#bulk').hidden = !n;
+    $('#bulk-n').textContent = plural(n, 'song') + ' selected';
+  }
+  function replace(s) { var i = S.songs.findIndex(function (x) { return x.id === s.id; }); if (i < 0) S.songs.push(s); else S.songs[i] = s; S.byId[s.id] = s; }
+  function quickToggle(s) {
+    var to = !s.enabled;
+    var go = to ? Promise.resolve(true) : confirmBox('Switch off "' + s.title + '"?', 'It stops being picked for the radio. If it is coming up soon, the songs coming up are planned again (the song playing now is not interrupted). You can undo this.', 'Switch it off');
+    go.then(function (ok) {
+      if (!ok) return;
+      var call = to && s.uploaded && !s.plays ? api('/songs/' + s.id + '/publish', { method: 'POST' }) : api('/songs/' + s.id, { method: 'PATCH', body: { enabled: to } });
+      call.then(function (j) {
+        replace(j.song); renderList();
+        toast((to ? 'Switched on "' : 'Switched off "') + s.title + '"' + (j.replanned ? '. The songs coming up were planned again.' : ''), function () {
+          api('/songs/' + s.id, { method: 'PATCH', body: { enabled: !to } }).then(function (k) { replace(k.song); renderList(); toast('Undone'); });
+        });
+      }).catch(function (e) { toast(e.message); });
+    });
+  }
+  $('#q').addEventListener('input', function () { S.filter.q = this.value; renderCap = 120; renderList(); });
+  $('#f-show').addEventListener('change', function () { S.filter.show = this.value; renderList(); });
+  $('#f-section').addEventListener('change', function () { S.filter.section = this.value; renderList(); });
+  $('#f-sort').addEventListener('change', function () { S.filter.sort = this.value; renderList(); });
+  $('#ck-all').addEventListener('change', function () {
+    var on = this.checked;
+    filtered().forEach(function (s) { if (on) S.sel[s.id] = 1; else delete S.sel[s.id]; });
+    renderList();
+  });
+  $('#bulk-clear').addEventListener('click', function () { S.sel = {}; renderList(); });
+  $$('[data-bulk]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var action = b.getAttribute('data-bulk'), ids = Object.keys(S.sel);
+      var words = { enable: 'Switch on', disable: 'Switch off', requests_on: 'Allow requests for', requests_off: 'Stop requests for' }[action];
+      var go = action === 'disable' ? confirmBox(words + ' ' + plural(ids.length, 'song') + '?', 'They stop being picked for the radio. Songs coming up are planned again if needed. You can undo this from History.', words) : Promise.resolve(true);
+      go.then(function (ok) {
+        if (!ok) return;
+        api('/songs/bulk', { method: 'POST', body: { action: action, ids: ids } }).then(function (j) {
+          S.sel = {}; toast(plural(j.changed, 'song') + ' updated' + (j.replanned ? '. The songs coming up were planned again.' : '')); return loadSongs();
+        }).catch(function (e) { toast(e.message); });
+      });
+    });
+  });
+  function fillLists() {
+    var albums = {}, artists = {};
+    S.songs.forEach(function (s) { if (s.album) albums[s.album] = 1; if (s.artist) artists[s.artist] = 1; });
+    var a = $('#albums'), b = $('#artists'); a.textContent = ''; b.textContent = '';
+    Object.keys(albums).sort(natural).forEach(function (x) { a.appendChild(el('option', { value: x })); });
+    Object.keys(artists).sort(natural).forEach(function (x) { b.appendChild(el('option', { value: x })); });
+  }
+
+  // ---------- song drawer ----------
+  var form = $('#dr-form');
+  function openEdit(id) {
+    var s = S.byId[id]; if (!s) return;
+    S.edit = s;
+    $('#dr-title').textContent = s.title;
+    $('#dr-sub').textContent = [s.album, s.artist].filter(Boolean).join(' · ');
+    $('#dr-art').src = s.art;
+    var au = $('#dr-audio'); au.pause(); au.src = s.url;
+    ['title', 'album', 'artist', 'year', 'no'].forEach(function (k) { form.elements[k].value = s[k] == null ? '' : s[k]; });
+    var sec = $('#dr-section'); sec.textContent = ''; sec.appendChild(el('option', { value: '', text: '(none)' }));
+    S.me.sections.forEach(function (x) { sec.appendChild(el('option', { value: x, text: x })); });
+    sec.value = s.section || '';
+    form.elements.enabled.checked = s.enabled;
+    form.elements.requestable.checked = s.requestable;
+    $('#dr-new').hidden = !(s.uploaded && !s.enabled && !s.plays);
+    $('#dr-delete').hidden = !(s.uploaded && !s.enabled && !s.plays);
+    var facts = $('#dr-facts'); facts.textContent = '';
+    [['Length', mmss(s.dur_ms)], ['Times played', String(s.plays)], ['Last played', s.last_played_ms ? (s.last_played_ms > nowMs() ? 'coming up at ' + clock(s.last_played_ms) : fullWhen(s.last_played_ms)) : 'never'], ['Song id', s.id]].forEach(function (f) {
+      facts.appendChild(el('div', null, [f[0] + ': ', el('b', { text: f[1] })]));
+    });
+    $('#dr-msg').textContent = ''; $('#dr-msg').className = 'msg';
+    $('#scrim').hidden = false; $('#drawer').classList.add('open'); $('#drawer').setAttribute('aria-hidden', 'false');
+  }
+  function closeEdit() {
+    $('#dr-audio').pause();
+    $('#scrim').hidden = true; $('#drawer').classList.remove('open'); $('#drawer').setAttribute('aria-hidden', 'true');
+    $('#fdrawer').classList.remove('open'); $('#fdrawer').setAttribute('aria-hidden', 'true');
+    S.edit = null; S.fedit = null;
+  }
+  $('#dr-close').addEventListener('click', closeEdit);
+  $('#dr-cancel').addEventListener('click', closeEdit);
+  $('#scrim').addEventListener('click', closeEdit);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && (S.edit || S.fedit) && $('#cf-scrim').hidden) closeEdit(); });
+  function drMsg(t, cls) { $('#dr-msg').textContent = t; $('#dr-msg').className = 'msg' + (cls ? ' ' + cls : ''); }
+
+  $('#dr-save').addEventListener('click', function () {
+    var s = S.edit; if (!s) return;
+    if (!form.elements.title.value.trim()) { drMsg('A title is required', 'bad'); form.elements.title.focus(); return; }
+    var b = { title: form.elements.title.value, album: form.elements.album.value, artist: form.elements.artist.value, year: form.elements.year.value, no: form.elements.no.value, section: form.elements.section.value, requestable: form.elements.requestable.checked };
+    var turningOff = s.enabled && !form.elements.enabled.checked, turningOn = !s.enabled && form.elements.enabled.checked;
+    var go = turningOff ? confirmBox('Switch off "' + s.title + '"?', 'It stops being picked for the radio. You can undo this.', 'Switch it off') : Promise.resolve(true);
+    go.then(function (ok) {
+      if (!ok) return;
+      if (!turningOn) b.enabled = form.elements.enabled.checked;
+      $('#dr-save').disabled = true;
+      api('/songs/' + s.id, { method: 'PATCH', body: b }).then(function (j) {
+        replace(j.song);
+        return turningOn ? api('/songs/' + s.id + '/publish', { method: 'POST' }).then(function (k) { replace(k.song); return j; }) : j;
+      }).then(function (j) {
+        renderList(); closeEdit();
+        toast(j.changed.length || turningOn ? 'Saved "' + S.byId[s.id].title + '"' + (j.replanned ? '. The songs coming up were planned again.' : '') : 'No changes');
+      }).catch(function (e) { drMsg(e.message, 'bad'); }).then(function () { $('#dr-save').disabled = false; });
+    });
+  });
+  $('#dr-publish').addEventListener('click', function () {
+    var s = S.edit;
+    var b = { title: form.elements.title.value, album: form.elements.album.value, artist: form.elements.artist.value, year: form.elements.year.value, no: form.elements.no.value, section: form.elements.section.value, requestable: form.elements.requestable.checked };
+    if (!b.title.trim()) { drMsg('A title is required', 'bad'); return; }
+    api('/songs/' + s.id, { method: 'PATCH', body: b }).then(function () { return api('/songs/' + s.id + '/publish', { method: 'POST' }); }).then(function (j) {
+      replace(j.song); renderList(); closeEdit(); toast('Published "' + j.song.title + '". It is now in the rotation.');
+    }).catch(function (e) { drMsg(e.message, 'bad'); });
+  });
+  $('#dr-delete').addEventListener('click', function () {
+    var s = S.edit;
+    confirmBox('Remove "' + s.title + '"?', 'It was never on the air. It comes out of the song list (you can undo this from History).', 'Remove').then(function (ok) {
+      if (!ok) return;
+      api('/songs/' + s.id, { method: 'DELETE' }).then(function () {
+        S.songs = S.songs.filter(function (x) { return x.id !== s.id; }); index(); closeEdit(); renderList(); toast('Removed "' + s.title + '"');
+      }).catch(function (e) { drMsg(e.message, 'bad'); });
+    });
+  });
+  $('#dr-cover').addEventListener('change', function () {
+    var f = this.files && this.files[0]; this.value = '';
+    if (!f) return;
+    var s = S.edit;
+    drMsg('Preparing the cover…');
+    uploadCover(f).then(function (key) {
+      return api('/songs/' + s.id, { method: 'PATCH', body: { art: key } });
+    }).then(function (j) {
+      replace(j.song); $('#dr-art').src = j.song.art; renderList(); drMsg('New cover saved', 'ok');
+    }).catch(function (e) { drMsg(e.message, 'bad'); });
+  });
+  function uploadCover(fileOrBlob) {
+    return import('/convert.js').then(function (C) { return C.makeCover(fileOrBlob); }).then(function (c) { return putCover(c); });
+  }
+  function putCover(c) {
+    return api('/art?name=' + c.name + '&v=main', { method: 'POST', body: c.main, type: 'image/jpeg' })
+      .then(function () { return api('/art?name=' + c.name + '&v=hd', { method: 'POST', body: c.hd, type: 'image/jpeg' }); })
+      .then(function () { return 'art/' + c.name + '.jpg'; });
+  }
+  function playSong(s, mode) {
+    var title = mode === 'now' ? 'Play "' + s.title + '" now?' : 'Play "' + s.title + '" next?';
+    var text = mode === 'now'
+      ? 'Everyone listening hears it in about 10 seconds. The song playing now stops early.'
+      : 'It plays for everyone right after the song that is playing now.';
+    return confirmBox(title, text, mode === 'now' ? 'Play it now' : 'Play it next').then(function (ok) {
+      if (!ok) return false;
+      return api('/booth/play', { method: 'POST', body: { id: s.id, mode: mode } }).then(function (j) {
+        toast(mode === 'now' ? '"' + s.title + '" starts for everyone at ' + clock(j.at) : '"' + s.title + '" plays next, at ' + clock(j.at));
+        loadBooth();
+        return true;
+      }).catch(function (e) { toast(e.message); return false; });
+    });
+  }
+  $('#dr-playnow').addEventListener('click', function () { var s = S.edit; playSong(s, 'now').then(function (ok) { if (ok) { closeEdit(); show('booth'); } }); });
+  $('#dr-playnext').addEventListener('click', function () { var s = S.edit; playSong(s, 'next').then(function (ok) { if (ok) { closeEdit(); show('booth'); } }); });
+
+  // ---------- on the air ----------
+  var boothT = null;
+  function loadBooth() {
+    return api('/booth').then(function (j) { S.skew = j.now - Date.now(); S.booth = j; renderBooth(); }).catch(function (e) { $('#now-title').textContent = e.message; });
+  }
+  function tags(i) {
+    return el('span', { class: 'tags' }, [i.is_dj ? el('span', { class: 'pill live', text: 'Your pick' }) : null, i.is_request ? el('span', { class: 'pill new', text: 'Request' }) : null]);
+  }
+  function qrow(i, past) {
+    var s = S.byId[i.track.id];
+    return el('li', null, [el('time', { text: clock(i.start_ms) }), el('img', { src: i.track.art, alt: '', loading: 'lazy' }),
+      el('div', { style: 'min-width:0' }, [el('div', { class: 't', text: i.track.title }), el('div', { class: 's', text: [i.track.album, mmss(i.end_ms - i.start_ms)].filter(Boolean).join(' · ') })]),
+      tags(i)]);
+  }
+  function renderBooth() {
+    var b = S.booth; if (!b) return;
+    var c = b.current;
+    if (c) {
+      $('#now-art').src = c.track.art_hd || c.track.art;
+      $('#now-title').textContent = c.track.title;
+      $('#now-sub').textContent = [c.track.artist, c.track.album].filter(Boolean).join(' · ');
+    } else { $('#now-title').textContent = 'Nothing scheduled right now'; $('#now-sub').textContent = ''; }
+    var up = $('#up-list'); up.textContent = '';
+    b.next.forEach(function (i) { up.appendChild(qrow(i)); });
+    if (!b.next.length) up.appendChild(el('li', { class: 'muted', text: 'Nothing planned yet.' }));
+    $('#up-note').textContent = b.next.length ? 'until ' + clock(b.next[b.next.length - 1].end_ms) + ' Pacific' : '';
+    var h = $('#hist-list'); h.textContent = '';
+    b.history.forEach(function (i) { h.appendChild(qrow(i, true)); });
+    if (!b.history.length) h.appendChild(el('li', { class: 'muted', text: 'Nothing yet.' }));
+    var fb = $('#feat-banner'); fb.textContent = '';
+    if (b.features_now.length) {
+      fb.appendChild(el('div', { class: 'feat-banner' }, [el('span', null, ['Featured right now: ', el('b', { text: b.features_now.map(function (f) { return f.name; }).join(', ') })]),
+        el('button', { class: 'btn sm', type: 'button', text: 'See featured times', onclick: function () { show('featured'); } })]));
+    }
+    tick();
+  }
+  function tick() {
+    var b = S.booth; if (!b || !b.current) return;
+    var c = b.current, t = nowMs();
+    var dur = c.end_ms - c.start_ms, pos = Math.min(dur, Math.max(0, t - c.start_ms));
+    $('#now-bar').style.width = (pos / dur * 100).toFixed(2) + '%';
+    $('#now-pos').textContent = mmss(pos);
+    $('#now-left').textContent = '-' + mmss(dur - pos);
+    if (t >= c.end_ms + 500 && !tick.busy) { tick.busy = true; loadBooth().then(function () { tick.busy = false; }); }
+  }
+  setInterval(function () { if (S.tab === 'booth' && !document.hidden) tick(); }, 500);
+  setInterval(function () { if (S.tab === 'booth' && !document.hidden) loadBooth(); }, 20000);
+  $('#btn-skip').addEventListener('click', function () {
+    var c = S.booth && S.booth.current;
+    confirmBox('Skip "' + (c ? c.track.title : 'this song') + '"?', 'Everyone listening moves on to the next song in about 10 seconds.', 'Skip it').then(function (ok) {
+      if (!ok) return;
+      api('/booth/skip', { method: 'POST' }).then(function (j) { toast(j.message || ('Skipped. The next song starts at ' + clock(j.at))); loadBooth(); }).catch(function (e) { toast(e.message); });
+    });
+  });
+  $('#pick-q').addEventListener('input', function () {
+    var q = this.value.toLowerCase().trim(), box = $('#pick-results'); box.textContent = '';
+    if (!q) return;
+    var words = q.split(/\s+/);
+    var unlocked = {};
+    S.features.forEach(function (f) { if (f.on_now && f.mode !== 'more') f.song_ids.forEach(function (id) { unlocked[id] = 1; }); });
+    var hits = S.songs.filter(function (s) {
+      if (!s.enabled && !unlocked[s.id]) return false;
+      var hay = (s.title + ' ' + s.album + ' ' + s.artist).toLowerCase();
+      return words.every(function (w) { return hay.indexOf(w) > -1; });
+    }).sort(function (a, b) { return natural(a.title, b.title); }).slice(0, 30);
+    if (!hits.length) box.appendChild(el('p', { class: 'muted small', text: 'No song on the air matches. (Switched-off songs have to be switched on first.)' }));
+    hits.forEach(function (s) {
+      box.appendChild(el('div', { class: 'pick-row' }, [el('img', { src: s.art, alt: '', loading: 'lazy' }),
+        el('div', { style: 'min-width:0' }, [el('div', { class: 't', text: s.title }), el('div', { class: 's', text: [s.album, mmss(s.dur_ms)].filter(Boolean).join(' · ') })]),
+        el('div', { class: 'b' }, [el('button', { class: 'btn sm primary', type: 'button', text: 'Play now', onclick: function () { playSong(s, 'now'); } }),
+          el('button', { class: 'btn sm', type: 'button', text: 'Play next', onclick: function () { playSong(s, 'next'); } })])]));
+    });
+  });
+
+  // ---------- add songs ----------
+  var drop = $('#drop'), queue = [], busy = false;
+  ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
+  ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
+  drop.addEventListener('drop', function (e) { addFiles([].slice.call(e.dataTransfer.files || [])); });
+  $('#files').addEventListener('change', function () { addFiles([].slice.call(this.files || [])); this.value = ''; });
+  document.addEventListener('dragover', function (e) { if (S.tab === 'upload') e.preventDefault(); });
+  document.addEventListener('drop', function (e) { if (S.tab === 'upload' && e.target !== drop && !drop.contains(e.target)) { e.preventDefault(); addFiles([].slice.call(e.dataTransfer.files || [])); } });
+  var OK_EXT = /\.(mp3|wav|wave|aif|aiff|aifc|m4a|mp4|aac|flac)$/i;
+  function addFiles(files) {
+    files.forEach(function (f) {
+      var card = makeCard(f);
+      $('#up-cards').prepend(card.node);
+      if (!OK_EXT.test(f.name)) { card.fail('This kind of file is not supported. Use MP3, WAV, AIFF, M4A or FLAC.'); return; }
+      if (f.size > 800 * 1024 * 1024) { card.fail('This file is over 800 MB.'); return; }
+      queue.push(card);
+    });
+    pump();
+  }
+  function pump() {
+    if (busy || !queue.length) return;
+    busy = true;
+    var card = queue.shift();
+    card.run().catch(function () {}).then(function () { busy = false; pump(); });
+  }
+  function makeCard(file) {
+    var st = el('div', { class: 'upc-step', text: 'Waiting…' }), bar = el('div'), facts = el('div', { class: 'upc-facts' });
+    var art = el('div', { class: 'upc-art' }, [el('div', { class: 'ph-none', text: 'No cover yet' })]);
+    var body = el('div', { style: 'min-width:0' });
+    var head = el('div', { class: 'upc-h' }, [el('div', { style: 'min-width:0' }, [el('h3', { text: file.name.replace(/\.[^.]+$/, '') }), el('div', { class: 'upc-file', text: file.name + ' · ' + (file.size / 1048576).toFixed(1) + ' MB' })])]);
+    body.appendChild(head); body.appendChild(el('div', { class: 'upc-bar' }, [bar])); body.appendChild(st); body.appendChild(facts);
+    var node = el('div', { class: 'card upc', 'data-file': file.name }, [art, body]);
+    var card = { node: node, file: file };
+    function step(t, p, cls) { st.textContent = t; st.className = 'upc-step' + (cls ? ' ' + cls : ''); if (p != null) bar.style.width = Math.round(p * 100) + '%'; }
+    card.fail = function (msg) { step(msg, null, 'bad'); bar.style.background = 'var(--amp-crit)'; node.setAttribute('data-state', 'error'); };
+    card.run = function () {
+      node.setAttribute('data-state', 'converting');
+      return import('/convert.js').then(function (C) {
+        return C.convert(file, function (t, p) { step(t + (p != null && p < 1 && /Loading/.test(t) ? ' ' + Math.round(p * 100) + '%' : '') + '…', /Loading|Starting/.test(t) ? 0.02 : p * 0.6); });
+      }).then(function (r) {
+        card.r = r; r.filename = file.name;
+        facts.textContent = '';
+        [mmss(r.dur_ms), '128 kbps MP3', 'Volume ' + (r.lufs != null ? r.lufs.toFixed(1) : '?') + ' LUFS (was ' + (r.lufs_in != null ? r.lufs_in.toFixed(1) : '?') + ')',
+          'Trimmed ' + r.trim_start.toFixed(1) + ' s start, ' + r.trim_end.toFixed(1) + ' s end'].forEach(function (x) { facts.appendChild(el('span', { text: x })); });
+        if (r.peak_limited) facts.appendChild(el('span', { text: 'Kept a little quieter so it never distorts' }));
+        if (r.cover) { art.textContent = ''; art.appendChild(el('img', { src: URL.createObjectURL(r.cover.main), alt: '' })); }
+        step('Uploading…', 0.62);
+        return upload(r, function (p) { step('Uploading ' + Math.round(p * 100) + '%…', 0.62 + p * 0.33); });
+      }).then(function (song) {
+        node.setAttribute('data-state', 'ready'); node.setAttribute('data-id', song.id);
+        step('Ready. Check the details, then publish.', 1, 'ok');
+        replace(song); renderList();
+        body.appendChild(detailsForm(card, song, art));
+      }).catch(function (e) {
+        card.fail(String(e && e.message || e));
+        if (/memory|abort|RuntimeError/i.test(String(e))) import('/convert.js').then(function (C) { C.reset(); });
+      });
+    };
+    return card;
+  }
+  function upload(r, onProg) {
+    var coverKey = Promise.resolve(null);
+    if (r.cover) coverKey = putCover(r.cover);
+    return coverKey.then(function (artKey) {
+      r.artKey = artKey;
+      return api('/uploads', { method: 'POST', body: { size: r.bytes, sha1: r.sha1 } });
+    }).then(function (u) {
+      var parts = [], n = Math.ceil(r.bytes / u.part_size), i = 0;
+      function next() {
+        if (i >= n) return Promise.resolve();
+        var num = i + 1, blob = r.mp3.slice(i * u.part_size, Math.min(r.bytes, (i + 1) * u.part_size));
+        return api('/uploads/' + u.upload + '/parts/' + num, { method: 'PUT', body: blob, type: 'application/octet-stream' }).then(function (p) {
+          parts.push(p); i++; onProg(i / n); return next();
+        });
+      }
+      return next().then(function () {
+        var m = r.meta;
+        return api('/uploads/' + u.upload + '/complete', { method: 'POST', body: { parts: parts, dur_ms: r.dur_ms, meta: {
+          title: m.title, album: m.album, artist: m.artist, year: m.year, no: m.no, art: r.artKey, lufs: r.lufs, filename: r.filename || '', section: m.album ? 'Albums' : 'Singles' } } });
+      }).catch(function (e) { api('/uploads/' + u.upload + '/abort', { method: 'POST' }).catch(function () {}); throw e; });
+    }).then(function (j) { return j.song; });
+  }
+  function detailsForm(card, song, artBox) {
+    var f = el('form', { class: 'stack', novalidate: true });
+    var secSel = el('select', { name: 'section' });
+    S.me.sections.forEach(function (x) { secSel.appendChild(el('option', { value: x, text: x })); });
+    secSel.value = song.section || 'Singles';
+    f.appendChild(el('label', null, ['Title', el('input', { name: 'title', value: song.title, maxlength: '160', required: true })]));
+    f.appendChild(el('div', { class: 'two' }, [el('label', null, ['Album', el('input', { name: 'album', value: song.album === 'Singles' ? '' : song.album, maxlength: '160', list: 'albums', placeholder: 'Leave empty for a single' })]),
+      el('label', null, ['Artist', el('input', { name: 'artist', value: song.artist, maxlength: '120', list: 'artists' })])]));
+    f.appendChild(el('div', { class: 'three' }, [el('label', null, ['Section', secSel]), el('label', null, ['Year', el('input', { name: 'year', value: song.year || '', maxlength: '4', inputmode: 'numeric' })]),
+      el('label', null, ['Track number', el('input', { name: 'no', value: song.no == null ? '' : song.no, maxlength: '5', inputmode: 'decimal' })])]));
+    var msg = el('span', { class: 'msg' });
+    var cover = el('label', { class: 'btn file' }, [song.art_key ? 'Change cover' : 'Add a cover', el('input', { type: 'file', accept: 'image/jpeg,image/png,image/webp', hidden: true, onchange: function () {
+      var file = this.files && this.files[0]; this.value = ''; if (!file) return;
+      msg.textContent = 'Saving the cover…'; msg.className = 'msg';
+      uploadCover(file).then(function (key) { return api('/songs/' + song.id, { method: 'PATCH', body: { art: key } }); }).then(function (j) {
+        replace(j.song); artBox.textContent = ''; artBox.appendChild(el('img', { src: j.song.art, alt: '' })); msg.textContent = 'Cover saved'; msg.className = 'msg ok';
+      }).catch(function (e) { msg.textContent = e.message; msg.className = 'msg bad'; });
+    } })]);
+    var audio = el('audio', { controls: true, preload: 'none', src: song.url, style: 'width:100%' });
+    f.appendChild(audio);
+    function vals() { var e = f.elements; return { title: e.title.value, album: e.album.value, artist: e.artist.value, year: e.year.value, no: e.no.value, section: e.section.value }; }
+    var pubBtn = el('button', { class: 'btn primary big', type: 'button', text: 'Publish (add to the rotation)', onclick: function () {
+      if (!f.elements.title.value.trim()) { msg.textContent = 'A title is required'; msg.className = 'msg bad'; return; }
+      pubBtn.disabled = true;
+      api('/songs/' + song.id, { method: 'PATCH', body: vals() }).then(function () { return api('/songs/' + song.id + '/publish', { method: 'POST' }); }).then(function (j) {
+        replace(j.song); renderList(); card.node.setAttribute('data-state', 'published');
+        f.textContent = ''; f.appendChild(el('p', { class: 'upc-step ok', text: 'Published. "' + j.song.title + '" is now in the rotation.' }));
+      }).catch(function (e) { msg.textContent = e.message; msg.className = 'msg bad'; pubBtn.disabled = false; });
+    } });
+    var saveBtn = el('button', { class: 'btn', type: 'button', text: 'Save, publish later', onclick: function () {
+      api('/songs/' + song.id, { method: 'PATCH', body: vals() }).then(function (j) { replace(j.song); renderList(); msg.textContent = 'Saved. It is in Songs (switched off) until you publish it.'; msg.className = 'msg ok'; })
+        .catch(function (e) { msg.textContent = e.message; msg.className = 'msg bad'; });
+    } });
+    f.appendChild(el('div', { class: 'actions' }, [pubBtn, saveBtn, cover, msg]));
+    return f;
+  }
+
+  // ---------- featured times ----------
+  var MODE_TXT = { more: 'Play more often', only: 'Play only these', unlock: 'Let switched-off songs play' };
+  function loadFeatures() {
+    return api('/features').then(function (j) { S.skew = j.now - Date.now(); S.features = j.features; renderFeatures(); renderStats(); });
+  }
+  function itemLabel(it) {
+    if (it.kind === 'track') { var s = S.byId[it.value]; return s ? s.title : 'song ' + it.value; }
+    return it.value + (it.kind === 'section' ? ' (section)' : '');
+  }
+  function whenTxt(f) {
+    var a = f.start_local.replace('T', ' '), b = f.end_local.replace('T', ' ');
+    function nice(s, yr) {
+      var d = new Date(s.slice(0, 10) + 'T12:00:00Z');
+      var t = s.slice(11), h = +t.slice(0, 2), m = t.slice(3);
+      return d.toLocaleDateString('en-US', { timeZone: 'UTC', weekday: f.yearly ? undefined : 'short', month: 'short', day: 'numeric', year: yr ? 'numeric' : undefined }) + ', ' + ((h % 12) || 12) + ':' + m + (h < 12 ? ' am' : ' pm');
+    }
+    return nice(a, !f.yearly) + ' to ' + nice(b, !f.yearly) + ' · ' + f.tz_label + (f.yearly ? ' · every year' : '');
+  }
+  function renderFeatures() {
+    var list = $('#feat-list'); list.textContent = '';
+    var live = S.features.filter(function (f) { return !f.finished; });
+    var done = S.features.filter(function (f) { return f.finished; });
+    $('#t-feat').textContent = S.features.some(function (f) { return f.on_now; }) ? '●' : '';
+    renderCalendar(live);
+    if (!S.features.length) list.appendChild(el('div', { class: 'card pad empty', text: 'No featured times yet. Press "New featured time" to make one, for example the Christmas album from December 1 to 26.' }));
+    live.concat(done).forEach(function (f) {
+      var status = f.on_now ? el('span', { class: 'pill live', text: 'On now' }) : !f.active ? el('span', { class: 'pill off', text: 'Paused' }) : f.finished ? el('span', { class: 'pill off', text: 'Finished' }) : el('span', { class: 'pill feat', text: f.windows[0] ? 'Starts ' + fullWhen(f.windows[0][0]) : 'Scheduled' });
+      var what = f.mode === 'more' ? f.weight + '× as often' : f.mode === 'only' ? 'Only these songs play' : 'Switched-off songs join the mix' + (f.weight > 1 ? ', ' + f.weight + '× as often' : '');
+      var chips = el('div', { class: 'chips' }, f.items.slice(0, 12).map(function (it) { return el('span', { class: 'chip', style: 'padding-right:11px', text: itemLabel(it) }); }).concat(f.items.length > 12 ? [el('span', { class: 'chip', style: 'padding-right:11px', text: '+' + (f.items.length - 12) + ' more' })] : []));
+      var card = el('div', { class: 'card fcard' + (f.active ? '' : ' paused'), 'data-fid': String(f.id) }, [
+        el('div', { class: 'fcard-h' }, [el('div', null, [el('h3', { text: f.name }), el('div', { class: 'when', text: whenTxt(f) })]), status]),
+        el('div', { class: 'what' }, [el('b', { text: MODE_TXT[f.mode] + ': ' }), what + ' · ' + plural(f.song_count, 'song') + (f.off_count ? ' (' + f.off_count + ' normally off)' : '')]),
+        chips,
+        f.note ? el('p', { class: 'muted small', style: 'margin:8px 0 0', text: f.note }) : null,
+        el('div', { class: 'actions' }, [
+          el('button', { class: 'btn', type: 'button', text: 'Edit', onclick: function () { openFeature(f); } }),
+          f.active ? el('button', { class: 'btn', type: 'button', text: 'Pause', onclick: function () { featureAction(f, 'pause'); } }) : el('button', { class: 'btn', type: 'button', text: 'Turn back on', onclick: function () { featureAction(f, 'resume'); } }),
+          el('button', { class: 'btn danger ghost', type: 'button', text: 'Delete', onclick: function () { featureAction(f, 'delete'); } }),
+          el('span', { class: 'muted small', text: 'Changed ' + when(f.updated_ms) + (f.updated_by ? ' by ' + f.updated_by : '') }),
+        ]),
+      ]);
+      list.appendChild(card);
+    });
+  }
+  function renderCalendar(fs) {
+    var box = $('#cal'); box.textContent = '';
+    var now = nowMs(), start = new Date(now); start.setUTCDate(1); start.setUTCHours(8, 0, 0, 0);
+    var a = start.getTime(), months = 6, b = new Date(start); b.setUTCMonth(b.getUTCMonth() + months); b = b.getTime();
+    var span = b - a;
+    var bars = [];
+    fs.forEach(function (f) { f.windows.forEach(function (w) { if (w[1] > a && w[0] < b) bars.push({ f: f, s: Math.max(a, w[0]), e: Math.min(b, w[1]) }); }); });
+    var inner = el('div', { class: 'cal-in' });
+    var mrow = el('div', { class: 'cal-months', style: 'grid-template-columns:repeat(' + months + ',1fr)' });
+    for (var i = 0; i < months; i++) { var d = new Date(start); d.setUTCMonth(d.getUTCMonth() + i); mrow.appendChild(el('span', { text: d.toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', year: i === 0 || d.getUTCMonth() === 0 ? 'numeric' : undefined }) })); }
+    inner.appendChild(mrow);
+    var rows = el('div', { class: 'cal-rows' });
+    rows.appendChild(el('div', { class: 'cal-now', style: 'left:' + ((now - a) / span * 100).toFixed(2) + '%' }));
+    if (!bars.length) rows.appendChild(el('div', { class: 'cal-empty', text: 'Nothing featured in the next ' + months + ' months.' }));
+    bars.forEach(function (x) {
+      var on = x.f.on_now && x.s <= now && now < x.e;
+      rows.appendChild(el('div', { class: 'cal-row' }, [el('button', { type: 'button', class: 'cal-bar' + (on ? ' on' : '') + (x.f.active ? '' : ' paused'), title: x.f.name + ': ' + whenTxt(x.f),
+        style: 'left:' + ((x.s - a) / span * 100).toFixed(2) + '%;width:' + Math.max(0.6, (x.e - x.s) / span * 100).toFixed(2) + '%', text: x.f.name, onclick: function () { openFeature(x.f); } })]));
+    });
+    inner.appendChild(rows);
+    box.appendChild(inner);
+  }
+  function featureAction(f, action) {
+    var t = { pause: ['Pause "' + f.name + '"?', 'It stops having any effect until you turn it back on.' + (f.on_now ? ' It is on right now, so the songs coming up are planned again (the song playing now is not interrupted).' : ''), 'Pause it'],
+      resume: ['Turn "' + f.name + '" back on?', f.windows.some(function (w) { return w[0] <= nowMs() && nowMs() < w[1]; }) ? 'It is inside its dates right now, so it starts changing what plays right away.' : 'It will work again during its dates.', 'Turn it on'],
+      delete: ['Delete "' + f.name + '"?', 'It stops having any effect.' + (f.on_now ? ' It is on right now, so the songs coming up are planned again.' : '') + ' You can undo this from History.', 'Delete it'] }[action];
+    confirmBox(t[0], t[1], t[2]).then(function (ok) {
+      if (!ok) return;
+      var call = action === 'delete' ? api('/features/' + f.id, { method: 'DELETE' }) : api('/features/' + f.id + '/' + action, { method: 'POST' });
+      call.then(function (j) { toast({ pause: 'Paused', resume: 'Turned on', delete: 'Deleted' }[action] + ' "' + f.name + '"' + (j.replanned ? '. The songs coming up were planned again.' : '')); return loadFeatures(); })
+        .catch(function (e) { toast(e.message); });
+    });
+  }
+
+  // feature drawer
+  var fform = $('#fd-form'), FD = { items: {}, ptab: 'albums' };
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function localNow(offsetDays) {
+    var d = new Date(nowMs() + (offsetDays || 0) * 864e5);
+    var p = {}; new Intl.DateTimeFormat('en-US', { timeZone: fform.elements.tz.value || TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(d).forEach(function (x) { p[x.type] = x.value; });
+    return { date: p.year + '-' + p.month + '-' + p.day, time: p.hour + ':' + p.minute };
+  }
+  function albumList() {
+    var m = {};
+    S.songs.forEach(function (s) {
+      var k = s.album || ''; if (!k) return;
+      if (!m[k]) m[k] = { name: k, n: 0, off: 0, art: s.art, section: s.section, artCount: {} };
+      m[k].n++; if (!s.enabled) m[k].off++;
+      m[k].artCount[s.art] = (m[k].artCount[s.art] || 0) + 1;
+    });
+    return Object.keys(m).map(function (k) { var a = m[k]; a.art = Object.keys(a.artCount).sort(function (x, y) { return a.artCount[y] - a.artCount[x]; })[0]; return a; }).sort(function (x, y) { return natural(x.name, y.name); });
+  }
+  function openFeature(f, preset) {
+    S.fedit = f || null;
+    $('#fd-title').textContent = f ? 'Edit "' + f.name + '"' : 'New featured time';
+    var tz = $('#fd-tz'); tz.textContent = '';
+    Object.keys(S.me.tz_labels).forEach(function (k) { tz.appendChild(el('option', { value: k, text: S.me.tz_labels[k] })); });
+    fform.reset();
+    FD.items = {};
+    if (f) {
+      fform.elements.name.value = f.name; tz.value = f.tz;
+      fform.elements.sd.value = f.start_local.slice(0, 10); fform.elements.st.value = f.start_local.slice(11);
+      fform.elements.ed.value = f.end_local.slice(0, 10); fform.elements.et.value = f.end_local.slice(11);
+      fform.elements.yearly.checked = f.yearly; fform.elements.note.value = f.note || '';
+      setRadio('mode', f.mode); setRadio('weight', String(f.weight));
+      f.items.forEach(function (it) { FD.items[it.kind + '|' + it.value] = it; });
+    } else {
+      tz.value = TZ;
+      var a = localNow(0), b = localNow(7);
+      fform.elements.sd.value = a.date; fform.elements.st.value = '00:00'; fform.elements.ed.value = b.date; fform.elements.et.value = '23:59';
+      setRadio('mode', 'more'); setRadio('weight', '2');
+      if (preset) preset();
+    }
+    renderPresets(!f);
+    FD.ptab = 'albums'; $$('.ptab').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-ptab') === 'albums'); });
+    $('#fd-q').value = '';
+    syncMode(); renderPick();
+    $('#fd-msg').textContent = ''; $('#fd-msg').className = 'msg';
+    $('#scrim').hidden = false; $('#fdrawer').classList.add('open'); $('#fdrawer').setAttribute('aria-hidden', 'false');
+  }
+  function setRadio(name, v) { $$('[name=' + name + ']', fform).forEach(function (r) { r.checked = r.value === v; }); }
+  function getRadio(name) { var r = $$('[name=' + name + ']', fform).filter(function (x) { return x.checked; })[0]; return r ? r.value : null; }
+  function renderPresets(on) {
+    var box = $('#fd-presets'); box.textContent = '';
+    if (!on) return;
+    var y = new Date(nowMs()).getUTCFullYear();
+    var xmasAlb = albumList().filter(function (a) { return /christmas|holiday|xmas/i.test(a.name); });
+    var presets = [
+      ['Christmas', function () {
+        fform.elements.name.value = 'Christmas'; fform.elements.sd.value = y + '-12-01'; fform.elements.st.value = '00:00'; fform.elements.ed.value = y + '-12-26'; fform.elements.et.value = '23:59';
+        fform.elements.yearly.checked = true; setRadio('mode', 'unlock'); setRadio('weight', '3');
+        xmasAlb.forEach(function (a) { FD.items['album|' + a.name] = { kind: 'album', value: a.name }; });
+      }],
+      ['July 4th weekend', function () { fform.elements.name.value = 'July 4th'; fform.elements.sd.value = (new Date(nowMs()).getUTCMonth() > 6 ? y + 1 : y) + '-07-03'; fform.elements.st.value = '00:00'; fform.elements.ed.value = fform.elements.sd.value.slice(0, 4) + '-07-05'; fform.elements.et.value = '23:59'; fform.elements.yearly.checked = true; setRadio('mode', 'more'); setRadio('weight', '3'); }],
+      ['Album release week', function () { fform.elements.name.value = 'New album week'; setRadio('mode', 'more'); setRadio('weight', '3'); FD.ptab = 'albums'; }],
+      ['Just today', function () { var a = localNow(0); fform.elements.name.value = 'Today'; fform.elements.sd.value = a.date; fform.elements.st.value = a.time; fform.elements.ed.value = a.date; fform.elements.et.value = '23:59'; fform.elements.yearly.checked = false; }],
+    ];
+    box.appendChild(el('span', { class: 'muted small', style: 'align-self:center', text: 'Quick start:' }));
+    presets.forEach(function (p) { box.appendChild(el('button', { class: 'btn sm', type: 'button', text: p[0], onclick: function () { p[1](); syncMode(); renderPick(); } })); });
+  }
+  function syncMode() {
+    var mode = getRadio('mode');
+    $('#fd-weights').hidden = mode === 'only';
+    $('.seg-1').hidden = mode === 'more';
+    if (mode === 'more' && getRadio('weight') === '1') setRadio('weight', '2');
+    if (!getRadio('weight')) setRadio('weight', mode === 'unlock' ? '1' : '2');
+    renderSum();
+  }
+  $$('[name=mode]', fform).forEach(function (r) { r.addEventListener('change', syncMode); });
+  $$('.ptab').forEach(function (b) { b.addEventListener('click', function () { FD.ptab = b.getAttribute('data-ptab'); $$('.ptab').forEach(function (x) { x.classList.toggle('on', x === b); }); renderPick(); }); });
+  $('#fd-q').addEventListener('input', renderPick);
+  function toggleItem(kind, value, on) { var k = kind + '|' + value; if (on) FD.items[k] = { kind: kind, value: value }; else delete FD.items[k]; renderSum(); }
+  function renderPick() {
+    var box = $('#fd-pick'); box.textContent = '';
+    var q = $('#fd-q').value.toLowerCase().trim();
+    var match = function (t) { return !q || q.split(/\s+/).every(function (w) { return t.toLowerCase().indexOf(w) > -1; }); };
+    function item(kind, value, img, t, s) {
+      var ck = el('input', { type: 'checkbox' }); ck.checked = !!FD.items[kind + '|' + value];
+      ck.addEventListener('change', function () { toggleItem(kind, value, ck.checked); });
+      return el('label', { class: 'pick-item' }, [ck, img ? el('img', { src: img, alt: '', loading: 'lazy' }) : el('span'), el('div', { style: 'min-width:0' }, [el('div', { class: 't', text: t }), el('div', { class: 's', text: s })])]);
+    }
+    if (FD.ptab === 'albums') {
+      albumList().filter(function (a) { return match(a.name); }).forEach(function (a) { box.appendChild(item('album', a.name, a.art, a.name, a.section + ' · ' + plural(a.n, 'song') + (a.off ? ' · ' + a.off + ' switched off' : ''))); });
+    } else if (FD.ptab === 'sections') {
+      S.me.sections.forEach(function (sec) { var n = S.songs.filter(function (s) { return s.section === sec; }).length; if (match(sec)) box.appendChild(item('section', sec, null, sec, plural(n, 'song'))); });
+    } else {
+      S.songs.filter(function (s) { return match(s.title + ' ' + s.album); }).sort(function (a, b) { return natural(a.title, b.title); }).slice(0, 200)
+        .forEach(function (s) { box.appendChild(item('track', s.id, s.art, s.title, [s.album, mmss(s.dur_ms), s.enabled ? null : 'switched off'].filter(Boolean).join(' · '))); });
+    }
+    if (!box.children.length) box.appendChild(el('p', { class: 'muted small', style: 'padding:10px 12px;margin:0', text: 'Nothing matches.' }));
+    renderSum();
+  }
+  function resolved() {
+    var ids = {};
+    Object.keys(FD.items).forEach(function (k) {
+      var it = FD.items[k];
+      S.songs.forEach(function (s) { if ((it.kind === 'track' && s.id === it.value) || (it.kind === 'album' && s.album === it.value) || (it.kind === 'section' && s.section === it.value)) ids[s.id] = s; });
+    });
+    return Object.keys(ids).map(function (k) { return ids[k]; });
+  }
+  function renderSum() {
+    var r = resolved(), off = r.filter(function (s) { return !s.enabled; }).length, picks = Object.keys(FD.items).map(function (k) { return itemLabel(FD.items[k]); });
+    var mode = getRadio('mode');
+    $('#fd-sum').textContent = r.length ? 'Picked: ' + picks.join(', ') + ' → ' + plural(r.length, 'song') + (off ? ' (' + off + ' switched off)' : '') : 'Nothing picked yet.';
+    var warn = $('#fd-warn'); warn.hidden = true;
+    if (mode === 'more' && off && off === r.length) { warn.hidden = false; warn.textContent = 'All of these songs are switched off, so "play more often" would do nothing. Choose "Let switched-off songs play" instead.'; }
+    else if (mode === 'more' && off) { warn.hidden = false; warn.textContent = off + ' of these are switched off and stay off. To let them play during these dates, choose "Let switched-off songs play".'; }
+    else if (mode === 'unlock' && !off) { warn.hidden = false; warn.textContent = 'None of these songs are switched off. "Let switched-off songs play" only matters for songs that are off. To play these more often, choose "Play these more often".'; }
+    else if (mode === 'only' && r.length && r.length < 15) { warn.hidden = false; warn.textContent = 'Only ' + plural(r.length, 'song') + ': a song never repeats within 6 hours, so when they have all played, the regular mix fills in until they can play again.'; }
+  }
+  function featureBody() {
+    var e = fform.elements;
+    return { name: e.name.value, tz: e.tz.value, start_local: e.sd.value + 'T' + (e.st.value || '00:00'), end_local: e.ed.value + 'T' + (e.et.value || '23:59'),
+      yearly: e.yearly.checked, mode: getRadio('mode'), weight: Number(getRadio('weight') || 1), note: e.note.value, items: Object.keys(FD.items).map(function (k) { return FD.items[k]; }) };
+  }
+  function fdMsg(t, cls) { $('#fd-msg').textContent = t; $('#fd-msg').className = 'msg' + (cls ? ' ' + cls : ''); }
+  $('#fd-save').addEventListener('click', function () {
+    var b = featureBody();
+    if (!b.name.trim()) { fdMsg('Give it a name', 'bad'); return; }
+    if (!fform.elements.sd.value || !fform.elements.ed.value) { fdMsg('Pick the start and end dates', 'bad'); return; }
+    if (!b.items.length) { fdMsg('Pick at least one album, song or section', 'bad'); return; }
+    // would it change what plays in the next couple of hours? then confirm first
+    var f = S.fedit;
+    var startsSoon = (function () {
+      try {
+        var p = new Intl.DateTimeFormat('en-US', { timeZone: b.tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(nowMs() + 2 * 3600e3));
+        var o = {}; p.forEach(function (x) { o[x.type] = x.value; });
+        var soon = o.year + '-' + o.month + '-' + o.day + 'T' + o.hour + ':' + o.minute;
+        var q = {}; new Intl.DateTimeFormat('en-US', { timeZone: b.tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(nowMs())).forEach(function (x) { q[x.type] = x.value; });
+        var nowL = q.year + '-' + q.month + '-' + q.day + 'T' + q.hour + ':' + q.minute;
+        var inWin = function (s, e) { return s <= soon && e > nowL; };
+        if (inWin(b.start_local, b.end_local)) return true;
+        if (b.yearly) { var y = +nowL.slice(0, 4); for (var k = -1; k <= 0; k++) { var sy = y + k, ey = sy + (+b.end_local.slice(0, 4) - +b.start_local.slice(0, 4)); if (inWin(sy + b.start_local.slice(4), ey + b.end_local.slice(4))) return true; } }
+        return !!(f && f.on_now);
+      } catch (e) { return true; }
+    })();
+    var go = startsSoon ? confirmBox('This changes what plays now', 'It covers the next couple of hours, so the songs coming up are planned again right away. The song playing now is not interrupted.', 'Save and apply') : Promise.resolve(true);
+    go.then(function (ok) {
+      if (!ok) return;
+      $('#fd-save').disabled = true;
+      (f ? api('/features/' + f.id, { method: 'PUT', body: b }) : api('/features', { method: 'POST', body: b })).then(function (j) {
+        closeEdit(); toast('Saved "' + b.name + '"' + (j.replanned ? '. The songs coming up were planned again.' : '')); return loadFeatures();
+      }).catch(function (e) { fdMsg(e.message, 'bad'); }).then(function () { $('#fd-save').disabled = false; });
+    });
+  });
+  $('#fd-close').addEventListener('click', closeEdit);
+  $('#fd-cancel').addEventListener('click', closeEdit);
+  $('#feat-new').addEventListener('click', function () { openFeature(null); });
+
+  // ---------- history ----------
+  function loadActivity() {
+    var box = $('#act'); box.textContent = '';
+    api('/activity').then(function (j) {
+      if (!j.activity.length) box.appendChild(el('div', { class: 'empty', text: 'Nothing yet.' }));
+      j.activity.forEach(function (a) {
+        box.appendChild(el('div', { class: 'act', 'data-action': a.action }, [
+          el('time', { text: fullWhen(a.at_ms) }),
+          el('div', null, [el('div', { text: a.summary }), el('div', { class: 'who', text: a.who })]),
+          a.undoable ? el('button', { type: 'button', class: 'btn sm', text: 'Undo', onclick: function () {
+            confirmBox('Undo this?', a.summary, 'Undo it').then(function (ok) {
+              if (!ok) return;
+              api('/activity/' + a.id + '/undo', { method: 'POST' }).then(function (k) {
+                toast('Undone' + (k.replanned ? '. The songs coming up were planned again.' : '')); return Promise.all([loadSongs(), loadFeatures()]);
+              }).then(loadActivity).catch(function (e) { toast(e.message); });
+            });
+          } }) : a.undone_ms ? el('span', { class: 'undone', text: 'Undone' }) : el('span'),
+        ]));
+      });
+    }).catch(function (e) { box.appendChild(el('div', { class: 'empty', text: e.message })); });
+  }
+
+  // ---------- boot ----------
+  Promise.all([api('/me'), api('/songs'), api('/features')]).then(function (r) {
+    S.me = r[0]; S.skew = r[0].now - Date.now(); TZ = r[0].tz;
+    S.songs = r[1].songs; index(); S.features = r[2].features;
+    $('#me').textContent = S.me.email;
+    var fs = $('#f-section');
+    S.me.sections.forEach(function (x) { fs.appendChild(el('option', { value: x, text: x })); });
+    fillLists(); renderList(); renderFeatures();
+    var tab = (location.hash || '').slice(1);
+    show(TABS.indexOf(tab) > -1 ? tab : 'booth');
+  }).catch(function (e) {
+    $('#app').textContent = ''; $('#app').appendChild(el('div', { class: 'card pad' }, [el('h2', { text: "Couldn't load" }), el('p', { class: 'muted', text: e.message })]));
+  });
+})();

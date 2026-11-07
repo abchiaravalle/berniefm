@@ -85,6 +85,126 @@ function pickRotation(pool, exclude, recentGroups) {
   return cand[Math.floor(Math.random() * cand.length)];
 }
 
+// ---------- featured periods (Control Room manager, "Featured" tab) ----------
+// A rule (tables `features` + `feature_tracks`) works inside a time window, optionally
+// every year:
+//   more   - the picked songs come up `weight` times as often (songs that are switched
+//            off stay off)
+//   only   - rotation plays only the picked songs (switched-off ones included); when they
+//            are used up under the no-repeat rules, normal rotation fills in
+//   unlock - picked songs that are normally switched off (e.g. the Christmas album) join
+//            rotation, at normal frequency or `weight` times as often
+// The window is checked for every planned slot, so a period that starts or ends inside
+// the 2 h horizon takes effect at the right song boundary. When no rule is active for a
+// slot the pick is the plain pickRotation above, untouched (manager/test/sched_equiv.mjs
+// runs the old and new engine with the same random sequence and compares every row).
+const TZF = new Map();
+function tzOffset(tz, ms) {
+  let f = TZF.get(tz);
+  if (!f) {
+    f = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' });
+    TZF.set(tz, f);
+  }
+  const p = {};
+  for (const x of f.formatToParts(new Date(ms))) p[x.type] = x.value;
+  return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second) - Math.floor(ms / 1000) * 1000;
+}
+// Wall-clock time in a time zone -> UTC ms (DST aware).
+export function zonedToUtc(y, mo, d, h, mi, tz = 'America/Los_Angeles') {
+  const guess = Date.UTC(y, mo - 1, d, h, mi);
+  const t = guess - tzOffset(tz, guess);
+  return guess - tzOffset(tz, t);
+}
+const LOCAL_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
+// Every window of rule `f` that overlaps [from, to), as [startMs, endMs] pairs.
+export function featureWindows(f, from, to) {
+  const out = [];
+  if (!f.yearly) {
+    if (f.end_ms > f.start_ms && f.start_ms < to && f.end_ms > from) out.push([f.start_ms, f.end_ms]);
+    return out;
+  }
+  const s = LOCAL_RE.exec(f.start_local || ''), e = LOCAL_RE.exec(f.end_local || '');
+  if (!s || !e) return out;
+  const span = +e[1] - +s[1];                 // 1 when the window crosses New Year
+  if (span < 0 || span > 1) return out;
+  const y0 = Math.max(+s[1], new Date(from).getUTCFullYear() - 1 - span), y1 = new Date(to).getUTCFullYear() + 1;
+  for (let y = y0; y <= y1; y++) {           // never before the year it was first set for
+    const a = zonedToUtc(y, +s[2], +s[3], +s[4], +s[5], f.tz);
+    const b = zonedToUtc(y + span, +e[2], +e[3], +e[4], +e[5], f.tz);
+    if (b > a && a < to && b > from) out.push([a, b]);
+  }
+  return out;
+}
+// Rules with a window inside [from, to) and their songs. null = nothing to do (also when
+// the tables don't exist yet), so the caller takes the plain rotation path.
+async function loadFeatures(env, from, to) {
+  try {
+    const { results: rows } = await env.DB.prepare(
+      'SELECT id, mode, weight, start_ms, end_ms, yearly, tz, start_local, end_local FROM features WHERE active=1 AND (yearly=1 OR (start_ms < ?2 AND end_ms > ?1))'
+    ).bind(from, to).all();
+    const wins = [];
+    for (const f of rows || []) {
+      try { for (const [a, b] of featureWindows(f, from, to)) wins.push({ f, a, b }); } catch (e) { /* bad time zone: skip rule */ }
+    }
+    if (!wins.length) return null;
+    const ids = [...new Set(wins.map(w => w.f.id))];
+    const { results: tr } = await env.DB.prepare(
+      `SELECT ft.feature_id AS fid, t.id, t.grp, t.dur_ms, t.last_played_ms, t.plays, t.enabled
+         FROM feature_tracks ft JOIN tracks t ON
+              (ft.kind='track' AND t.id=ft.value)
+           OR (ft.kind='album' AND COALESCE(NULLIF(t.cat_album,''), t.album)=ft.value)
+           OR (ft.kind='section' AND t.cat_section=ft.value)
+        WHERE ft.feature_id IN (${ids.map((_, i) => '?' + (i + 1)).join(',')})`
+    ).bind(...ids).all();
+    const byF = new Map();
+    for (const r of tr || []) {
+      if (!byF.has(r.fid)) byF.set(r.fid, []);
+      byF.get(r.fid).push(r);
+    }
+    return { wins, byF, cache: null };
+  } catch (e) {
+    return null;
+  }
+}
+// What the rules active at slot time `at` ask for, or null when none is active.
+function featurePlan(F, at) {
+  const act = F.wins.filter(w => w.a <= at && at < w.b);
+  if (!act.length) return null;
+  const key = act.map(w => w.f.id + ':' + w.a).join(',');
+  if (F.cache && F.cache.key === key) return F.cache.fx;
+  const weight = new Map(), add = new Map(), only = new Map();
+  for (const { f } of act) {
+    const w = Math.max(1, Math.min(10, Number(f.weight) || 1));
+    for (const t of F.byF.get(f.id) || []) {
+      if (f.mode === 'only') { only.set(t.id, t); continue; }
+      if (!t.enabled && f.mode !== 'unlock') continue;      // boosting never switches a song on
+      if (!t.enabled || w > 1) add.set(t.id, t);
+      if (w > (weight.get(t.id) || 1)) weight.set(t.id, w);
+    }
+  }
+  const fx = { weight, add: [...add.values()], only: [...only.values()] };
+  F.cache = { key, fx };
+  return fx;
+}
+// Stalest first, where a boosted song looks `weight` times staler than it is, so it
+// comes round `weight` times as often (the no-repeat window still applies).
+function staleSort(rows, weight, at) {
+  return rows.map(t => {
+    const w = weight.get(t.id) || 1;
+    return { t, e: w > 1 ? at - (at - t.last_played_ms) * w : t.last_played_ms };
+  }).sort((x, y) => (x.e - y.e) || (x.t.plays - y.t.plays)).map(x => x.t);
+}
+function pickFeatured(pool, exclude, recentGroups, fx, at) {
+  if (fx.only.length) {
+    const left = fx.only.filter(t => !exclude.has(t.id));
+    if (left.length) return pickRotation(staleSort(left, fx.weight, at), exclude, recentGroups);
+    return pickRotation(pool, exclude, recentGroups);      // used up: normal rotation fills in
+  }
+  const have = new Set(pool.map(t => t.id));
+  const rows = pool.concat(fx.add.filter(t => !have.has(t.id)));
+  return pickRotation(staleSort(rows, fx.weight, at), exclude, recentGroups);
+}
+
 // Extend the schedule so it reaches now + HORIZON_MS. The whole extension is
 // planned in memory and written in ONE transaction (a handful of D1 calls no
 // matter how many slots), so long-lived streams never run out of their
@@ -109,8 +229,9 @@ export async function ensureSchedule(env, now = Date.now(), { publish = true } =
     const [{ results: reqs }, { results: upcoming }, { results: pool }] = await env.DB.batch([
       env.DB.prepare("SELECT r.id, r.track_id, t.dur_ms, t.grp FROM requests r JOIN tracks t ON t.id=r.track_id WHERE r.status='pending' ORDER BY r.id ASC LIMIT 20"),
       env.DB.prepare('SELECT track_id FROM schedule WHERE start_ms >= ?1').bind(now - 6 * 3600 * 1000),
-      env.DB.prepare('SELECT id, grp, dur_ms FROM tracks WHERE enabled=1 ORDER BY last_played_ms ASC, plays ASC LIMIT 150'),
+      env.DB.prepare('SELECT id, grp, dur_ms, last_played_ms, plays FROM tracks WHERE enabled=1 ORDER BY last_played_ms ASC, plays ASC LIMIT 150'),
     ]);
+    const F = await loadFeatures(env, start, now + HORIZON_MS + 1);   // featured periods in this stretch (usually null)
     const exclude = new Set(upcoming.map(u => u.track_id));
     const recent = tails.map(t => t.grp).filter(Boolean);    // newest first
     const plan = [];
@@ -122,7 +243,8 @@ export async function ensureSchedule(env, now = Date.now(), { publish = true } =
       if (rq) {
         trackId = rq.track_id; durMs = rq.dur_ms; grp = rq.grp; requestId = rq.id;
       } else {
-        const t = pickRotation(pool, exclude, recent.slice(0, 3));
+        const fx = F && featurePlan(F, start);
+        const t = fx ? pickFeatured(pool, exclude, recent.slice(0, 3), fx, start) : pickRotation(pool, exclude, recent.slice(0, 3));
         if (!t) break;
         trackId = t.id; durMs = t.dur_ms; grp = t.grp;
       }
@@ -183,11 +305,13 @@ export async function ensureSchedule(env, now = Date.now(), { publish = true } =
 // Everything after the cut is dropped and re-planned (listener requests keep their
 // place in line, right after the DJ pick).
 export const DJ_LEAD_MS = 10000;
-export async function djPlace(env, trackId, mode = 'now', now = Date.now()) {
+// opts.allowDisabled: the Control Room may play a song that is switched off but unlocked
+// by a featured period that is on right now (it checks that itself).
+export async function djPlace(env, trackId, mode = 'now', now = Date.now(), opts = {}) {
   await ensureSchedule(env, now, { publish: false });
   let track = null;
   if (trackId) {
-    track = await env.DB.prepare('SELECT id, dur_ms FROM tracks WHERE id=?1 AND enabled=1').bind(trackId).first();
+    track = await env.DB.prepare(opts.allowDisabled ? 'SELECT id, dur_ms FROM tracks WHERE id=?1' : 'SELECT id, dur_ms FROM tracks WHERE id=?1 AND enabled=1').bind(trackId).first();
     if (!track) return { ok: false, message: 'Unknown song.' };
   }
   const cur = await env.DB.prepare(
@@ -233,6 +357,37 @@ export async function djPlace(env, trackId, mode = 'now', now = Date.now()) {
   await ensureSchedule(env, now, { publish: false });
   const state = await publishState(env, now);
   return { ok: true, at, state };
+}
+
+// Re-plan the part of the schedule that hasn't started yet, after something changed what
+// rotation should pick (a featured period saved, edited or removed, songs switched off).
+// Same bookkeeping as djPlace / the request re-plan: the song on air, anything starting in
+// the next REPLAN_LOCK_MS (players may already be loading it) and the DJ's queued picks
+// stay put; listener requests go back in line and are slotted first, in order.
+export const REPLAN_LOCK_MS = 90000;
+export async function replanFuture(env, now = Date.now()) {
+  await ensureSchedule(env, now, { publish: false });
+  const cut = await env.DB.prepare(
+    `SELECT seq FROM schedule WHERE start_ms >= ?1
+       AND seq > COALESCE((SELECT MAX(seq) FROM schedule WHERE writer='dj'), 0)
+     ORDER BY seq ASC LIMIT 1`
+  ).bind(now + REPLAN_LOCK_MS).first();
+  let dropped = [];
+  if (cut) {
+    ({ results: dropped } = await env.DB.prepare('SELECT seq, track_id, request_id FROM schedule WHERE seq >= ?1').bind(cut.seq).all());
+    const stmts = [env.DB.prepare('DELETE FROM schedule WHERE seq >= ?1').bind(cut.seq)];
+    for (const d of dropped) {
+      if (d.request_id) stmts.push(env.DB.prepare("UPDATE requests SET status='pending', seq=NULL WHERE id=?1").bind(d.request_id));
+      stmts.push(env.DB.prepare(
+        `UPDATE tracks SET plays = MAX(plays-1,0), last_played_ms = COALESCE(
+           (SELECT MAX(start_ms) FROM schedule WHERE track_id=?1 AND seq < ?2), 0) WHERE id=?1`
+      ).bind(d.track_id, cut.seq));
+    }
+    await env.DB.batch(stmts);
+  }
+  const added = await ensureSchedule(env, now, { publish: false });
+  const state = await publishState(env, now);
+  return { ok: true, dropped: dropped.length, added, state };
 }
 
 export async function pruneHistory(env, now = Date.now()) {
