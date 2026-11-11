@@ -31,17 +31,18 @@
 <main>
   <p class="brand">BC Radio</p>
   <h1>Privacy</h1>
-  <p class="updated">Last updated November 6, 2026</p>
+  <p class="updated">Last updated November 11, 2026</p>
 
-  <p>This page covers the BC Radio iPhone app ("BC Radio: Bernie Chiaravalle") and the bcradio.net website. BC Radio plays Bernie Chiaravalle's music around the clock. Adam Chiaravalle runs the station and made the app.</p>
+  <p>This page covers the BC Radio iPhone app ("BC Radio: Bernie Chiaravalle") and the bcradio.net website. BC Radio plays Bernie Chiaravalle's music around the clock.</p>
 
   <h2>The short version</h2>
-  <p>The app doesn't collect personal data. It has no accounts, no ads, no analytics and no tracking. It doesn't ask for your name, email, location, contacts or photos.</p>
+  <p>BC Radio doesn't collect personal data. The website and the iPhone app have no accounts and no ads, and they never ask for your name, email, location, contacts or photos. The app has no analytics and no tracking; the website's one analytics tool is covered below.</p>
 
-  <h2>What the app sends</h2>
+  <h2>What the website and the app send</h2>
   <ul>
-    <li><strong>Listening.</strong> To play the station in sync with everyone else, the app downloads the schedule, the clock time and the songs from bcradio.net and media.bcradio.net. These are ordinary web requests and don't carry anything that identifies you.</li>
-    <li><strong>Song requests.</strong> When you request a song, the app sends the id of that song and the result of a Cloudflare Turnstile check, which keeps bots off the request line. To stop one person from flooding the queue, the station server keeps a salted, one-way hash of your IP address with the request for a few days and then deletes it. The station never stores your IP address itself.</li>
+    <li><strong>Listening.</strong> To play the station in sync with everyone else, the website and the app download the schedule, the clock time and the songs from bcradio.net and media.bcradio.net. These are ordinary web requests and don't carry anything that identifies you.</li>
+    <li><strong>Live listener count.</strong> While you're playing the station, the website and the app send a "still listening" signal about once a minute with a random code made up when you press play; the station deletes the code within a few minutes of you stopping, never stores your IP address or a device ID with it, and keeps only the totals (how many people were listening each minute).</li>
+    <li><strong>Song requests.</strong> When you request a song, the website or the app sends the id of that song and the result of a Cloudflare Turnstile check, which keeps bots off the request line. To stop one person from flooding the queue, the station server keeps a salted, one-way hash of your IP address with the request for a few days and then deletes it. The station never stores your IP address itself.</li>
     <li><strong>Cloudflare.</strong> The station runs on Cloudflare, and the Turnstile check runs in the request screen. Cloudflare handles these requests under its own <a href="https://www.cloudflare.com/privacypolicy/">privacy policy</a> and <a href="https://www.cloudflare.com/turnstile-privacy-policy/">Turnstile privacy addendum</a>.</li>
   </ul>
 
