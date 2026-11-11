@@ -97,6 +97,20 @@ timeline as the website. Two small server pieces exist for it:
   (built by `art_hd.py` in the work folder; re-run it after adding new covers).
 - `public/app/turnstile.html` (`/app/turnstile`): the request check shown inside the app (same sitekey and action).
 
+## Live listener count
+"12 listening now" on the website (under the headline) and in the iPhone app.
+- `POST /api/listen {sid, platform: web|ios|android, playing}`: sent by a player when play starts and every
+  60 s while it plays; `playing:false` on stop / page close (sendBeacon) deletes the row at once. `sid` is a
+  random code the player makes up each time play starts and keeps only in memory.
+- `GET /api/listeners` -> `{now, total, web, ios, android}` = sessions seen in the last 150 s (edge-cached 15 s).
+- D1 keeps only `listen_sessions(sid, platform, last_seen_ms)` (rows older than 3 min are deleted) and
+  per-minute totals `listen_minutes(minute_ms, web, ios, android)`. No IP, user agent, country or device id.
+  Rate limit 30 pings/min per IP via `hits` with a per-minute salted hash, deleted after its minute.
+- Code: `functions/_listeners.js`, `functions/api/listen.js`, `functions/api/listeners.js`,
+  `public/listeners-v1.js`. Schema: `manager/migrations/0002_listeners.sql` (also at the end of `schema.sql`).
+- Local test (local D1 only): `wrangler pages dev --port 8820`, then
+  `BASE=http://127.0.0.1:8820 node manager/test/test_listen_local.mjs` (31 checks).
+
 ## Old design
 The pre-2026-10-05 page (with the holiday mode toggles) is kept in `legacy/` for reference.
 It is not deployed.
