@@ -191,7 +191,7 @@ Christmas only (gap 30 min): 31 full cycles in 24 h, each 45.0 min (49.6 when a 
 slots in), every cycle 14 different songs, the same song never twice in a row, nothing else plays.
 
 Tests (all on the fresh export, `BCRADIO_EXPORT=<export.sql>` picks it):
-`sched_equiv.mjs` (61, the hard gate), `sched_switch.mjs` (39), `sched_features.mjs` (42),
+`sched_equiv.mjs` (61, the hard gate), `sched_switch.mjs` (38), `sched_features.mjs` (42),
 `test_season.mjs` (22), `sched_test_orig.mjs` (10), `test_api_local.mjs` (55),
 `verify_ui_local.py` (original UI suite), and `~/.hermes/workspace/bcradio-christmas/switch/11_local_ui.py`
 (the switch in real Chrome, every state + confirm + History undo + the editor, desktop 1280 + phone 430).
