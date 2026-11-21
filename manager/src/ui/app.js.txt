@@ -400,6 +400,7 @@
     var c = b.current;
     $('#now-where').textContent = chOn() ? 'Playing now on the ' + CH[curCh()] + ' channel' : 'Playing now on bcradio.net';
     $('#btn-skip').textContent = chOn() ? 'Skip this song on ' + CH[curCh()] : 'Skip this song';
+    $('#pick-note').textContent = chOn() ? 'Find a song, then play it right now for everyone on ' + CH[curCh()] + ', or have it play next. Only songs on this channel are listed.' : 'Find a song, then play it right now for everyone, or have it play next.';
     if (c) {
       $('#now-art').src = c.track.art_hd || c.track.art;
       $('#now-title').textContent = c.track.title;

@@ -20,7 +20,7 @@ functions/         Pages Functions
   api/time.js      server clock
   api/now.js       timeline straight from D1 (fallback; players read media.bcradio.net/state/now.json)
   api/library.js   requestable songs + availability
-  api/season.js    seasonal look switch for the iPhone app + website ({theme:'christmas'} while a Christmas period is on)
+  api/season.js    seasonal look switch for the iPhone app + website ({theme:'christmas', channels} while a Christmas period is on)
   api/request.js   song requests (Turnstile + rate limits), re-plans the queue
   api/nowplaying/  AzuraCast-compatible now-playing JSON (old integrations keep working, edge cached 5 s)
   api/station/     old AzuraCast request API for pages cached from before the switch
@@ -29,6 +29,7 @@ functions/         Pages Functions
   listen/          continuous MP3 stream at the old URL, same timeline
   _middleware.js   host redirects (bernieradio.acwebdev.net -> bcradio.net, stream.* root)
   _lib.js          scheduler + helpers (featured periods, replanFuture)
+  _channels.js     the Christmas channels (christmas / classic timelines, see "Christmas channels")
 manager/           Control Room: private manager Worker at controlroom.amplifi.studio (see below)
 schema.sql         D1 schema
 wrangler.jsonc     bindings: DB (D1 bcradio), MEDIA (R2 bcradio-media)
@@ -207,6 +208,69 @@ Tests (all on the fresh export, `BCRADIO_EXPORT=<export.sql>` picks it):
 Backup + rollback from before the switch: `~/.hermes/backups/bcradio-d1-2026-11-21-christmas-switch/`
 (the aux drive hung that morning).
 
+## Christmas channels (2026-11-21)
+Turning Christmas on no longer forces one mix on everybody. While the Christmas period is on (Control Room >
+On the air > Christmas: **On**), listeners pick a channel, and each channel is its own shared timeline, so
+everyone on the same channel hears the same second:
+
+| id | label | what plays | timeline |
+|---|---|---|---|
+| `mixed` (default) | Mixed | the station's normal timeline (Christmas "Mixed in": ~1 in 3, never two in a row) | `schedule`, `state/now.json` + `rev.json` (unchanged) |
+| `christmas` | Christmas only | only the period's 14 songs, shuffled rounds (every song once before any repeat, ~45 min) | `ch_schedule`, `state/now-christmas.json` + `rev-christmas.json` |
+| `classic` | No Christmas | normal rotation without any of the period's songs, 6 h no-repeat, album spread | `ch_schedule`, `state/now-classic.json` + `rev-classic.json` |
+
+- **Mixed is byte-for-byte the old station.** Old app versions, the live website, `/listen`, `/api/nowplaying`
+  keep working unchanged. `manager/test/sched_equiv.mjs` parts H/I/J run today's prod engine (`test/_lib.9c8f7f9.js`)
+  against the new one on the real export with Christmas Mixed in: identical (83 checks), also with both channels busy
+  at every step (`sched_channels.mjs` part 1).
+- **Own memory per channel.** `ch_plays(channel, track_id, last_played_ms, plays)` is each channel's own "last played";
+  only the main timeline writes `tracks.last_played_ms/plays`, so a channel can never shift what Mixed plays. A fresh
+  classic channel starts from the station's last-played (well spread); christmas uses only its own plays (the round
+  position is the running play count, so pruning history never moves it). The 6 h no-repeat window is each channel's
+  own schedule. The same song playing on two channels at once is fine.
+- **On demand, free when idle.** A channel is planned only when someone asks for it (`/api/now?ch=`, a request, a DJ
+  action, the Control Room booth). After a quiet spell the first listener starts a song at that very second. Planning
+  stops at the end of the Christmas window, so the files run out with it and players fall back to Mixed.
+- **Switch Off / "Christmas for everyone" / dates over:** `/api/season` lists no channels (pickers disappear), live
+  channel files are rewritten to `{"ch":"mixed","items":[]}` at once (players move to the main timeline), and every
+  channel endpoint answers the main timeline with `"ch":"mixed"`.
+- **Endpoints** (no `ch` = exactly as before): `GET /api/now?ch=`, `POST /api/request {ch}` (own request line
+  `ch_requests`; christmas: only Christmas songs, 15 min either side of a play; classic: none of them; rate limits
+  shared), `GET /api/library?ch=`, `GET /api/catalog?ch=`, `POST /api/dj/play|skip {ch}`, `POST /api/listen {ch}`
+  (`listen_sessions.ch`), `GET /api/listeners` adds `channels:{mixed,christmas,classic}`, `GET /api/season` adds
+  `channels:[{id,label,default}]`. Full contract for the apps: `~/.hermes/workspace/bcradio-channels/CONTRACT.md`.
+- **Schema:** `manager/migrations/0004_channels.sql` (additive: `ch_schedule`, `ch_plays`, `ch_requests`,
+  `listen_sessions.ch`; also at the end of `schema.sql`). `_lib.js` only gained `export` on six functions.
+- **Control Room:** the switch reads **Off / On / Christmas for everyone** ("On" = the old "Mixed in" row + channels;
+  "Christmas for everyone" = the old "Christmas only" row, one station, no channels). On the air has a **Channel**
+  picker (Mixed / Christmas only / No Christmas, with listener counts): the song on air, coming up, Play now/next,
+  Skip and the search all act on the picked channel; History says which channel.
+- **Website picker: PREVIEW ONLY** on branch `channels-web` (https://channels-web.berniefm.pages.dev), not on
+  bcradio.net until Adam says go: `public/bcsync-v6.js` (v5 + `setChannel`, v5 stays untouched for its immutable
+  cache), `public/channels-v1.js` (the 3-way control under the player, shown only while `/api/season` lists channels,
+  remembers the choice in localStorage `bc-channel`, re-joins the chosen timeline at its live position in ~0.2-0.4 s,
+  "N listening" per channel), `listeners-v1.js` sends `ch`, `dj-v1.js` acts on the channel being listened to, the
+  request sheet uses the channel's song list. `?channels=off` hides it for testing.
+- **Live:** engine + endpoints since 2026-11-21 16:49 ET (Pages deploy ef1a2275, commit 1bcf846); Control Room with
+  the channel picker + "How it works" tab (Worker version 131417e0, commit 4596ca1). Backup + rollback:
+  `~/.hermes/backups/bcradio-d1-2026-11-21-channels/` (ROLLBACK.md).
+- **Tests:** `sched_channels.mjs` (94: Mixed identical with both channels busy, christmas rounds 45.0 min / 0 broken,
+  classic 0 Christmas songs and >= 6 h between repeats, requests + DJ per channel, on-demand start at offset 0, idle
+  restart, window end, Off / paused / 'only', endpoints in-process), `test_channels_local.mjs` (28, real HTTP on
+  `wrangler pages dev` + `wrangler dev` with one local D1), plus the existing suites (all pass on the fresh export).
+  Offline: `BCRADIO_EXPORT=<export.sql> node --no-warnings manager/test/sched_channels.mjs`.
+
+## Control Room "How it works" tab (2026-11-21)
+The last tab of the Control Room is a plain-words guide for Bernie: the big idea, the pieces, every tab with
+click-by-click steps, Christmas + channels + how to make a song a Christmas song, requests, the hidden DJ panel,
+the listener count, safety, and a changelog. Source: `manager/src/ui/guide.html` (bundled into the Worker; edit it
+when the behaviour it describes changes). Live numbers (songs on air, Christmas setting, channels, the 14 / 12
+Christmas songs, dates) come from the Control Room's own data; `GET /api/guide` adds the sign-in list (Worker secret
+`GUIDE_PEOPLE`, set at deploy from `~/.hermes/secrets/controlroom-emails.txt`, never in this repo) and the App Store
+version (Apple's public lookup, cached 6 h). Manager deploy now writes both secrets:
+`{"ACCESS_AUD": ..., "GUIDE_PEOPLE": "<comma-separated emails>"}` (see
+`~/.hermes/workspace/bcradio-channels/51_ship_manager.sh`).
+
 ## Old design
 The pre-2026-10-05 page (with the holiday mode toggles) is kept in `legacy/` for reference.
 It is not deployed.
@@ -275,7 +339,7 @@ Never test writes on a Pages preview URL: previews share the prod D1.
 ```
 set -a; source ~/.hermes/secrets/cloudflare.env; set +a; export CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID
 cd manager && npm install && npm run assets
-umask 077; printf '{"ACCESS_AUD":"%s"}' "$(sed -n 's/^AUD=//p' ~/.hermes/secrets/controlroom-access.txt)" > /tmp/cr.secrets.json
+umask 077; printf '{"ACCESS_AUD":"%s","GUIDE_PEOPLE":"%s"}' "$(sed -n 's/^AUD=//p' ~/.hermes/secrets/controlroom-access.txt)" "$(grep -v '^#' ~/.hermes/secrets/controlroom-emails.txt | grep @ | paste -sd, -)" > /tmp/cr.secrets.json
 ../node_modules/.bin/wrangler deploy --secrets-file /tmp/cr.secrets.json; rm /tmp/cr.secrets.json
 python3 scripts/verify_gate_live.py
 ```
