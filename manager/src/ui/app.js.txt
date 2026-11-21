@@ -354,12 +354,64 @@
     b.history.forEach(function (i) { h.appendChild(qrow(i, true)); });
     if (!b.history.length) h.appendChild(el('li', { class: 'muted', text: 'Nothing yet.' }));
     var fb = $('#feat-banner'); fb.textContent = '';
-    if (b.features_now.length) {
-      fb.appendChild(el('div', { class: 'feat-banner' }, [el('span', null, ['Featured right now: ', el('b', { text: b.features_now.map(function (f) { return f.name; }).join(', ') })]),
+    var others = b.features_now.filter(function (f) { return !f.christmas; });
+    if (others.length) {
+      fb.appendChild(el('div', { class: 'feat-banner' }, [el('span', null, ['Featured right now: ', el('b', { text: others.map(function (f) { return f.name; }).join(', ') })]),
         el('button', { class: 'btn sm', type: 'button', text: 'See featured times', onclick: function () { show('featured'); } })]));
     }
+    renderXmas(b.christmas);
     tick();
   }
+  // ---------- the Christmas switch ----------
+  var XMAS = {
+    off: { label: 'Off', title: 'Turn Christmas off?', text: 'The Christmas songs stop. The two regular songs (On This Night, Winnie\'s Song) play as usual. The app and website drop their Christmas look within about 5 minutes.', yes: 'Turn it off' },
+    mixed: { label: 'Mixed in', title: 'Mix Christmas songs in?', text: 'About 1 in 3 songs will be a Christmas song, spread out, never two in a row. The app and website show their Christmas look.', yes: 'Mix them in' },
+    only: { label: 'Christmas only', title: 'Play only Christmas songs?', text: 'Only the Christmas songs play, shuffled, every one before any repeats, until you switch it back. Listener requests still play in their turn.', yes: 'Christmas only' },
+  };
+  function xmasWhen(x) {
+    if (x.in_window) {
+      var e = x.windows.filter(function (w) { return w[0] <= nowMs() && nowMs() < w[1]; })[0];
+      return 'Christmas dates: on until ' + (e ? fullWhen(e[1]) + ' Pacific' : 'the end of its dates') + (x.yearly ? ', every year' : '') + '.';
+    }
+    if (x.windows[0]) return 'Outside its dates right now. Next: ' + fullWhen(x.windows[0][0]) + ' Pacific. The switch takes effect then.';
+    return 'Its dates are over.';
+  }
+  function renderXmas(x) {
+    S.xmas = x || null;
+    $('#xmas-card').hidden = !x; $('#xmas-none').hidden = !!x;
+    if (!x) return;
+    var heard = x.setting === 'off' ? 'Off' : x.setting === 'custom' ? 'A custom setting' : XMAS[x.setting].label;
+    var pill = $('#xmas-pill');
+    pill.textContent = x.on_now ? 'On now: ' + heard : x.setting === 'off' ? 'Off' : 'Not on now';
+    pill.className = 'pill ' + (x.on_now ? 'live' : 'off');
+    $('#xmas-sub').textContent = xmasWhen(x);
+    $('#xmas-only-txt').textContent = 'Only the ' + x.song_count + ' Christmas songs, on repeat.';
+    $$('#xmas-seg .xopt').forEach(function (btn) {
+      var on = btn.getAttribute('data-set') === x.setting;
+      btn.classList.toggle('on', on); btn.setAttribute('aria-checked', on ? 'true' : 'false');
+      btn.disabled = !!S.xmasBusy;
+    });
+    var note = $('#xmas-note');
+    note.textContent = x.setting === 'custom' ? 'Right now it uses a custom setting made in Featured times. Pick one of the three to use the switch.'
+      : 'Changed ' + when(x.updated_ms) + (x.updated_by ? ' by ' + x.updated_by : '') + '. A change is heard from the next song that starts after about 1½ minutes; the song playing now is never cut.';
+  }
+  $$('#xmas-seg .xopt').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var set = btn.getAttribute('data-set'), x = S.xmas;
+      if (!x || x.setting === set || S.xmasBusy) return;
+      var t = XMAS[set];
+      confirmBox(t.title, t.text + '\n\nThe song playing now finishes first. You can undo this from History.', t.yes).then(function (ok) {
+        if (!ok) return;
+        S.xmasBusy = true; renderXmas(x);
+        api('/christmas', { method: 'POST', body: { setting: set } }).then(function (j) {
+          S.xmasBusy = false;
+          toast('Christmas: ' + t.label + (j.replanned ? (j.from_ms ? '. Heard from ' + clock(j.from_ms) + ' (the next song after the one playing now).' : '. The songs coming up were planned again.') : '.'));
+          return Promise.all([loadBooth(), loadFeatures()]);
+        }).catch(function (e) { S.xmasBusy = false; renderXmas(x); toast(e.message); });
+      });
+    });
+  });
+  $('#xmas-make').addEventListener('click', function () { show('featured'); });
   function tick() {
     var b = S.booth; if (!b || !b.current) return;
     var c = b.current, t = nowMs();
@@ -545,10 +597,13 @@
     live.concat(done).forEach(function (f) {
       var status = f.on_now ? el('span', { class: 'pill live', text: 'On now' }) : !f.active ? el('span', { class: 'pill off', text: 'Paused' }) : f.finished ? el('span', { class: 'pill off', text: 'Finished' }) : el('span', { class: 'pill feat', text: f.windows[0] ? 'Starts ' + fullWhen(f.windows[0][0]) : 'Scheduled' });
       var what = f.mode === 'more' ? f.weight + '× as often' : f.mode === 'only' ? 'Only these songs play' : 'Switched-off songs join the mix' + (f.weight > 1 ? ', ' + f.weight + '× as often' : '');
+      var whatEl = f.christmas && f.setting !== 'custom'
+        ? el('div', { class: 'what' }, [el('b', { text: 'Christmas: ' + XMAS[f.setting].label + '. ' }), { off: 'No Christmas songs; the app and website look normal.', mixed: 'About 1 in 3 songs is a Christmas song.', only: 'Only these songs, on repeat.' }[f.setting] + ' · ' + plural(f.song_count, 'song') + (f.off_count ? ' (' + f.off_count + ' normally off)' : '')])
+        : el('div', { class: 'what' }, [el('b', { text: MODE_TXT[f.mode] + ': ' }), what + ' · ' + plural(f.song_count, 'song') + (f.off_count ? ' (' + f.off_count + ' normally off)' : '')]);
       var chips = el('div', { class: 'chips' }, f.items.slice(0, 12).map(function (it) { return el('span', { class: 'chip', style: 'padding-right:11px', text: itemLabel(it) }); }).concat(f.items.length > 12 ? [el('span', { class: 'chip', style: 'padding-right:11px', text: '+' + (f.items.length - 12) + ' more' })] : []));
       var card = el('div', { class: 'card fcard' + (f.active ? '' : ' paused'), 'data-fid': String(f.id) }, [
         el('div', { class: 'fcard-h' }, [el('div', null, [el('h3', { text: f.name }), el('div', { class: 'when', text: whenTxt(f) })]), status]),
-        el('div', { class: 'what' }, [el('b', { text: MODE_TXT[f.mode] + ': ' }), what + ' · ' + plural(f.song_count, 'song') + (f.off_count ? ' (' + f.off_count + ' normally off)' : '')]),
+        whatEl,
         chips,
         f.note ? el('p', { class: 'muted small', style: 'margin:8px 0 0', text: f.note }) : null,
         el('div', { class: 'actions' }, [
@@ -626,6 +681,7 @@
       fform.elements.ed.value = f.end_local.slice(0, 10); fform.elements.et.value = f.end_local.slice(11);
       fform.elements.yearly.checked = f.yearly; fform.elements.note.value = f.note || '';
       setRadio('mode', f.mode); setRadio('weight', String(f.weight));
+      setRadio('xset', f.christmas && f.setting !== 'custom' ? f.setting : '');
       f.items.forEach(function (it) { FD.items[it.kind + '|' + it.value] = it; });
     } else {
       tz.value = TZ;
@@ -662,6 +718,13 @@
     presets.forEach(function (p) { box.appendChild(el('button', { class: 'btn sm', type: 'button', text: p[0], onclick: function () { p[1](); syncMode(); renderPick(); } })); });
   }
   function syncMode() {
+    // The Christmas period (an existing one named like Christmas/Holiday) shows the same three
+    // settings as the switch on the On the air tab instead of the general modes.
+    var f = S.fedit, xm = !!(f && f.christmas);
+    $('#fd-xmas').hidden = !xm; $('#fd-modes').hidden = xm;
+    var cu = $('#fd-xmas-custom'); cu.hidden = !(xm && f.setting === 'custom' && !getRadio('xset'));
+    if (!cu.hidden) cu.textContent = 'It uses a custom setting right now (' + MODE_TXT[f.mode] + (f.mode !== 'only' && f.weight > 1 ? ', ' + f.weight + '×' : '') + '). Saving without picking one of the three keeps it.';
+    if (xm) { $('#fd-weights').hidden = true; renderSum(); return; }
     var mode = getRadio('mode');
     $('#fd-weights').hidden = mode === 'only';
     $('.seg-1').hidden = mode === 'more';
@@ -669,6 +732,7 @@
     if (!getRadio('weight')) setRadio('weight', mode === 'unlock' ? '1' : '2');
     renderSum();
   }
+  $$('[name=xset]', fform).forEach(function (r) { r.addEventListener('change', syncMode); });
   $$('[name=mode]', fform).forEach(function (r) { r.addEventListener('change', syncMode); });
   $$('.ptab').forEach(function (b) { b.addEventListener('click', function () { FD.ptab = b.getAttribute('data-ptab'); $$('.ptab').forEach(function (x) { x.classList.toggle('on', x === b); }); renderPick(); }); });
   $('#fd-q').addEventListener('input', renderPick);
@@ -706,6 +770,7 @@
     var mode = getRadio('mode');
     $('#fd-sum').textContent = r.length ? 'Picked: ' + picks.join(', ') + ' → ' + plural(r.length, 'song') + (off ? ' (' + off + ' switched off)' : '') : 'Nothing picked yet.';
     var warn = $('#fd-warn'); warn.hidden = true;
+    if (S.fedit && S.fedit.christmas) return;
     if (mode === 'more' && off && off === r.length) { warn.hidden = false; warn.textContent = 'All of these songs are switched off, so "play more often" would do nothing. Choose "Let switched-off songs play" instead.'; }
     else if (mode === 'more' && off) { warn.hidden = false; warn.textContent = off + ' of these are switched off and stay off. To let them play during these dates, choose "Let switched-off songs play".'; }
     else if (mode === 'unlock' && !off) { warn.hidden = false; warn.textContent = 'None of these songs are switched off. "Let switched-off songs play" only matters for songs that are off. To play these more often, choose "Play these more often".'; }
@@ -713,8 +778,10 @@
   }
   function featureBody() {
     var e = fform.elements;
-    return { name: e.name.value, tz: e.tz.value, start_local: e.sd.value + 'T' + (e.st.value || '00:00'), end_local: e.ed.value + 'T' + (e.et.value || '23:59'),
+    var b = { name: e.name.value, tz: e.tz.value, start_local: e.sd.value + 'T' + (e.st.value || '00:00'), end_local: e.ed.value + 'T' + (e.et.value || '23:59'),
       yearly: e.yearly.checked, mode: getRadio('mode'), weight: Number(getRadio('weight') || 1), note: e.note.value, items: Object.keys(FD.items).map(function (k) { return FD.items[k]; }) };
+    if (S.fedit && S.fedit.christmas && getRadio('xset')) b.setting = getRadio('xset');
+    return b;
   }
   function fdMsg(t, cls) { $('#fd-msg').textContent = t; $('#fd-msg').className = 'msg' + (cls ? ' ' + cls : ''); }
   $('#fd-save').addEventListener('click', function () {
@@ -737,7 +804,9 @@
         return !!(f && f.on_now);
       } catch (e) { return true; }
     })();
-    var go = startsSoon ? confirmBox('This changes what plays now', 'It covers the next couple of hours, so the songs coming up are planned again right away. The song playing now is not interrupted.', 'Save and apply') : Promise.resolve(true);
+    var xs = f && f.christmas && b.setting && b.setting !== f.setting ? XMAS[b.setting] : null;
+    var go = xs ? confirmBox(xs.title, xs.text + '\n\nThe song playing now finishes first. You can undo this from History.', xs.yes)
+      : startsSoon ? confirmBox('This changes what plays now', 'It covers the next couple of hours, so the songs coming up are planned again right away. The song playing now is not interrupted.', 'Save and apply') : Promise.resolve(true);
     go.then(function (ok) {
       if (!ok) return;
       $('#fd-save').disabled = true;

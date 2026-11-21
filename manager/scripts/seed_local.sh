@@ -10,6 +10,10 @@ rm -rf .wrangler/state
 grep -v '^PRAGMA defer_foreign_keys' "$EXP" > /tmp/cr_seed.sql
 $WR d1 execute bcradio --local --file /tmp/cr_seed.sql > /dev/null
 $WR d1 execute bcradio --local --file ../schema.sql > /dev/null
+# 2026-11-21 columns (an export from before the migration lacks them; ALTER only when missing)
+if ! $WR d1 execute bcradio --local --json --command "SELECT name FROM pragma_table_info('features')" | grep -q '"gap_min"'; then
+  $WR d1 execute bcradio --local --file migrations/0003_christmas_switch.sql > /dev/null
+fi
 # a stand-in for the held-back Christmas album: 4 real songs copied as switched-off "Christmas" tracks
 # (LOCAL ONLY, so the unlock feature can be exercised end to end)
 $WR d1 execute bcradio --local --command "INSERT INTO tracks (id,title,artist,album,genre,art,file,dur_ms,bytes,source,enabled,requestable,last_played_ms,plays,grp,cat_section,cat_album,cat_no,cat_title,cat_artist,cat_year)

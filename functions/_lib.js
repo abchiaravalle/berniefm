@@ -137,11 +137,22 @@ export function featureWindows(f, from, to) {
 }
 // Rules with a window inside [from, to) and their songs. null = nothing to do (also when
 // the tables don't exist yet), so the caller takes the plain rotation path.
+// Two optional columns (2026-11-21, NULL = the rules above, unchanged):
+//   gap_min - the rule's songs may come back after this many minutes instead of the
+//             station-wide 6 h. With mode 'only' it also means "on repeat": the songs play
+//             as a shuffled cycle (every one of them before any repeats), never falling back
+//             to normal rotation (the Control Room's "Christmas only").
+//   pace    - 'unlock'/'more': instead of looking `weight` times staler, the rule's songs are
+//             spread through the hour, about one in every `pace` songs, never two in a row
+//             (the Control Room's "Mixed in").
+const F_SQL = 'SELECT id, mode, weight, start_ms, end_ms, yearly, tz, start_local, end_local FROM features WHERE active=1 AND (yearly=1 OR (start_ms < ?2 AND end_ms > ?1))';
+const F_SQL2 = 'SELECT id, mode, weight, start_ms, end_ms, yearly, tz, start_local, end_local, gap_min, pace, updated_ms FROM features WHERE active=1 AND (yearly=1 OR (start_ms < ?2 AND end_ms > ?1))';
 async function loadFeatures(env, from, to) {
   try {
-    const { results: rows } = await env.DB.prepare(
-      'SELECT id, mode, weight, start_ms, end_ms, yearly, tz, start_local, end_local FROM features WHERE active=1 AND (yearly=1 OR (start_ms < ?2 AND end_ms > ?1))'
-    ).bind(from, to).all();
+    let rows;
+    try { ({ results: rows } = await env.DB.prepare(F_SQL2).bind(from, to).all()); }
+    catch (e) { ({ results: rows } = await env.DB.prepare(F_SQL).bind(from, to).all()); }   // columns not added yet
+
     const wins = [];
     for (const f of rows || []) {
       try { for (const [a, b] of featureWindows(f, from, to)) wins.push({ f, a, b }); } catch (e) { /* bad time zone: skip rule */ }
@@ -167,13 +178,28 @@ async function loadFeatures(env, from, to) {
   }
 }
 // What the rules active at slot time `at` ask for, or null when none is active.
+const isCycle = f => f.mode === 'only' && f.gap_min != null;
+const isPaced = f => f.mode !== 'only' && f.pace != null && Number(f.pace) >= 2;
 function featurePlan(F, at) {
   const act = F.wins.filter(w => w.a <= at && at < w.b);
   if (!act.length) return null;
   const key = act.map(w => w.f.id + ':' + w.a).join(',');
   if (F.cache && F.cache.key === key) return F.cache.fx;
   const weight = new Map(), add = new Map(), only = new Map();
+  let cyc = null, paced = null;
   for (const { f } of act) {
+    if (isCycle(f)) {                                     // "on repeat" (see loadFeatures)
+      if (!cyc) cyc = { fid: f.id, songs: new Map(), gap: Math.max(0, Number(f.gap_min) || 0) * 60e3 };
+      if (cyc.fid === f.id) for (const t of F.byF.get(f.id) || []) cyc.songs.set(t.id, t);
+      continue;
+    }
+    if (isPaced(f)) {                                     // spread through the hour (see loadFeatures)
+      paced = paced || { songs: new Map(), gap: Infinity, pace: Infinity };
+      for (const t of F.byF.get(f.id) || []) if (t.enabled || f.mode === 'unlock') paced.songs.set(t.id, t);
+      paced.gap = Math.min(paced.gap, (f.gap_min == null ? 6 * 60 : Math.max(0, Number(f.gap_min))) * 60e3);
+      paced.pace = Math.min(paced.pace, Math.round(Math.min(10, Number(f.pace))));
+      continue;
+    }
     const w = Math.max(1, Math.min(10, Number(f.weight) || 1));
     for (const t of F.byF.get(f.id) || []) {
       if (f.mode === 'only') { only.set(t.id, t); continue; }
@@ -183,8 +209,89 @@ function featurePlan(F, at) {
     }
   }
   const fx = { weight, add: [...add.values()], only: [...only.values()] };
+  if (cyc && cyc.songs.size) fx.cyc = { fid: cyc.fid, songs: [...cyc.songs.values()], gap: cyc.gap };
+  else if (paced && paced.songs.size) fx.paced = { songs: [...paced.songs.values()], ids: new Set(paced.songs.keys()), gap: paced.gap, pace: paced.pace };
   F.cache = { key, fx };
   return fx;
+}
+// Everything the paced / on-repeat picks need to know about what already played, kept up to
+// date while a plan is built (so a 2 h plan follows the same rules slot by slot). Loaded only
+// when such a rule is in the stretch being planned (2 extra D1 reads), so other plans are
+// untouched.
+//   hist  - track ids of the last 40 slots before the one being planned, oldest first
+//   last  - track id -> latest start of every song in a rule
+//   cnt   - per on-repeat rule set: plays of its songs since the rule was last changed
+const needsHist = F => F.wins.some(w => isCycle(w.f) || isPaced(w.f));
+async function loadHist(env, F, tailSeq) {
+  const { results: rows } = await env.DB.prepare('SELECT track_id, start_ms FROM schedule WHERE seq <= ?1 ORDER BY seq DESC LIMIT 40').bind(tailSeq).all();
+  rows.reverse();
+  const last = new Map();
+  for (const ts of F.byF.values()) for (const t of ts) last.set(t.id, t.last_played_ms || 0);
+  const H = { hist: rows.map(r => r.track_id), last, cyc: [] };
+  for (const { f } of F.wins) {
+    if (!isCycle(f) || H.cyc.some(c => c.fid === f.id)) continue;
+    const ids = (F.byF.get(f.id) || []).map(t => t.id);
+    if (!ids.length) continue;
+    const anchor = Number(f.updated_ms) || 0;
+    const r = await env.DB.prepare(`SELECT COUNT(*) n FROM schedule WHERE start_ms >= ?1 AND track_id IN (${ids.map((_, i) => '?' + (i + 2)).join(',')})`).bind(anchor, ...ids).first();
+    H.cyc.push({ fid: f.id, ids: new Set(ids), anchor, n: Number(r && r.n) || 0 });
+  }
+  return H;
+}
+function histPush(H, id, start) {
+  if (!H) return;
+  H.hist.push(id);
+  if (H.last.has(id)) H.last.set(id, start);
+  for (const c of H.cyc) if (c.ids.has(id) && start >= c.anchor) c.n++;
+}
+// "Mixed in": the rule's songs come round about one in every `pace` songs, spread out: never
+// two in a row, and after k other songs the chance of one is 0 below pace-2, 25% at pace-2,
+// 60% at pace-1 and certain from pace on (pace 3: 1, 2 or 3 songs in between, mostly 2 or 3;
+// measured on the prod export: about 1 in 3.1, never more than 3 other songs in a row).
+// Which one: the least recently played of those whose own gap has passed, random among the
+// stalest 3. The other songs follow the plain rotation (the rule's songs are kept out of it).
+function pickPaced(pool, exclude, recentGroups, fx, at, H) {
+  const P = fx.paced;
+  let k = 0;
+  for (let i = H.hist.length - 1; i >= 0 && !P.ids.has(H.hist[i]); i--) k++;
+  if (k === H.hist.length) k = Infinity;                  // none in the recent history: one now
+  const p = P.pace;
+  const want = k >= 1 && (k >= p || (k === p - 1 ? Math.random() < 0.6 : k === p - 2 ? Math.random() < 0.25 : false));
+  if (want) {
+    const ok = P.songs.filter(t => at - (H.last.get(t.id) || 0) >= P.gap)
+      .sort((x, y) => (H.last.get(x.id) || 0) - (H.last.get(y.id) || 0));
+    if (ok.length) {
+      const prevGrp = recentGroups[0];
+      const c2 = ok.filter(t => !t.grp || t.grp !== prevGrp);
+      const cand = (c2.length ? c2 : ok).slice(0, 3);
+      return cand[Math.floor(Math.random() * cand.length)];
+    }
+  }
+  const rest = pool.filter(t => !P.ids.has(t.id));
+  const base = { weight: fx.weight, add: fx.add.filter(t => !P.ids.has(t.id)), only: fx.only };
+  return pickFeatured(rest, exclude, recentGroups, base, at);
+}
+// "Christmas only" (mode 'only' + gap_min): the songs play as shuffled cycles. With p = plays
+// since the rule was last changed, mod the number of songs, the current cycle is the p most
+// recently played songs; the next song is a random one of the others (so every song plays
+// once before any repeats), avoiding the last 4 played (never the same song twice in a row
+// across cycles) and, when possible, anything inside its own gap. Never falls back to normal
+// rotation while the set has songs; listener requests and DJ picks still go first (they are
+// slotted before rotation).
+function pickCycle(pool, exclude, recentGroups, fx, at, H) {
+  const C = fx.cyc, N = C.songs.length;
+  const byRecent = C.songs.slice().sort((x, y) => (H.last.get(y.id) || 0) - (H.last.get(x.id) || 0));
+  const cnt = H.cyc.find(c => c.fid === C.fid);
+  const p = cnt ? cnt.n % N : 0;
+  const played = new Set(byRecent.slice(0, p).map(t => t.id));
+  const recent = new Set(byRecent.slice(0, Math.min(4, N - 1)).map(t => t.id));
+  const bag = C.songs.filter(t => !played.has(t.id));
+  let cand = bag.filter(t => !recent.has(t.id));
+  if (!cand.length) cand = bag.filter(t => t.id !== (byRecent[0] && byRecent[0].id));
+  if (!cand.length) cand = bag.length ? bag : C.songs;
+  const spaced = cand.filter(t => at - (H.last.get(t.id) || 0) >= C.gap);
+  if (spaced.length) cand = spaced;
+  return cand[Math.floor(Math.random() * cand.length)] || pickRotation(pool, exclude, recentGroups);
 }
 // Stalest first, where a boosted song looks `weight` times staler than it is, so it
 // comes round `weight` times as often (the no-repeat window still applies).
@@ -232,6 +339,7 @@ export async function ensureSchedule(env, now = Date.now(), { publish = true } =
       env.DB.prepare('SELECT id, grp, dur_ms, last_played_ms, plays FROM tracks WHERE enabled=1 ORDER BY last_played_ms ASC, plays ASC LIMIT 150'),
     ]);
     const F = await loadFeatures(env, start, now + HORIZON_MS + 1);   // featured periods in this stretch (usually null)
+    const H = F && needsHist(F) ? await loadHist(env, F, tail ? tail.seq : 0) : null;   // only for "mixed in" / "on repeat" rules
     const exclude = new Set(upcoming.map(u => u.track_id));
     const recent = tails.map(t => t.grp).filter(Boolean);    // newest first
     const plan = [];
@@ -244,7 +352,10 @@ export async function ensureSchedule(env, now = Date.now(), { publish = true } =
         trackId = rq.track_id; durMs = rq.dur_ms; grp = rq.grp; requestId = rq.id;
       } else {
         const fx = F && featurePlan(F, start);
-        const t = fx ? pickFeatured(pool, exclude, recent.slice(0, 3), fx, start) : pickRotation(pool, exclude, recent.slice(0, 3));
+        const t = !fx ? pickRotation(pool, exclude, recent.slice(0, 3))
+          : fx.cyc && H ? pickCycle(pool, exclude, recent.slice(0, 3), fx, start, H)
+          : fx.paced && H ? pickPaced(pool, exclude, recent.slice(0, 3), fx, start, H)
+          : pickFeatured(pool, exclude, recent.slice(0, 3), fx, start);
         if (!t) break;
         trackId = t.id; durMs = t.dur_ms; grp = t.grp;
       }
@@ -253,6 +364,7 @@ export async function ensureSchedule(env, now = Date.now(), { publish = true } =
       prev = { seq, start, track: trackId, dur: durMs };
       exclude.add(trackId);
       recent.unshift(grp);
+      histPush(H, trackId, start);
       start += durMs + GAP_MS;
     }
     if (!plan.length) break;
@@ -368,7 +480,7 @@ export const REPLAN_LOCK_MS = 90000;
 export async function replanFuture(env, now = Date.now()) {
   await ensureSchedule(env, now, { publish: false });
   const cut = await env.DB.prepare(
-    `SELECT seq FROM schedule WHERE start_ms >= ?1
+    `SELECT seq, start_ms FROM schedule WHERE start_ms >= ?1
        AND seq > COALESCE((SELECT MAX(seq) FROM schedule WHERE writer='dj'), 0)
      ORDER BY seq ASC LIMIT 1`
   ).bind(now + REPLAN_LOCK_MS).first();
@@ -387,7 +499,8 @@ export async function replanFuture(env, now = Date.now()) {
   }
   const added = await ensureSchedule(env, now, { publish: false });
   const state = await publishState(env, now);
-  return { ok: true, dropped: dropped.length, added, state };
+  // from_ms: when the re-planned part starts (what listeners hear from then on)
+  return { ok: true, dropped: dropped.length, added, state, from_ms: cut ? cut.start_ms : null };
 }
 
 export async function pruneHistory(env, now = Date.now()) {

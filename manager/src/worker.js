@@ -195,14 +195,52 @@ function featureOut(f, items, songs, now) {
     tz_label: TZ_LABEL[f.tz] || f.tz, yearly: !!f.yearly, active: !!f.active, note: f.note, items,
     song_count: songs.length, off_count: songs.filter((s) => !s.enabled).length, song_ids: songs.map((s) => s.id),
     on_now: onNow, windows: upcoming, last_window: last, finished: !f.yearly && f.end_ms <= now,
+    in_window: wins.some(([a, b]) => a <= now && now < b), gap_min: f.gap_min ?? null, pace: f.pace ?? null,
+    christmas: XMAS_NAME.test(f.name || ''), setting: xmasSetting(f),
     updated_ms: f.updated_ms, updated_by: f.updated_by, created_by: f.created_by,
   };
 }
+// ---------- the Christmas switch (On the air tab + the Featured times editor) ----------
+// Drives the featured period named like /christmas|holiday/i (the same rule /api/season uses
+// for the app + website look). Three settings, each a plain row of that period:
+//   off   - paused (active=0): no switched-off Christmas songs, /api/season says theme null
+//   mixed - unlock + pace 3 + gap_min 120: about 1 in 3 songs, spread out, never two in a row
+//   only  - only + gap_min 30: only the period's songs, shuffled, all before any repeats
+const XMAS_NAME = /christmas|holiday/i;
+const XMAS = {
+  off: { label: 'Off', row: { active: 0 } },
+  mixed: { label: 'Mixed in', row: { active: 1, mode: 'unlock', weight: 3, pace: 3, gap_min: 120 } },
+  only: { label: 'Christmas only', row: { active: 1, mode: 'only', weight: 1, pace: null, gap_min: 30 } },
+};
+function xmasSetting(f) {
+  if (!f) return null;
+  if (!f.active) return 'off';
+  if (f.mode === 'only' && f.gap_min != null) return 'only';
+  if (f.mode !== 'only' && f.pace != null) return 'mixed';
+  return 'custom';                 // set some other way in Featured times (e.g. the original 3x unlock)
+}
+function xmasWhat(s, n) {
+  return { off: 'no Christmas songs; the app and website look normal', mixed: 'about 1 in 3 songs is a Christmas song', only: `only the ${n} Christmas songs, on repeat`, custom: 'a custom setting from Featured times' }[s] || '';
+}
+async function christmasFeature(env) {
+  let rows;
+  try { ({ results: rows } = await env.DB.prepare('SELECT * FROM features WHERE deleted_ms IS NULL ORDER BY id').all()); }
+  catch { return null; }
+  return rows.find((f) => XMAS_NAME.test(f.name || '')) || null;
+}
+// The switch's view of the Christmas period, from featuresList() (same first match by id).
+function christmasFrom(feats) {
+  const o = feats.filter((f) => f.christmas).sort((a, b) => a.id - b.id)[0];
+  if (!o) return null;
+  return { id: o.id, name: o.name, setting: o.setting, what: xmasWhat(o.setting, o.song_count), on_now: o.on_now, in_window: o.in_window,
+    windows: o.windows, last_window: o.last_window, start_local: o.start_local, end_local: o.end_local, tz: o.tz, tz_label: o.tz_label,
+    yearly: o.yearly, song_count: o.song_count, off_count: o.off_count, mode: o.mode, weight: o.weight, updated_ms: o.updated_ms, updated_by: o.updated_by };
+}
 function cleanFeature(b) {
   const name = str(b.name, 80) || bad('Give it a name, like "Christmas"');
-  const mode = MODES[b.mode] ? b.mode : bad('Choose what should happen');
+  const mode = b.setting != null ? (MODES[b.mode] ? b.mode : 'unlock') : MODES[b.mode] ? b.mode : bad('Choose what should happen');
   const weight = mode === 'only' ? 1 : Number(b.weight);
-  if (!(weight >= 1 && weight <= 10)) bad('Choose how much more often');
+  if (b.setting == null && !(weight >= 1 && weight <= 10)) bad('Choose how much more often');
   const tz = str(b.tz, 64) || DEFAULT_TZ;
   if (!validTz(tz)) bad('Unknown time zone');
   const start_local = str(b.start_local, 16), end_local = str(b.end_local, 16);
@@ -224,7 +262,15 @@ function cleanFeature(b) {
   }
   if (!items.length) bad('Pick at least one song, album or section');
   if (items.length > 600) bad('Too many picks');
-  return { name, mode, weight, tz, start_local, end_local, start_ms, end_ms, yearly, note: str(b.note, 400), items };
+  // The Christmas period's editor sends one of the three switch settings instead of a mode.
+  if (b.setting != null) {
+    const s = XMAS[b.setting] || bad('Choose Off, Mixed in or Christmas only');
+    if (!XMAS_NAME.test(name)) bad('Only a Christmas period has these three settings');
+    const r = { mode: 'unlock', weight: 3, pace: null, gap_min: null, ...s.row };
+    if (b.setting === 'off') { r.mode = MODES[b.mode] ? b.mode : 'unlock'; r.weight = Math.max(1, Math.min(10, Number(b.weight) || 3)); }
+    return { name, tz, start_local, end_local, start_ms, end_ms, yearly, note: str(b.note, 400), items, ...r, setting: b.setting };
+  }
+  return { name, mode, weight, tz, start_local, end_local, start_ms, end_ms, yearly, note: str(b.note, 400), items, pace: null, gap_min: null };
 }
 // Does this rule (in either its old or new form) touch the part of the schedule that is planned?
 function touchesPlan(rows, now) {
@@ -241,7 +287,7 @@ async function itemsOf(env, id) {
   const { results } = await env.DB.prepare('SELECT kind, value FROM feature_tracks WHERE feature_id=?1 ORDER BY kind, value').bind(id).all();
   return results;
 }
-const F_COLS = ['name', 'mode', 'weight', 'start_ms', 'end_ms', 'start_local', 'end_local', 'tz', 'yearly', 'active', 'note', 'deleted_ms'];
+const F_COLS = ['name', 'mode', 'weight', 'start_ms', 'end_ms', 'start_local', 'end_local', 'tz', 'yearly', 'active', 'note', 'deleted_ms', 'gap_min', 'pace'];
 async function writeFeature(env, id, row, items, who) {
   const now = Date.now();
   const stmts = [
@@ -253,7 +299,9 @@ async function writeFeature(env, id, row, items, who) {
   await env.DB.batch(stmts);
 }
 function describeFeature(f) {
-  const what = f.mode === 'only' ? 'only these songs' : f.mode === 'unlock' ? `switched-off songs allowed${f.weight > 1 ? `, ${f.weight}x as often` : ''}` : `${f.weight}x as often`;
+  const s = XMAS_NAME.test(f.name || '') ? xmasSetting(f) : null;
+  const what = s && s !== 'custom' ? `Christmas: ${XMAS[s].label}`
+    : f.mode === 'only' ? 'only these songs' : f.mode === 'unlock' ? `switched-off songs allowed${f.weight > 1 ? `, ${f.weight}x as often` : ''}` : `${f.weight}x as often`;
   return `"${f.name}" (${f.start_local.replace('T', ' ')} to ${f.end_local.replace('T', ' ')} ${TZ_LABEL[f.tz] || f.tz}${f.yearly ? ', every year' : ''}; ${what})`;
 }
 
@@ -506,9 +554,33 @@ async function api(request, env, url, who, ctx) {
     return json({
       now, current: out(items[cur]), next: cur >= 0 ? items.slice(cur + 1, cur + 11).map(out) : [],
       history: cur > 0 ? items.slice(Math.max(0, cur - 5), cur).reverse().map(out) : [],
-      features_now: feats.filter((f) => f.on_now).map((f) => ({ id: f.id, name: f.name, mode: f.mode, weight: f.weight, song_count: f.song_count })),
-      lead_ms: DJ_LEAD_MS,
+      features_now: feats.filter((f) => f.on_now).map((f) => ({ id: f.id, name: f.name, mode: f.mode, weight: f.weight, song_count: f.song_count, christmas: f.christmas, setting: f.setting })),
+      christmas: christmasFrom(feats),
+      lead_ms: DJ_LEAD_MS, lock_ms: REPLAN_LOCK_MS,
     });
+  }
+  // ----- the Christmas switch: Off / Mixed in / Christmas only (drives the Christmas featured period) -----
+  if (p === '/christmas' && m === 'GET') {
+    return json({ now, christmas: christmasFrom(await featuresList(env, now)) });
+  }
+  if (p === '/christmas' && m === 'POST') {
+    const b = await body(request);
+    const set = XMAS[b.setting] ? b.setting : bad('Choose Off, Mixed in or Christmas only');
+    const cur = await christmasFeature(env);
+    if (!cur) return err(404, 'There is no Christmas period yet. Make one in Featured times and name it "Christmas".');
+    const curItems = await itemsOf(env, cur.id);
+    const was = xmasSetting(cur);
+    if (was === set) return json({ ok: true, changed: false, replanned: false, christmas: christmasFrom(await featuresList(env, now)) });
+    // Off = the existing pause (keeps the period's other settings, so "Turn back on" restores them)
+    const target = { ...cur, ...XMAS[set].row };
+    await writeFeature(env, cur.id, target, curItems, who);
+    let replanned = false, from = null;
+    if (touchesPlan([cur, target], now)) { const r = await replanFuture(env, now); replanned = true; from = r.from_ms; }
+    const lbl = (s) => (XMAS[s] ? XMAS[s].label : 'a custom setting');
+    await logActivity(env, who, 'christmas', String(cur.id),
+      `Christmas switched from ${lbl(was)} to ${lbl(set)}${replanned ? ` (the songs coming up were re-planned; heard from ${from ? fmtWhen(from) + ' PT' : 'the next song'})` : ''}`,
+      { type: 'feature', id: cur.id, before: cur, items: curItems });
+    return json({ ok: true, changed: true, from: was, to: set, replanned, from_ms: from, christmas: christmasFrom(await featuresList(env, now)) });
   }
   if (p === '/booth/play' && m === 'POST') {
     const b = await body(request);
@@ -546,9 +618,9 @@ async function api(request, env, url, who, ctx) {
   }
   if (p === '/features' && m === 'POST') {
     const f = cleanFeature(await body(request));
-    const ins = await env.DB.prepare(`INSERT INTO features(name, mode, weight, start_ms, end_ms, start_local, end_local, tz, yearly, active, note, created_ms, created_by, updated_ms, updated_by)
-                                      VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,1,?10,?11,?12,?11,?12) RETURNING id`)
-      .bind(f.name, f.mode, f.weight, f.start_ms, f.end_ms, f.start_local, f.end_local, f.tz, f.yearly, f.note, now, who).first();
+    const ins = await env.DB.prepare(`INSERT INTO features(name, mode, weight, start_ms, end_ms, start_local, end_local, tz, yearly, active, note, created_ms, created_by, updated_ms, updated_by, gap_min, pace)
+                                      VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?13,?10,?11,?12,?11,?12,?14,?15) RETURNING id`)
+      .bind(f.name, f.mode, f.weight, f.start_ms, f.end_ms, f.start_local, f.end_local, f.tz, f.yearly, f.note, now, who, f.active ?? 1, f.gap_min ?? null, f.pace ?? null).first();
     await env.DB.batch(f.items.map((it) => env.DB.prepare('INSERT OR IGNORE INTO feature_tracks(feature_id, kind, value) VALUES (?1,?2,?3)').bind(ins.id, it.kind, it.value)));
     const row = await getFeature(env, ins.id);
     let replanned = false;
@@ -568,6 +640,8 @@ async function api(request, env, url, who, ctx) {
     if (fe && m === 'PUT') {
       const f = cleanFeature(await body(request));
       target = { ...cur, ...f }; items = f.items; verb = 'Edited';
+      // "Off" from the editor = the same pause the switch uses (keeps the last setting for "Turn back on")
+      if (f.setting === 'off') Object.assign(target, { mode: cur.mode, weight: cur.weight, pace: cur.pace ?? null, gap_min: cur.gap_min ?? null, active: 0 });
     } else if (fe) {
       target = { ...cur, active: 0, deleted_ms: now }; verb = 'Deleted';
     } else {

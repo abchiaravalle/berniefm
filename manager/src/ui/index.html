@@ -31,6 +31,26 @@
 <main id="app">
   <!-- ON THE AIR -->
   <section data-panel="booth">
+    <div class="card pad xmas-card" id="xmas-card" hidden>
+      <div class="xmas-h">
+        <div>
+          <h2>Christmas</h2>
+          <p class="muted small" id="xmas-sub"></p>
+        </div>
+        <span class="pill" id="xmas-pill"></span>
+      </div>
+      <div class="xmas-seg" id="xmas-seg" role="radiogroup" aria-label="Christmas">
+        <button type="button" class="xopt" role="radio" aria-checked="false" data-set="off"><b>Off</b><small>No Christmas songs. The app and website go back to normal.</small></button>
+        <button type="button" class="xopt" role="radio" aria-checked="false" data-set="mixed"><b>Mixed in</b><small>About 1 in 3 songs is a Christmas song.</small></button>
+        <button type="button" class="xopt" role="radio" aria-checked="false" data-set="only"><b>Christmas only</b><small id="xmas-only-txt">Only the Christmas songs, on repeat.</small></button>
+      </div>
+      <p class="xmas-note" id="xmas-note"></p>
+    </div>
+    <div class="card pad xmas-card none" id="xmas-none" hidden>
+      <h2>Christmas</h2>
+      <p class="muted">There is no Christmas period yet, so there is nothing to switch. Make one in Featured times and call it "Christmas"; this switch then controls it.</p>
+      <button class="btn" type="button" id="xmas-make">Go to Featured times</button>
+    </div>
     <div id="feat-banner"></div>
     <div class="booth">
       <div class="card now-card" id="now-card">
@@ -199,10 +219,16 @@
       <label>Time zone<select name="tz" id="fd-tz"></select></label>
       <label class="check big-check"><input type="checkbox" name="yearly"> Repeat every year</label>
     </div>
-    <fieldset class="modes"><legend>What should happen</legend>
+    <fieldset class="modes" id="fd-modes"><legend>What should happen</legend>
       <label class="mode"><input type="radio" name="mode" value="more"><span><b>Play these more often</b><small>The rest of the station keeps playing too.</small></span></label>
       <label class="mode"><input type="radio" name="mode" value="only"><span><b>Play only these</b><small>Nothing else plays. If they run out, the regular mix fills in until they can repeat.</small></span></label>
       <label class="mode"><input type="radio" name="mode" value="unlock"><span><b>Let switched-off songs play</b><small>For songs that are normally off, like the Christmas album. They join the mix only during these dates.</small></span></label>
+    </fieldset>
+    <fieldset class="modes" id="fd-xmas" hidden><legend>Christmas (same switch as on the On the air tab)</legend>
+      <label class="mode"><input type="radio" name="xset" value="off"><span><b>Off</b><small>No Christmas songs. The app and website go back to normal.</small></span></label>
+      <label class="mode"><input type="radio" name="xset" value="mixed"><span><b>Mixed in</b><small>About 1 in 3 songs is a Christmas song, spread out, never two in a row.</small></span></label>
+      <label class="mode"><input type="radio" name="xset" value="only"><span><b>Christmas only</b><small>Only these songs, shuffled, every one before any repeats.</small></span></label>
+      <p class="muted small" id="fd-xmas-custom" hidden></p>
     </fieldset>
     <div class="weights" id="fd-weights"><span class="lbl">How much more often</span>
       <div class="seg" role="radiogroup" aria-label="How much more often">

@@ -39,6 +39,19 @@ export function fromExport(path) {
   db.exec(sql);
   return db;
 }
+// Which prod export the tests read: $BCRADIO_EXPORT, else the 2026-11-06 one on the aux drive.
+export function exportPath(dir = '/Volumes/6154577230/client-backups/bcradio-d1-2026-11-06') {
+  if (process.env.BCRADIO_EXPORT) return process.env.BCRADIO_EXPORT;
+  return dir + '/' + fs.readdirSync(dir).filter(f => f.endsWith('.sql'))[0];
+}
+// Additive columns of 2026-11-21 (manager/migrations/0003_christmas_switch.sql), when missing.
+export function addSwitchColumns(db) {
+  const cols = db.prepare("SELECT name FROM pragma_table_info('features')").all().map(r => r.name);
+  if (!cols.length) return false;
+  if (!cols.includes('gap_min')) db.exec('ALTER TABLE features ADD COLUMN gap_min INTEGER');
+  if (!cols.includes('pace')) db.exec('ALTER TABLE features ADD COLUMN pace INTEGER');
+  return true;
+}
 
 export function applyNewTables(db, schemaPath) {
   // only the additive Control Room part of schema.sql

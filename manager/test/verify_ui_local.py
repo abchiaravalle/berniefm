@@ -34,7 +34,8 @@ ff("-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo:d=1.5", "-f", "lavfi", "-i",
 cover = OUT / "cover.png"
 ff("-f", "lavfi", "-i", "color=c=0x78ea78:s=800x800:d=1", "-frames:v", "1", str(cover))
 real = OUT / "Real Music Sample.m4a"
-ff("-i", "/Volumes/6154577230/bcradio-work/src_nav/Backups/Dropbox-account-2026-10-02/files/Elf Band Remastered mp3 version/01 Jingle Bells.mp3", "-t", "45", "-c:a", "aac", "-b:a", "256k", "-metadata", "title=Real Music Sample", str(real))
+REAL_SRC = os.environ.get("REAL_SAMPLE") or "/Volumes/6154577230/bcradio-work/src_nav/Backups/Dropbox-account-2026-10-02/files/Elf Band Remastered mp3 version/01 Jingle Bells.mp3"
+ff("-i", REAL_SRC, "-t", "45", "-c:a", "aac", "-b:a", "256k", "-metadata", "title=Real Music Sample", str(real))
 flac = OUT / "Second Song.flac"
 ff("-i", str(tone), "-i", str(cover), "-map", "0:a", "-map", "1:v", "-c:a", "flac", "-c:v", "png", "-disposition:v", "attached_pic", "-metadata", "title=Flac Song With Cover", "-metadata", "album=", str(flac))
 src_I = float(re.search(r"I:\s+(-?[\d.]+) LUFS", subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-i", str(tone), "-af", "ebur128=framelog=quiet", "-f", "null", "-"], capture_output=True, text=True).stderr).group(1))
@@ -192,7 +193,8 @@ with sync_playwright() as p:
     pg.locator(".act[data-action=feature_add] button", has_text="Undo").first.click()
     pg.wait_for_selector("#cf-scrim:not([hidden])"); pg.click("#cf-yes")
     pg.wait_for_function("() => /Undone/.test(document.querySelector('#toast').textContent)", timeout=15000)
-    left = d1("SELECT COUNT(*) n FROM features WHERE active=1 AND deleted_ms IS NULL")[0]["n"]
+    # count only rules this test made (exports from 2026-11-20 on already hold the live Christmas period)
+    left = d1("SELECT COUNT(*) n FROM features WHERE active=1 AND deleted_ms IS NULL AND created_by='tester@local.test'")[0]["n"]
     check("undo the feature from History: no active featured time left", left == 0, str(left))
     check("desktop end to end: no JS errors", not errs, str(errs[:3]))
     ctx.close()
