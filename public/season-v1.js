@@ -21,8 +21,8 @@
     var s = document.createElement('style');
     s.textContent =
       '.bc-snow{position:fixed;inset:0;width:100%;height:100%;z-index:5;pointer-events:none}' +
-      '.bc-lights{position:absolute;left:8px;right:8px;top:-13px;height:46px;width:calc(100% - 16px);z-index:4;pointer-events:none}' +
-      '@media (max-width:620px){.bc-lights{left:4px;right:4px;width:calc(100% - 8px);top:-12px;height:40px}}';
+      '.bc-lights{position:absolute;left:-14px;top:-30px;height:76px;width:calc(100% + 28px);z-index:4;pointer-events:none}' +
+      '@media (max-width:620px){.bc-lights{top:-28px;height:70px}}';
     document.head.appendChild(s);
   }
 
@@ -86,31 +86,32 @@
     var ctx = c.getContext('2d');
     var W = 0, H = 0, bulbs = [], glows = {}, wire = [];
     COLORS.forEach(function (col) {
-      var s = document.createElement('canvas'), d = 48;
+      var s = document.createElement('canvas'), d = 40;
       s.width = s.height = d;
       var g = s.getContext('2d'), gr = g.createRadialGradient(d / 2, d / 2, 0, d / 2, d / 2, d / 2);
-      gr.addColorStop(0, col); gr.addColorStop(.25, col + 'aa'); gr.addColorStop(1, col + '00');
+      gr.addColorStop(0, col + 'cc'); gr.addColorStop(.3, col + '66'); gr.addColorStop(.75, col + '14'); gr.addColorStop(1, col + '00');
       g.fillStyle = gr; g.fillRect(0, 0, d, d);
       glows[col] = s;
     });
+    var PAD = 26, TOP = 24;                                 // glow never reaches the canvas edges
     function y(x) {                                         // wire: shallow scallops between hooks
-      var n = Math.max(3, Math.round(W / 170)), seg = W / n, p = (x % seg) / seg;
-      return 9 + Math.sin(Math.PI * p) * (W < 500 ? 8 : 11);
+      var L = W - 2 * PAD, n = Math.max(3, Math.round(L / 170)), seg = L / n, p = (((x - PAD) % seg) + seg) % seg / seg;
+      return TOP + Math.sin(Math.PI * p) * (L < 500 ? 7 : 10);
     }
     function resize() {
       var r = c.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 2);
       W = Math.max(50, r.width); H = Math.max(30, r.height);
       c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      var n = Math.max(10, Math.round(W / (W < 500 ? 28 : 34)));
+      var L = W - 2 * PAD, n = Math.max(10, Math.round(L / (L < 500 ? 28 : 34)));
       bulbs = [];
       for (var i = 0; i < n; i++) {
-        var x = (i + .5) * W / n;
+        var x = PAD + (i + .5) * L / n;
         bulbs.push({ x: x, y: y(x), col: COLORS[i % COLORS.length], ph: Math.random() * 6.28,
           sp: .7 + Math.random() * 1.3, tilt: (Math.random() - .5) * .35, spark: 0 });
       }
       wire = [];
-      for (var k = 0; k <= 80; k++) { var xx = k * W / 80; wire.push([xx, y(xx)]); }
+      for (var k = 0; k <= 80; k++) { var xx = PAD - 6 + k * (W - 2 * PAD + 12) / 80; wire.push([xx, y(xx)]); }
     }
     resize();
     addEventListener('resize', resize);
@@ -132,7 +133,7 @@
         ctx.translate(b.x, b.y);
         ctx.rotate(b.tilt);
         ctx.globalAlpha = .25 + .6 * lvl;                      // glow
-        ctx.drawImage(glows[b.col], -24, -10, 48, 48);
+        ctx.drawImage(glows[b.col], -20, -9, 40, 40);
         ctx.globalAlpha = 1;
         ctx.fillStyle = '#1c2e22'; ctx.fillRect(-2.6, -1.5, 5.2, 5.5);   // socket
         ctx.globalAlpha = .55 + .45 * lvl;
