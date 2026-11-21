@@ -54,7 +54,10 @@ check('undo twice is refused', r.s === 400 || r.s === 409, String(r.s));
 
 // --- switch off a song that is coming up -> re-plan; booth no longer has it after the lock
 let b = (await api('/booth')).j;
-const upcoming = b.next.filter((i) => i.start_ms > Date.now() + 120000 && !i.is_dj && !i.is_request);
+// (a switched-on song: since 2026-11-21 the export runs Christmas "Mixed in", so a third of the slots are
+// switched-off Christmas songs, and switching those "off" changes nothing)
+const onIds = new Set((await api('/songs')).j.songs.filter((x) => x.enabled).map((x) => x.id));
+const upcoming = b.next.filter((i) => i.start_ms > Date.now() + 120000 && !i.is_dj && !i.is_request && onIds.has(i.track.id));
 const victim = upcoming[upcoming.length - 1];
 r = await api('/songs/' + victim.track.id, { method: 'PATCH', body: { enabled: false } });
 check('switching off a song that is coming up re-plans', r.s === 200 && r.j.replanned === true, victim.track.title);
@@ -153,6 +156,8 @@ for (const id of [futureId, xmasId]) await api('/features/' + id, { method: 'DEL
     c = (await api('/christmas')).j.christmas;
   }
   check('switch: GET /christmas finds the Christmas period', c && /christmas/i.test(c.name) && ['off', 'mixed', 'only', 'custom'].includes(c.setting), c && c.setting);
+  // the steps below start with "mixed": an export already in Mixed in (prod since 2026-11-21) starts from Off
+  if (c.setting === 'mixed') { await api('/christmas', { method: 'POST', body: { setting: 'off' } }); c = (await api('/christmas')).j.christmas; }
   b = (await api('/booth')).j;
   check('switch: the booth carries the same Christmas state', b.christmas && b.christmas.id === c.id && b.christmas.setting === c.setting);
   const steps = [['mixed', (f) => f.mode === 'unlock' && f.pace === 3 && f.gap_min === 120 && f.active], ['only', (f) => f.mode === 'only' && f.gap_min === 30 && f.active], ['off', (f) => !f.active]];
