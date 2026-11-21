@@ -6,6 +6,8 @@
  * "Play next" queues it right after the current song. "Skip" moves everyone on.
  * Themeable via CSS variables on :root: --dj-bg --dj-panel --dj-line --dj-text
  * --dj-dim --dj-accent --dj-accent-ink --dj-font.
+ * 2026-11-21: on a Christmas channel (bcsync-v6.js BCSync.channel()) the panel acts on that channel only and
+ * lists only that channel's songs.
  */
 (function () {
   const TAPS = 5, WINDOW_MS = 3000, KEY = 'bcdj-token';
@@ -71,10 +73,14 @@
   let toastT;
   function toast(m) { toastEl.textContent = m; toastEl.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove('show'), 3500); }
 
-  let catalog = null, view = { album: null, q: '' }, busy = false;
+  let catalog = null, catalogCh = null, view = { album: null, q: '' }, busy = false;
+  const chNow = () => (window.BCSync && BCSync.channel ? BCSync.channel() : null);
+  const CHL = { christmas: 'Christmas only', classic: 'No Christmas' };
+  const aud = () => (chNow() ? 'everyone on ' + (CHL[chNow()] || chNow()) : 'everyone');
   const token = () => { try { return localStorage.getItem(KEY) || ''; } catch (e) { return ''; } };
   async function api(action, body) {
-    const r = await fetch('/api/dj/' + action, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...body, token: token() }) });
+    const ch = chNow();
+    const r = await fetch('/api/dj/' + action, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...body, ...(ch && action !== 'check' ? { ch } : {}), token: token() }) });
     let d = {}; try { d = await r.json(); } catch (e) {}
     if (d.locked) { try { localStorage.removeItem(KEY); } catch (e) {} }
     return d;
@@ -105,13 +111,14 @@
     if (!cur) return '';
     const t = cur.track;
     return `<div class="djx-now"><img src="${esc(t.art)}" alt=""><div class="grow"><div class="t">${esc(t.title)}</div>
-      <div class="s">On air now${nxt ? ' · next: ' + esc(nxt.track.title) : ''}</div></div></div>`;
+      <div class="s">On air now${chNow() ? ' on ' + esc(CHL[chNow()] || chNow()) : ''}${nxt ? ' · next: ' + esc(nxt.track.title) : ''}</div></div></div>`;
   }
   async function showPicker() {
     $('[data-a=skip]', root).style.display = '';
-    if (!catalog) {
+    if (!catalog || catalogCh !== chNow()) {
+      catalog = null; catalogCh = chNow();
       main.innerHTML = nowHtml() + `<div class="djx-body"><div class="djx-msg" style="padding:20px 0">Loading songs…</div></div>`;
-      try { catalog = await (await fetch('/api/catalog', { cache: 'no-store' })).json(); } catch (e) {}
+      try { catalog = await (await fetch('/api/catalog' + (catalogCh ? '?ch=' + catalogCh : ''), { cache: 'no-store' })).json(); } catch (e) {}
       if (!catalog) { main.innerHTML = `<div class="djx-lock"><div class="djx-msg">Couldn't load the song list.</div></div>`; return; }
       const ok = await api('check', {});
       if (!ok.ok) { showLock(ok.locked ? 'This device needs the code again.' : (ok.message || '')); return; }
@@ -158,8 +165,8 @@
       if (!d.ok) { toast(d.message || 'That didn\u2019t work. Try again.'); return; }
       if (d.state && window.BCSync) BCSync.setState(d.state);
       const secs = d.at ? Math.max(0, Math.round((d.at - (window.BCSync ? BCSync.serverNow() : Date.now())) / 1000)) : 0;
-      toast(kind === 'next' ? `“${title}” plays next for everyone` :
-            kind === 'skip' ? `Skipping for everyone in ${secs} s` : `“${title}” starts for everyone in ${secs} s`);
+      toast(kind === 'next' ? `“${title}” plays next for ${aud()}` :
+            kind === 'skip' ? `Skipping for ${aud()} in ${secs} s` : `“${title}” starts for ${aud()} in ${secs} s`);
       close();
     } finally { busy = false; }
   }

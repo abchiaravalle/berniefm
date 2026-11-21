@@ -424,9 +424,10 @@ html.lite .card{background:rgba(8,20,13,.86)}
   <button id="ios-pwa-close" aria-label="Close">×</button>
 </div>
 
-<script src="/bcsync-v5.js"></script>
+<script src="/bcsync-v6.js"></script>
 <script src="/dj-v1.js" defer></script>
 <script src="/listeners-v1.js" defer></script>
+<script src="/channels-v1.js" defer></script>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 <script>
 (function () {
@@ -520,7 +521,8 @@ html.lite .card{background:rgba(8,20,13,.86)}
   async function loadSongs() {
     songsList.innerHTML = '<div class="note">Loading available songs...</div>';
     try {
-      const r = await fetch('/api/library', { cache: 'no-store' });
+      const ch = BCSync.channel ? BCSync.channel() : null;      // requests go to the channel being listened to
+      const r = await fetch('/api/library' + (ch ? '?ch=' + ch : ''), { cache: 'no-store' });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       songs = ((await r.json()).songs || []).filter(s => s.title && s.title.trim().length > 1);
       if (!songs.length) throw new Error('empty');
@@ -553,7 +555,8 @@ html.lite .card{background:rgba(8,20,13,.86)}
     submit.disabled = true; submit.textContent = 'Submitting request...';
     const token = tsToken;
     try {
-      const r = await fetch('/api/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: selected.id, token }) });
+      const ch = BCSync.channel ? BCSync.channel() : null;
+      const r = await fetch('/api/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(ch ? { id: selected.id, token, ch } : { id: selected.id, token }) });
       let d = {}; try { d = await r.json(); } catch (e) {}
       if (r.ok && d.ok) {
         closeModal(); toast(d.message || 'Your request has been submitted!');

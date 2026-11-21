@@ -6,6 +6,9 @@
  * - Every 30 s while the page is visible it reads the total (GET /api/listeners, edge-cached).
  * The server keeps nothing but (sid, platform, last seen) for players playing right now.
  * Needs window.BCSync (bcsync-v5.js) and <p id="listening" hidden> in the page.
+ * 2026-11-21: with bcsync-v6.js the pings also say which Christmas channel this player is on ("ch"), a new
+ * ping goes out right after a channel switch, and every count is broadcast as a 'bc-listeners' window
+ * event (channels-v1.js shows "N listening" per channel from it).
  */
 (function () {
   const el = document.getElementById('listening');
@@ -35,6 +38,7 @@
     if (!d || typeof d.total !== 'number' || typeof d.now !== 'number') return;
     if (shown && d.now < shown.now) return;
     shown = d;
+    try { dispatchEvent(new CustomEvent('bc-listeners', { detail: d })); } catch (e) {}
     let n = d.total;
     if (sid && n < 1) n = 1;                 // we're playing, so at least us
     if (n < 1) { el.hidden = true; return; }
@@ -44,7 +48,9 @@
 
   function send(playing, beacon) {
     if (!sid) return;
-    const body = JSON.stringify({ sid, platform: 'web', playing });
+    const msg = { sid, platform: 'web', playing };
+    if (BCSync.channel) msg.ch = BCSync.channel() || 'mixed';
+    const body = JSON.stringify(msg);
     if (beacon && navigator.sendBeacon) {
       try { if (navigator.sendBeacon('/api/listen', new Blob([body], { type: 'text/plain;charset=UTF-8' }))) return; } catch (e) {}
     }
@@ -69,6 +75,7 @@
 
   BCSync.on('play', begin);       // fires on start and on every rejoin; one session per start
   BCSync.on('pause', () => end(false));
+  BCSync.on('channel', () => { if (sid && BCSync.isLive()) send(true); });
   addEventListener('pagehide', () => end(true));
   addEventListener('pageshow', e => { if (e.persisted && BCSync.isLive()) begin(); });
 
