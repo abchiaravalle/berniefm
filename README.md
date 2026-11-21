@@ -101,6 +101,15 @@ timeline as the website. Two small server pieces exist for it:
   (built by `art_hd.py` in the work folder; re-run it after adding new covers).
 - `public/app/turnstile.html` (`/app/turnstile`): the request check shown inside the app (same sitekey and action).
 
+On the website (live 2026-11-21, deploy ed9835a6): a `.getapp` block with Apple's official black
+"Download on the App Store" badge (`public/img/app-store-badge-black.svg`, the unmodified SVG from
+toolbox.marketingtools.apple.com, shown 44 px tall) linking to
+https://apps.apple.com/us/app/bc-radio-bernie-chiaravalle/id6821450174. It sits below "Upcoming in this
+set"; on iPhones (UA check) it moves up under "Request a song". iPhone Safari 26+ (the app's minimum iOS)
+no longer shows the Add to Home Screen note. No `apple-itunes-app` smart-banner meta. The footer
+"Listen elsewhere" row now has YouTube (https://www.youtube.com/@berniechiaravalle) after Spotify.
+No Google Play badge until the Android app is on Play.
+
 ## Live listener count
 "12 listening now" on the website (under the headline) and in the iPhone app.
 - `POST /api/listen {sid, platform: web|ios|android, playing}`: sent by a player when play starts and every
