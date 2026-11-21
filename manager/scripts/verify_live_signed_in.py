@@ -159,6 +159,7 @@ finally:
     toks = [x["name"] for x in cf("GET", f"/accounts/{A}/access/service_tokens").get("result") or [] if "controlroom check" in x["name"]]
     check("no temp service tokens left", not toks, str(toks))
     names = secret_names()
-    check("temp Worker secret gone (only ACCESS_AUD left)", names == ["ACCESS_AUD"], str(names))
+    # GUIDE_PEOPLE (2026-11-21): who can sign in, shown on the "How it works" tab; set at deploy from the private list
+    check("temp Worker secret gone (only ACCESS_AUD + GUIDE_PEOPLE left)", sorted(names) in (["ACCESS_AUD"], ["ACCESS_AUD", "GUIDE_PEOPLE"]), str(names))
 print("FAILS:", fails or "none")
 sys.exit(1 if fails else 0)

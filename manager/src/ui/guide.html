@@ -1,0 +1,144 @@
+<!-- "How it works" tab (2026-11-21). Plain-words guide to how BC Radio is set up, for Bernie and Adam.
+     Versioned with the code: when something here changes in the code, change it here too.
+     Numbers in <span data-g="..."> are filled in live from the Control Room's own data (app.js.txt, renderGuide).
+     No secrets in this file (no DJ code, no tokens, no account ids; the sign-in list comes from the server). -->
+<div class="guide" id="guide">
+  <div class="card pad g-top">
+    <h2>How BC Radio works</h2>
+    <p class="muted">Everything about how the station is set up, in plain words. The numbers in green come straight from the station right now.</p>
+    <div class="g-facts" id="g-facts">
+      <span class="g-fact"><b data-g="songs-on">…</b> songs on the air</span>
+      <span class="g-fact"><b data-g="songs-off">…</b> switched off</span>
+      <span class="g-fact">Christmas: <b data-g="xmas-setting">…</b></span>
+      <span class="g-fact">Channels: <b data-g="channels">…</b></span>
+      <span class="g-fact">iPhone app on the App Store: <b data-g="app-version">…</b></span>
+    </div>
+    <nav class="g-jump" aria-label="Jump to">
+      <a href="#g-idea">The big idea</a><a href="#g-pieces">The pieces</a><a href="#g-tabs">Control Room tabs</a><a href="#g-xmas">Christmas</a>
+      <a href="#g-requests">Requests</a><a href="#g-dj">Hidden DJ panel</a><a href="#g-count">Listener count</a><a href="#g-safety">Safety</a><a href="#g-changes">What changed</a>
+    </nav>
+  </div>
+
+  <section class="card pad g-sec" id="g-idea">
+    <h2>1. The big idea</h2>
+    <p><b>Everyone hears the same song at the same second.</b> BC Radio works like a real radio station: there is one shared playlist with exact start times (we call it the timeline), and every listener's player joins it at the right spot. Listeners stay within a few hundredths of a second of each other.</p>
+    <p><b>One timeline per channel.</b> While Christmas is on, listeners can pick a channel (Mixed, Christmas only, No Christmas). Each channel is its own timeline, so everyone on the same channel hears the same thing. When Christmas is off there is just the one station.</p>
+    <p><b>"Planned 2 hours ahead."</b> The station always knows the next 2 hours of songs. It picks them the way a DJ would: songs that haven't played in a while first, never the same album twice in a row, and no song again within 6 hours (the Christmas songs on Mixed come back after about 2 hours). Listener requests and your picks go to the front of the line.</p>
+    <p><b>It only plans while someone is listening.</b> The plan is extended when a player asks for it. If nobody listens for a while, the plan simply runs out, and the next person who presses play starts a fresh song right then. So a gap in the history (for example 12:56 to 1:30 pm on Nov 21) is normal: nobody was listening, and nobody heard silence. A channel nobody listens to costs nothing.</p>
+  </section>
+
+  <section class="card pad g-sec" id="g-pieces">
+    <h2>2. The pieces and where they live</h2>
+    <ul class="g-list">
+      <li><b>bcradio.net</b>: the website with the player, requests and the live listener count.</li>
+      <li><b>iPhone app</b> "BC Radio: Bernie Chiaravalle" on the App Store (version there now: <span data-g="app-version">…</span>). It keeps playing with the screen locked.</li>
+      <li><b>Android app</b>: built and tested, not on Google Play yet.</li>
+      <li><b>Control Room</b> (this site, controlroom.amplifi.studio): where you run the station. You sign in with a code sent to your email; it remembers you for 30 days. People who can sign in: <span data-g="people">…</span>. Adam changes this list.</li>
+      <li><b>Music storage</b> (media.bcradio.net): every song file and cover, plus the published timeline the players read.</li>
+      <li><b>The old stream link</b> (stream.bcradio.net/listen/bcradio/radio.mp3): for VLC, smart speakers and radio apps that saved it years ago. It follows the main station (Mixed) only.</li>
+    </ul>
+  </section>
+
+  <section class="card pad g-sec" id="g-tabs">
+    <h2>3. The Control Room tabs</h2>
+    <h3>On the air</h3>
+    <p>The song playing now, the next 10 and the last 5. At the top: the Christmas switch and, while Christmas is on, a <b>Channel</b> picker. Everything on this tab (song on air, coming up, play, skip) is for the channel picked there.</p>
+    <ol class="g-steps">
+      <li><b>Play a song now:</b> type its name under "Play a song", press <b>Play now</b>, then <b>Play it now</b>. Everyone on that channel switches in about 10 seconds; the song playing stops early.</li>
+      <li><b>Play a song next:</b> same, but press <b>Play next</b>. It plays right after the current song.</li>
+      <li><b>Skip:</b> press <b>Skip this song</b>, then <b>Skip it</b>. Everyone moves on in about 10 seconds.</li>
+    </ol>
+    <h3>Songs</h3>
+    <p>Every song with cover, plays and when it last played. Search, filter (on the air, switched off, never played, requests off…) and sort.</p>
+    <ol class="g-steps">
+      <li><b>Turn a song off:</b> click the song, untick <b>On the air (in the rotation)</b>, press <b>Save</b>. If it was coming up, the next songs are planned again. To do many at once, tick them in the list and use <b>Switch off</b>.</li>
+      <li><b>Edit a title or album:</b> click the song, change the text, press <b>Save</b>. The website shows the new name.</li>
+      <li><b>Change a cover:</b> click the song, press <b>Change cover</b>, pick a picture. It's saved right away (a big copy is made for the iPhone app).</li>
+      <li><b>Stop requests for a song:</b> click it, untick <b>Listeners can request it</b>, <b>Save</b>.</li>
+    </ol>
+    <h3>Add songs</h3>
+    <ol class="g-steps">
+      <li>Drop a song file on the box (MP3, WAV, AIFF, M4A or FLAC).</li>
+      <li>Your browser turns it into the station's format by itself: the same loudness as every other song (-16 LUFS), silence trimmed at the start and end, 128 kbps MP3. The station checks the file before it's added.</li>
+      <li>Check the title, album and cover, then press <b>Publish (add to the rotation)</b>. Until then the song stays switched off (it never plays). Published songs join the rotation at a random spot.</li>
+    </ol>
+    <h3>Featured times</h3>
+    <p>Dates when some songs play differently: <b>more often</b> (2×, 3×, 5×), <b>only these</b>, or <b>let switched-off songs play</b> (how the Christmas songs work). Times are in Pacific unless you pick another time zone, and a period can repeat every year. A calendar shows the next 6 months.</p>
+    <ol class="g-steps">
+      <li>Press <b>+ New featured time</b>, give it a name and dates.</li>
+      <li>Pick what should happen, then tick songs, whole albums or sections.</li>
+      <li>Press <b>Save</b>. If it covers the next couple of hours, the songs coming up are planned again right away (the song playing now is never cut).</li>
+    </ol>
+    <h3>History</h3>
+    <p>Every change, who made it and when. Most changes have an <b>Undo</b> button: edits, on/off, publishing, bulk changes, featured times, the Christmas switch, and removing an upload that never aired. Play now and Skip are listed but can't be undone (they already played).</p>
+  </section>
+
+  <section class="card pad g-sec" id="g-xmas">
+    <h2>4. Christmas</h2>
+    <p><b>The Christmas featured time</b> "<span data-g="xmas-name">…</span>" runs <span data-g="xmas-dates">…</span><span data-g="xmas-yearly"></span>. It has <span data-g="xmas-count">…</span> songs, <span data-g="xmas-off">…</span> of them switched off the rest of the year (so they only play inside those dates).</p>
+    <p><b>The Christmas switch</b> (top of On the air) has three settings. Right now: <b data-g="xmas-setting">…</b>.</p>
+    <ul class="g-list">
+      <li><b>Off</b>: no Christmas songs, one station for everyone, the channel picker disappears in the app and on the website, and they drop their Christmas look.</li>
+      <li><b>On</b>: listeners choose a channel. <b>Mixed</b> (everyone starts here): about 1 in 3 songs is a Christmas song, spread out, never two in a row. <b>Christmas only</b>: only the Christmas songs, shuffled, every one before any repeats (a round is about 45 minutes). <b>No Christmas</b>: the usual songs, no Christmas at all.</li>
+      <li><b>Christmas for everyone</b>: one station that plays only the Christmas songs. No choice.</li>
+    </ul>
+    <p>A change is heard from the next song that starts after about 1½ minutes; the song playing is never cut. Outside the Christmas dates the switch does nothing.</p>
+    <p><b>The look.</b> The app and website ask the station once in a while whether it's Christmas (and which channels exist). While it is, they show falling snow and twinkling lights and the channel picker; Off takes them away within about 5 minutes. The iPhone app gets the look from version 1.0.2 (on the App Store now: <span data-g="app-version">…</span>). On the website the look and the channel picker are on a preview and go live when Adam says so.</p>
+    <h3>How to make a song a Christmas song</h3>
+    <ol class="g-steps">
+      <li>Go to <b>Featured times</b>, find <b>Christmas</b>, press <b>Edit</b>.</li>
+      <li>Under "Which songs", open the <b>Songs</b> tab (or <b>Albums</b> for a whole album), search, and tick it.</li>
+      <li>Press <b>Save</b>. It's part of Christmas right away: in Mixed's mix, on Christmas only, and never on No Christmas.</li>
+    </ol>
+    <p class="g-tip"><b>Only at Christmas, or all year?</b> A song that is <b>switched off</b> plays only inside the Christmas dates. A song that is switched on keeps playing all year too. For a new Christmas song: add it on Add songs but don't publish it (it stays switched off), then tick it in the Christmas featured time.</p>
+    <p class="g-tip">The 12 switched-off Christmas songs carry the section "Christmas", but that section is not one of the choices in the Section menu yet, and the Christmas featured time lists its songs one by one. So a section alone doesn't make a song a Christmas song: tick it as above.</p>
+  </section>
+
+  <section class="card pad g-sec" id="g-requests">
+    <h2>5. Requests</h2>
+    <p>Listeners press <b>Request a song</b> on the website (or in the app), search, pick a song, pass a quick spam check, and send it. Requests play next, in the order they came in. They never cut the song playing or anything starting in the next 90 seconds.</p>
+    <ul class="g-list">
+      <li>Each listener: 1 request every 2 minutes, 8 per hour (counted across all channels).</li>
+      <li>At most 15 requests waiting at once (per channel).</li>
+      <li>A song that played in the last 4 hours, or is already coming up, can't be requested (it shows "Played recently" or "Coming up soon").</li>
+      <li>On a channel, the request plays on that channel. <b>Christmas only</b>: only Christmas songs can be requested, and not within 15 minutes of when that song last played or plays next. <b>No Christmas</b>: no Christmas songs.</li>
+      <li>Songs with requests turned off can't be requested anywhere. Switched-off songs can't be requested either, except the Christmas songs on <b>Christmas only</b> while Christmas is on.</li>
+    </ul>
+  </section>
+
+  <section class="card pad g-sec" id="g-dj">
+    <h2>6. The hidden DJ panel (owner only)</h2>
+    <p>Listeners never see it. On the website, tap the words <b>Upcoming in this set</b> 5 times within 3 seconds; in the app, tap <b>Up next</b> 5 times. The first time on a phone or computer it asks for the DJ code (Adam has it); after that the device stays unlocked for a year.</p>
+    <p>It can play any song now (everyone switches in about 10 seconds), play one next, or skip, from an album browser. It acts on the channel you are listening to: on Christmas only it offers only the Christmas songs and changes only that channel. (This channel part arrives with the channel picker on the website and in the apps.) Changing the DJ code signs every device out; ask Adam.</p>
+  </section>
+
+  <section class="card pad g-sec" id="g-count">
+    <h2>7. Listener count</h2>
+    <p>The website shows "<b>12 listening now</b>" under the headline. A playing player says "still listening" once a minute. The station keeps only a random code made up for that one play, which kind of player it is (website, iPhone, Android), the channel, and when it last checked in. That row is deleted when play stops, or after 3 minutes of silence. For charts it keeps only totals per minute. No names, IP addresses, devices or locations.</p>
+    <p>On the air shows how many people are on each channel. The iPhone app doesn't show or send a count: it's switched off for now so the App Store privacy label ("Data Not Collected") stays true.</p>
+  </section>
+
+  <section class="card pad g-sec" id="g-safety">
+    <h2>8. Safety</h2>
+    <ul class="g-list">
+      <li><b>Undo first.</b> Most changes in this Control Room can be undone from <b>History</b>.</li>
+      <li><b>Nothing here deletes music.</b> Library songs can only be switched off; the only thing you can remove is an upload that never played.</li>
+      <li><b>Backups.</b> Before every big change Adam saves a full copy of the station's database with written steps to put it back, and the database itself can be rewound to an earlier moment if needed.</li>
+      <li><b>Something looks wrong?</b> Open <b>On the air</b>: is a song playing and is "Coming up" full? Open bcradio.net and press play. If a recent change caused it, undo it in History. Then tell Adam what you saw and when.</li>
+    </ul>
+  </section>
+
+  <section class="card pad g-sec" id="g-changes">
+    <h2>9. What changed recently</h2>
+    <ul class="g-log">
+      <li><time>Nov 21, 2026</time><span><b>Christmas channels.</b> Mixed, Christmas only and No Christmas, each its own shared station. Live behind the scenes; the picker on the website is on a preview, and the apps get it next. This Control Room got the Channel picker on On the air, the switch now reads Off / On / Christmas for everyone, and this guide.</span></li>
+      <li><time>Nov 21, 2026</time><span><b>Website:</b> YouTube link in the footer and a "Download on the App Store" badge for the iPhone app.</span></li>
+      <li><time>Nov 21, 2026</time><span><b>Christmas switch</b> (Off / Mixed in / Christmas only) and the real Elf Band CD cover (Christmas 2000) on all 12 Elf Band songs.</span></li>
+      <li><time>Nov 20, 2026</time><span><b>Christmas mode.</b> The 12 Elf Band songs joined the library, switched off outside the Christmas dates; the app and website can show a Christmas look.</span></li>
+      <li><time>Nov 11, 2026</time><span><b>Live listener count</b> on the website.</span></li>
+      <li><time>Nov 6, 2026</time><span><b>Control Room</b> opened: songs, uploads, featured times, history with undo.</span></li>
+      <li><time>Oct 10, 2026</time><span><b>iPhone app</b> support: big covers and requests inside the app.</span></li>
+      <li><time>Oct 5, 2026</time><span><b>The new station:</b> everyone hears the same second; the hidden DJ panel; 68 songs the old station never had.</span></li>
+    </ul>
+  </section>
+</div>

@@ -24,6 +24,7 @@
       <button class="tabb" data-tab="upload">Add songs</button>
       <button class="tabb" data-tab="featured">Featured times <b id="t-feat"></b></button>
       <button class="tabb" data-tab="activity">History</button>
+      <button class="tabb" data-tab="guide">How it works</button>
     </div>
   </nav>
 </header>
@@ -76,7 +77,7 @@
       </div>
       <div class="card pad pick-card">
         <h2>Play a song</h2>
-        <p class="muted">Find a song, then play it right now for everyone, or have it play next.</p>
+        <p class="muted" id="pick-note">Find a song, then play it right now for everyone, or have it play next.</p>
         <input id="pick-q" type="search" placeholder="Type a song or album name" aria-label="Find a song to play" autocomplete="off">
         <div id="pick-results" class="pick-results"></div>
       </div>
@@ -161,6 +162,11 @@
       <div class="card-h pad-h"><h2>History</h2><span class="muted small">Every change, who made it, and an undo where it makes sense.</span></div>
       <div id="act"></div>
     </div>
+  </section>
+
+  <!-- HOW IT WORKS (source: guide.html, filled in by the Worker) -->
+  <section data-panel="guide" hidden>
+{{GUIDE}}
   </section>
 </main>
 

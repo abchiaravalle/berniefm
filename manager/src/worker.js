@@ -20,6 +20,7 @@ import APP_JS from './ui/app.js.txt';
 import APP_CSS from './ui/app.css.txt';
 import CONVERT_JS from './ui/convert.js.txt';
 import MP3_JS from './ui/mp3.js.txt';   // same source as ./mp3.js (scripts/check_mp3_copy.sh keeps them identical)
+import GUIDE_HTML from './ui/guide.html'; // the "How it works" tab (plain-words guide, versioned here)
 
 const NOINDEX = { 'x-robots-tag': 'noindex, nofollow' };
 const SEC = { ...NOINDEX, 'x-frame-options': 'DENY', 'referrer-policy': 'same-origin', 'x-content-type-options': 'nosniff' };
@@ -376,6 +377,28 @@ async function api(request, env, url, who, ctx) {
 
   if (p === '/me' && m === 'GET') {
     return json({ email: who, app: APP_NAME, tagline: APP_TAGLINE, sections: SECTIONS, tz: DEFAULT_TZ, tz_labels: TZ_LABEL, ff: FF_VERSION, part_size: PART_SIZE, max_bytes: MAX_SONG_BYTES, lead_ms: DJ_LEAD_MS, now, media: mediaBase(env) });
+  }
+
+  // ----- the "How it works" tab: the few live facts it shows that the other calls don't carry -----
+  //   people: who can sign in (secret GUIDE_PEOPLE, set at deploy from the private list; never in the repo)
+  //   app: the iPhone app's version on the App Store (Apple's public lookup, cached 6 h)
+  if (p === '/guide' && m === 'GET') {
+    const people = String(env.GUIDE_PEOPLE || '').split(/[\s,]+/).filter((x) => /^[^@\s]+@[^@\s]+$/.test(x));
+    let app = null;
+    try {
+      const key = new Request('https://controlroom.internal/guide-app-v1');
+      let r = await caches.default.match(key);
+      if (!r) {
+        const up = await fetch('https://itunes.apple.com/lookup?id=6821450174&country=us', { signal: AbortSignal.timeout(4000) });
+        const j = await up.json();
+        const x = j && j.results && j.results[0];
+        r = new Response(JSON.stringify(x ? { version: x.version, released_ms: Date.parse(x.currentVersionReleaseDate) || null, url: String(x.trackViewUrl || '').replace(/\?uo=4$/, '') } : null),
+          { headers: { 'content-type': 'application/json', 'cache-control': 'max-age=21600' } });
+        ctx.waitUntil(caches.default.put(key, r.clone()));
+      }
+      app = await r.json();
+    } catch { app = null; }
+    return json({ now, people, app });
   }
 
   // ----- library -----
@@ -772,7 +795,7 @@ export default {
     if (request.method !== 'GET' && request.method !== 'HEAD') return new Response(null, { status: 405, headers: SEC });
     const page = { ...SEC, 'cache-control': 'no-store' };
     if (path === '/' || path === '/index.html') {
-      const html = INDEX_HTML.replaceAll('{{APP_NAME}}', APP_NAME).replaceAll('{{APP_TAGLINE}}', APP_TAGLINE);
+      const html = INDEX_HTML.replace('{{GUIDE}}', () => GUIDE_HTML).replaceAll('{{APP_NAME}}', APP_NAME).replaceAll('{{APP_TAGLINE}}', APP_TAGLINE);
       return new Response(html, { headers: { ...page, 'content-type': 'text/html; charset=utf-8', 'content-security-policy': PAGE_CSP } });
     }
     if (path === '/app.js') return new Response(APP_JS, { headers: { ...page, 'content-type': 'text/javascript; charset=utf-8' } });
