@@ -144,6 +144,43 @@ r = await api('/features/' + futureId, { method: 'PUT', body: { name: 'Future te
 check('edit future feature (yearly, other time zone)', r.s === 200 && r.j.feature.yearly && r.j.feature.tz === 'America/New_York' && r.j.feature.mode === 'only' && r.j.replanned === false, r.j.error || '');
 for (const id of [futureId, xmasId]) await api('/features/' + id, { method: 'DELETE' });
 
+// --- the Christmas switch (2026-11-21). The local D1 seeded from a 2026-11-20+ export holds the real
+// "Christmas" period (id 1); with an older export this part creates one.
+{
+  let c = (await api('/christmas')).j.christmas;
+  if (!c) {
+    r = await api('/features', { method: 'POST', body: { name: 'Christmas', mode: 'unlock', weight: 3, start_local: fmt(now - 864e5, 'America/New_York'), end_local: fmt(now + 20 * 864e5, 'America/New_York'), tz: 'America/New_York', yearly: true, items: [{ kind: 'album', value: 'Christmas' }] } });
+    c = (await api('/christmas')).j.christmas;
+  }
+  check('switch: GET /christmas finds the Christmas period', c && /christmas/i.test(c.name) && ['off', 'mixed', 'only', 'custom'].includes(c.setting), c && c.setting);
+  b = (await api('/booth')).j;
+  check('switch: the booth carries the same Christmas state', b.christmas && b.christmas.id === c.id && b.christmas.setting === c.setting);
+  const steps = [['mixed', (f) => f.mode === 'unlock' && f.pace === 3 && f.gap_min === 120 && f.active], ['only', (f) => f.mode === 'only' && f.gap_min === 30 && f.active], ['off', (f) => !f.active]];
+  for (const [set, ok] of steps) {
+    const t = Date.now();
+    r = await api('/christmas', { method: 'POST', body: { setting: set } });
+    const f = (await api('/features')).j.features.find((x) => x.id === c.id);
+    check(`switch -> ${set}: saved, re-planned, heard from the first song after the 90 s lock (${r.j.from_ms ? Math.round((r.j.from_ms - t) / 1000) + ' s' : '?'})`, r.s === 200 && r.j.to === set && r.j.replanned === true && r.j.from_ms >= t + 90000 && ok(f) && f.setting === set, r.j.error || JSON.stringify({ mode: f.mode, pace: f.pace, gap: f.gap_min, active: f.active }));
+    const a = (await api('/activity')).j.activity[0];
+    check(`switch -> ${set}: History entry with undo`, a.action === 'christmas' && a.undoable === 1 && a.who === 'tester@local.test', a.summary);
+  }
+  r = await api('/christmas', { method: 'POST', body: { setting: 'off' } });
+  check('switch: same setting again does nothing', r.s === 200 && r.j.changed === false && r.j.replanned === false);
+  r = await api('/christmas', { method: 'POST', body: { setting: 'party' } });
+  check('switch: unknown setting refused', r.s === 400, r.j.error);
+  x = await fetch(BASE + '/api/christmas', { method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://evil.example' }, body: '{"setting":"only"}' });
+  check('switch: write from another origin refused', x.status === 403);
+  let act2 = (await api('/activity')).j.activity;
+  r = await api('/activity/' + act2.find((a) => a.action === 'christmas').id + '/undo', { method: 'POST' });
+  check('switch: History undo of "Off" puts "Christmas only" back', r.s === 200 && (await api('/christmas')).j.christmas.setting === 'only');
+  // the Featured times editor sends the same settings
+  const f = (await api('/features')).j.features.find((x) => x.id === c.id);
+  r = await api('/features/' + c.id, { method: 'PUT', body: { name: f.name, tz: f.tz, start_local: f.start_local, end_local: f.end_local, yearly: f.yearly, note: f.note, items: f.items, setting: 'mixed' } });
+  check('editor: saving with setting "mixed" = the switch reads Mixed in', r.s === 200 && (await api('/christmas')).j.christmas.setting === 'mixed', r.j.error || '');
+  r = await api('/features/' + c.id, { method: 'PUT', body: { name: 'July 4th', tz: f.tz, start_local: f.start_local, end_local: f.end_local, yearly: f.yearly, items: f.items, setting: 'mixed' } });
+  check('editor: the three settings are refused for a period not named Christmas', r.s === 400, r.j.error);
+}
+
 // --- booth: play now + skip
 b = (await api('/booth')).j;
 const pick = songs.find((s) => s.enabled && !b.next.some((i) => i.track.id === s.id) && s.id !== b.current.track.id);

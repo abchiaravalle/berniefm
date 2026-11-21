@@ -131,16 +131,72 @@ period in the Control Room whose name contains "Christmas" or "Holiday".
   website's snow + lights (`public/season-v1.js`, one script tag) live on branch `christmas-web`
   and are on the preview only (https://christmas-web.berniefm.pages.dev) until Adam says ship it.
   Forcing it for testing: `?season=christmas` / `?season=off` on the website.
-- **Turn it off early:** Control Room > Featured times > Christmas > Pause (or History > Undo).
-  The schedule re-plans at once and the apps drop the look within 5 minutes.
+- **Turn it off early:** Control Room > On the air > Christmas > **Off** (or Featured times > Christmas > Pause,
+  or History > Undo). The schedule re-plans at once and the apps drop the look within 5 minutes.
 - Requests: the request list (`/api/library`) and the album browser (`/api/catalog`) only show
   switched-on songs, so the 12 Elf Band songs can't be requested or picked from the website DJ
   panel even in December; the Control Room booth can play them while the period is on.
-- Tests: `node --no-warnings manager/test/test_season.mjs` (21 checks).
+- Tests: `node --no-warnings manager/test/test_season.mjs` (22 checks).
 - Adding the songs used the work-folder recipe (`christmas_transcode.py` runs transcode.py +
   transcode2.py, `christmas_publish.py` uploads and inserts switched off, `christmas_verify.py
   --remote` checks the stored files). Backup + rollback:
   `/Volumes/6154577230/client-backups/bcradio-d1-2026-11-20-christmas/`.
+- **Cover (2026-11-21):** all 12 Elf Band songs (Christmas Time Again too) use Adam's photo of the
+  real CD, Christmas 2000: `art/f982bb0a2abbf539.jpg` (600 px) + `art/hd/` (1400 px), square crop of
+  1 px off the left and 5 px off the right, nothing else changed. Set through the Control Room (History
+  has 12 "Changed the cover" entries with undo); the old placeholder `art/fae5fd5920505a3a.jpg` and the
+  2013 Christmas Time Again cover `art/f9f8361927d673db.jpg` stay in R2 for undo.
+
+### The Christmas switch (Control Room, 2026-11-21)
+At the top of **On the air**: a card called **Christmas** with three choices. It drives the Christmas
+featured period (the first period named like /christmas|holiday/i, the same rule `/api/season` uses).
+Featured times > Christmas > Edit shows the same three choices, so the two never disagree. Every
+change asks first, is logged in History with undo, and re-plans the part of the schedule that hasn't
+started (`replanFuture`: the song on air, the next 90 s, DJ picks and listener requests stay). It is
+heard from the first song that starts after that 90 s lock: 2-5 minutes in tests, never mid-song.
+The yearly window (Nov 20 to Dec 26, Eastern) doesn't change; outside it the switch has no effect.
+
+| Choice | What listeners hear | The period's row |
+|---|---|---|
+| **Off** | no switched-off Christmas songs; On This Night and Winnie's Song at their normal rate; `/api/season` = `{theme:null}` so the app + website drop the Christmas look | `active=0` (the existing pause; the last setting is kept) |
+| **Mixed in** | about 1 in 3 songs is a Christmas song, spread out: never two in a row, never more than 3 other songs in a row, one song never again within 2 h | `mode=unlock, pace=3, gap_min=120` |
+| **Christmas only** | only the 14 songs, shuffled: every one plays before any repeats (a cycle is ~45 min), never the same song twice in a row, never normal rotation; a pending listener request or DJ pick still plays in its turn | `mode=only, gap_min=30` |
+
+Engine (`functions/_lib.js`): two additive, nullable columns on `features`
+(`manager/migrations/0003_christmas_switch.sql`). NULL on both = the rules from before, byte for byte
+(`manager/test/sched_equiv.mjs` runs today's prod engine e93f1fb against the new one on the real export,
+with the live Christmas period on, plus active 'more' and 'only' rules: identical).
+- `pace` (with `unlock`/`more`): the period's songs are kept out of the normal pick. After k other songs
+  the next slot is a Christmas song with chance 0 below pace-2, 25 % at pace-2, 60 % at pace-1, always
+  from pace on. Which one: the least recently played whose own gap has passed (random among the 3
+  stalest), avoiding the album of the song before. Replaces the old "3x as staler" boost, which on
+  2026-11-20 played all 14 in one burst (22:19-01:59 ET) and then none for ~8 h.
+- `gap_min`: the period's own repeat gap in minutes instead of the station-wide 6 h. With `mode=only`
+  it also switches on the shuffled cycle (plays since the period was last changed, counted in D1).
+- Only for such a period the planner reads 2 more things (the last 40 slots and, for "only", one
+  count), so other plans cost the same D1 calls as before.
+
+24 h dry run on the prod export of 2026-11-21 09:44 ET, from the real state (all 14 played last night),
+3 seeds (`~/.hermes/workspace/bcradio-christmas/switch/sim_switch.mjs`):
+
+| | before (unlock 3x) | Mixed in |
+|---|---|---|
+| Christmas share | 8.2-8.3 % (1 in 12) | 31.3-32.8 % (1 in 3.1) |
+| longest stretch with no Christmas song | 338-459 min (77-104 songs) | 16-17 min (3 songs) |
+| most Christmas songs in any hour | 5-6 (in a burst) | 6-7 (spread) |
+| shortest repeat of one song | 630-640 min | 122-139 min |
+| Christmas back to back | 1-4 | 0 |
+
+Christmas only (gap 30 min): 31 full cycles in 24 h, each 45.0 min (49.6 when a listener request
+slots in), every cycle 14 different songs, the same song never twice in a row, nothing else plays.
+
+Tests (all on the fresh export, `BCRADIO_EXPORT=<export.sql>` picks it):
+`sched_equiv.mjs` (61, the hard gate), `sched_switch.mjs` (39), `sched_features.mjs` (42),
+`test_season.mjs` (22), `sched_test_orig.mjs` (10), `test_api_local.mjs` (55),
+`verify_ui_local.py` (original UI suite), and `~/.hermes/workspace/bcradio-christmas/switch/11_local_ui.py`
+(the switch in real Chrome, every state + confirm + History undo + the editor, desktop 1280 + phone 430).
+Backup + rollback from before the switch: `~/.hermes/backups/bcradio-d1-2026-11-21-christmas-switch/`
+(the aux drive hung that morning).
 
 ## Old design
 The pre-2026-10-05 page (with the holiday mode toggles) is kept in `legacy/` for reference.

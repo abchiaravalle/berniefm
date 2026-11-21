@@ -5,7 +5,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
-import { d1, seedRandom, checkTimeline, checkBookkeeping, makeChecker, fromExport, applyNewTables } from './d1shim.mjs';
+import { d1, seedRandom, checkTimeline, checkBookkeeping, makeChecker, fromExport, applyNewTables, exportPath } from './d1shim.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '../..');
@@ -181,12 +181,13 @@ const slots = (db, a, b) => db.prepare('SELECT s.seq, s.start_ms, s.track_id, s.
 
 // ---- 7. real prod export with the Christmas-style unlock + a 'more' rule, 24 h, racing writers
 {
-  const exp = fs.readdirSync('/Volumes/6154577230/client-backups/bcradio-d1-2026-11-06').find(f => f.endsWith('.sql'));
-  const db = fromExport('/Volumes/6154577230/client-backups/bcradio-d1-2026-11-06/' + exp);
+  const db = fromExport(exportPath());
   applyNewTables(db, path.join(REPO, 'schema.sql'));
   const env = { DB: d1(db), MEDIA: { async put() {} } };
   const t0 = db.prepare('SELECT MAX(created_ms) m FROM schedule').get().m + 1000;
   const seq0 = db.prepare('SELECT MAX(seq) m FROM schedule').get().m;   // older rows hold real idle gaps from before
+  // exports from after 2026-11-20 already hold the live Christmas period: pause it so this part measures only its own rules
+  db.prepare('UPDATE features SET active=0').run();
   // pretend 6 Dreamer songs were switched off and unlocked, and Albums boosted 2x
   db.prepare("UPDATE tracks SET enabled=0 WHERE id IN (SELECT id FROM tracks WHERE cat_album='Dreamer' LIMIT 6)").run();
   rule(db, { mode: 'unlock', weight: 2, start: t0 + 3 * H, end: t0 + 20 * H, items: [['album', 'Dreamer']] });
@@ -194,7 +195,8 @@ const slots = (db, a, b) => db.prepare('SELECT s.seq, s.start_ms, s.track_id, s.
   seedRandom(77);
   for (let t = t0; t < t0 + 24 * H; t += 9 * 60e3) await Promise.all([lib.ensureSchedule(env, t, { publish: false }), lib.ensureSchedule(env, t + 5, { publish: false })]);
   const off = new Set(db.prepare("SELECT id FROM tracks WHERE enabled=0").all().map(r => r.id));
-  const s = db.prepare('SELECT track_id, start_ms FROM schedule WHERE start_ms >= ? ORDER BY seq').all(t0);
+  // only slots this run planned (an export can already hold planned slots of the songs switched off above)
+  const s = db.prepare('SELECT track_id, start_ms FROM schedule WHERE start_ms >= ? AND seq > ? ORDER BY seq').all(t0, seq0);
   const offBefore = s.filter(x => off.has(x.track_id) && x.start_ms < t0 + 3 * H).length;
   const offIn = s.filter(x => off.has(x.track_id) && x.start_ms >= t0 + 3 * H && x.start_ms < t0 + 20 * H);
   check('prod data: unlocked songs absent before the window', offBefore === 0, 'n=' + offBefore);

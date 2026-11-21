@@ -78,7 +78,11 @@ CREATE TABLE IF NOT EXISTS features (
   created_ms INTEGER NOT NULL,
   created_by TEXT NOT NULL DEFAULT '',
   updated_ms INTEGER NOT NULL,
-  updated_by TEXT NOT NULL DEFAULT ''
+  updated_by TEXT NOT NULL DEFAULT '',
+  -- 2026-11-21 Christmas switch (existing databases: manager/migrations/0003_christmas_switch.sql).
+  -- NULL = the rules above, unchanged.
+  gap_min INTEGER,                        -- the period's songs may come back after this many minutes (not 6 h); with 'only' = on repeat
+  pace INTEGER                            -- 'unlock'/'more': about 1 in every `pace` songs, spread out, never two in a row
 );
 CREATE INDEX IF NOT EXISTS features_active ON features(active, start_ms);
 CREATE TABLE IF NOT EXISTS feature_tracks (
