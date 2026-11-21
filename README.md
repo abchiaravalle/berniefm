@@ -20,6 +20,7 @@ functions/         Pages Functions
   api/time.js      server clock
   api/now.js       timeline straight from D1 (fallback; players read media.bcradio.net/state/now.json)
   api/library.js   requestable songs + availability
+  api/season.js    seasonal look switch for the iPhone app + website ({theme:'christmas'} while a Christmas period is on)
   api/request.js   song requests (Turnstile + rate limits), re-plans the queue
   api/nowplaying/  AzuraCast-compatible now-playing JSON (old integrations keep working, edge cached 5 s)
   api/station/     old AzuraCast request API for pages cached from before the switch
@@ -45,12 +46,15 @@ never had: All or Nothing, Dreamer, This Is What I See (from album files on Nava
 Maybe One Day, Standing in the Shadows, the Driven by Desire 2025 versions and recent
 singles (from the official releases on Bernie's YouTube channel). Every track is matched
 to its exact recording by audio fingerprint, not by title; Bernie's full Apple Music
-catalog (241 tracks, 38 releases) is covered except his Christmas album (held back).
+catalog (241 tracks, 38 releases) is covered. His Christmas songs (the Elf Band album, 12 more
+songs) joined on 2026-11-20 switched off: they only play inside the Christmas featured period
+(see "Christmas mode" below), so the library reads 346 songs, 334 of them in everyday rotation.
 Expansion tooling: `expansion_plan.py`, `build_expansion.py` -> `expansion_lib.json`.
 
 ## Endpoints
 - `https://bcradio.net/` player
 - `https://bcradio.net/api/now` timeline
+- `https://bcradio.net/api/season` seasonal look switch (`{"theme":"christmas","until_ms":...}` or `{"theme":null}`)
 - `https://stream.bcradio.net/listen/bcradio/radio.mp3` legacy continuous stream (VLC, apps)
 - `https://stream.bcradio.net/api/nowplaying` legacy AzuraCast-shaped JSON
 
@@ -110,6 +114,33 @@ timeline as the website. Two small server pieces exist for it:
   `public/listeners-v1.js`. Schema: `manager/migrations/0002_listeners.sql` (also at the end of `schema.sql`).
 - Local test (local D1 only): `wrangler pages dev --port 8820`, then
   `BASE=http://127.0.0.1:8820 node manager/test/test_listen_local.mjs` (31 checks).
+
+## Christmas mode (/api/season)
+One switch drives the Christmas songs, the iPhone app look and the website look: a featured
+period in the Control Room whose name contains "Christmas" or "Holiday".
+- **The songs.** Period "Christmas" (id 1, added 2026-11-20): Nov 20 00:00 to Dec 26 23:59
+  **Eastern time** (America/New_York), every year, mode *let switched-off songs play*, 3x as often.
+  Songs: the 12 Elf Band songs (switched off, so they never play outside the window) plus
+  On This Night (BC mix) and Winnie's Song (always on; inside the window they come round 3x as often).
+  In a 24 h dry run on the prod data that came to about 1 slot in 12, every song twice a day,
+  never the same song within 9 h, no two Elf Band songs back to back.
+- **The look.** `GET /api/season` answers `{"theme":"christmas","until_ms":<end of the window>}`
+  while such a period is ON right now (active, not deleted, inside a window; yearly repeats),
+  otherwise `{"theme":null}`. Public, CORS open, `Cache-Control: public, s-maxage=300` (one D1
+  read per data center every 5 minutes). The iPhone app switches its snow + lights on this; the
+  website's snow + lights (`public/season-v1.js`, one script tag) live on branch `christmas-web`
+  and are on the preview only (https://christmas-web.berniefm.pages.dev) until Adam says ship it.
+  Forcing it for testing: `?season=christmas` / `?season=off` on the website.
+- **Turn it off early:** Control Room > Featured times > Christmas > Pause (or History > Undo).
+  The schedule re-plans at once and the apps drop the look within 5 minutes.
+- Requests: the request list (`/api/library`) and the album browser (`/api/catalog`) only show
+  switched-on songs, so the 12 Elf Band songs can't be requested or picked from the website DJ
+  panel even in December; the Control Room booth can play them while the period is on.
+- Tests: `node --no-warnings manager/test/test_season.mjs` (21 checks).
+- Adding the songs used the work-folder recipe (`christmas_transcode.py` runs transcode.py +
+  transcode2.py, `christmas_publish.py` uploads and inserts switched off, `christmas_verify.py
+  --remote` checks the stored files). Backup + rollback:
+  `/Volumes/6154577230/client-backups/bcradio-d1-2026-11-20-christmas/`.
 
 ## Old design
 The pre-2026-10-05 page (with the holiday mode toggles) is kept in `legacy/` for reference.
