@@ -442,3 +442,33 @@ legend{font-size:13px;font-weight:550;color:var(--amp-slate);margin-bottom:5px;p
   .pick-row .b .btn{flex:1 1 0}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* "How it works" tab (guide.html, 2026-11-21): plain reading layout, same cards and type as the rest */
+.guide{max-width:860px}
+.g-top h2{font-size:22px;margin-bottom:6px}
+.g-facts{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 14px}
+.g-fact{display:inline-flex;align-items:baseline;gap:5px;padding:6px 11px;border-radius:999px;background:var(--amp-bg-soft);font-size:13.5px;color:var(--amp-slate)}
+.g-fact b{color:var(--amp-green-deep);font-weight:650}
+.g-jump{display:flex;flex-wrap:wrap;gap:6px 8px;border-top:1px solid var(--amp-line);padding-top:12px}
+.g-jump a{display:inline-flex;align-items:center;min-height:36px;padding:0 12px;border:1px solid #cdd5da;border-radius:999px;text-decoration:none;font-size:14px;font-weight:550;color:var(--amp-ink);background:#fff}
+.g-jump a:hover{border-color:var(--amp-green-deep);color:var(--amp-green-deep)}
+.g-jump a:focus-visible{outline:2px solid var(--amp-info);outline-offset:2px}
+.g-sec{scroll-margin-top:118px}
+.g-sec h2{font-size:19px;margin-bottom:10px}
+.g-sec p{margin:0 0 12px;line-height:1.6}
+.g-sec p:last-child{margin-bottom:0}
+.g-sec [data-g]{color:var(--amp-green-deep);font-weight:600}
+.g-list,.g-steps{margin:0 0 12px;padding-left:22px;line-height:1.6}
+.g-list li,.g-steps li{margin:0 0 7px}
+.g-steps li::marker{font-weight:650;color:var(--amp-green-deep)}
+.g-tip{background:var(--amp-bg-green);border-radius:10px;padding:10px 14px}
+.g-log{list-style:none;margin:0;padding:0}
+.g-log li{display:grid;grid-template-columns:120px 1fr;gap:12px;padding:10px 0;border-top:1px solid var(--amp-line);line-height:1.55}
+.g-log li:first-child{border-top:0;padding-top:0}
+.g-log time{font-size:13px;font-weight:600;color:var(--amp-slate);white-space:nowrap}
+@media (max-width:640px){
+  .g-top h2{font-size:20px}
+  .g-sec{scroll-margin-top:112px}
+  .g-log li{grid-template-columns:1fr;gap:2px}
+  .g-list,.g-steps{padding-left:20px}
+}

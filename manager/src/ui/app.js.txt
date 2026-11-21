@@ -75,10 +75,49 @@
     if (tab === 'booth') loadBooth();
     if (tab === 'activity') loadActivity();
     if (tab === 'featured') loadFeatures();
+    if (tab === 'guide') { renderGuide(); window.scrollTo(0, 0); }
     if (location.hash !== '#' + tab) history.replaceState(null, '', '#' + tab);
   }
   $$('.tabb').forEach(function (b) { b.addEventListener('click', function () { show(b.getAttribute('data-tab')); }); });
-  var TABS = ['booth', 'songs', 'upload', 'featured', 'activity'];
+  var TABS = ['booth', 'songs', 'upload', 'featured', 'activity', 'guide'];
+
+  // ---------- how it works (guide.html): fill in the live numbers ----------
+  var guideFacts = null;
+  function gset(k, v) { $$('[data-g="' + k + '"]').forEach(function (e) { e.textContent = v; }); }
+  function renderGuide() {
+    var on = S.songs.filter(function (s) { return s.enabled; }).length;
+    gset('songs-on', String(on)); gset('songs-off', String(S.songs.length - on));
+    var x = (S.features || []).filter(function (f) { return f.christmas; }).sort(function (a, b) { return a.id - b.id; })[0];
+    var LBL = { off: 'Off', mixed: 'On', only: 'Christmas for everyone', custom: 'a custom setting' };
+    if (x) {
+      gset('xmas-name', x.name);
+      gset('xmas-setting', LBL[x.setting] || x.setting);
+      gset('xmas-count', String(x.song_count)); gset('xmas-off', String(x.off_count));
+      var d = function (l) { var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(l || ''); if (!m) return l; var dt = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5])); return dt.toLocaleString('en-US', { timeZone: 'UTC', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }); };
+      gset('xmas-dates', 'from ' + d(x.start_local) + ' to ' + d(x.end_local) + ' ' + (x.tz_label || x.tz));
+      gset('xmas-yearly', x.yearly ? ', every year' : '');
+      gset('channels', x.on_now && x.setting !== 'off' && x.setting !== 'only' ? 'on (Mixed, Christmas only, No Christmas)' : 'off (one station)');
+    } else {
+      gset('xmas-name', 'Christmas'); gset('xmas-setting', 'no Christmas period yet'); gset('channels', 'off (one station)');
+      gset('xmas-dates', '(not set up)'); gset('xmas-count', '0'); gset('xmas-off', '0');
+    }
+    if (!guideFacts) {
+      guideFacts = api('/guide').then(function (j) { return j; }).catch(function () { return null; });
+    }
+    guideFacts.then(function (j) {
+      if (!j) { guideFacts = null; return; }
+      gset('people', j.people && j.people.length ? j.people.join(', ') : 'ask Adam');
+      gset('app-version', j.app && j.app.version ? j.app.version + (j.app.released_ms ? ' (since ' + new Date(j.app.released_ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ')' : '') : 'see the App Store');
+    });
+  }
+  // jump list: scroll inside the tab (the address keeps #guide, so a reload stays here)
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('.g-jump a');
+    if (!a) return;
+    e.preventDefault();
+    var t = document.getElementById(a.getAttribute('href').slice(1));
+    if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
   window.addEventListener('hashchange', function () { var t = location.hash.slice(1); if (S.me && TABS.indexOf(t) > -1 && t !== S.tab) show(t); });
 
   // ---------- songs ----------
