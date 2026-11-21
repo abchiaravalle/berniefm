@@ -1,4 +1,5 @@
 import { json, ipHash, limited, verifyTurnstile, ensureSchedule, stationState, publishState, NO_REPEAT_TRACK_MS } from '../_lib.js';
+import { extraCh, requestOnChannel } from '../_channels.js';
 
 // Hostname pin for the shared Turnstile widget: only tokens solved on this
 // station's own hosts (incl. this project's preview aliases) are accepted.
@@ -61,6 +62,14 @@ export async function onRequestPost({ request, env }) {
   }
   if (await limited(env, 'req1h', who, 3600, 8)) {
     return json({ ok: false, message: 'That is a lot of requests for one hour. Please try again later.' }, 429);
+  }
+
+  // Christmas channels: {ch:'christmas'|'classic'} goes to that channel's own request line
+  // (../_channels.js). Channel off right now: falls through to the main timeline below.
+  const ch = extraCh(body.ch);
+  if (ch) {
+    const r = await requestOnChannel(env, ch, trackId, who, Date.now());
+    if (r) return json(r.body, r.status);
   }
 
   const now = Date.now();

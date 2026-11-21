@@ -29,6 +29,16 @@
 //   F  same, new columns added (NULL)
 //   G  F + an active 'more' rule and an active 'only' rule during the run
 //
+// Part 3 (2026-11-21, the Christmas channels): today's prod engine (test/_lib.9c8f7f9.js = functions/_lib.js
+// at 9c8f7f9, what bcradio.net runs: the live Christmas period in "Mixed in") vs the new engine on the export
+// AS IS (pace 3, gap 120 on the live period):
+//   H  export as is, channel tables missing (code deployed before the migration)
+//   I  export + migrations/0004_channels.sql (empty channel tables, listen_sessions.ch)
+//   J  I + both channels already holding a past timeline, own plays and pending requests
+// (sched_channels.mjs repeats this with both channels busy at every step.)
+// Part 2 resets pace/gap_min to NULL on the copy, because since 2026-11-21 the live period has them set
+// and e93f1fb ignores them (the comparison is about periods WITHOUT the new settings).
+//
 // usage: BCRADIO_EXPORT=path/to/export.sql node manager/test/sched_equiv.mjs
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -39,6 +49,9 @@ const REPO = path.resolve(HERE, '../..');
 const EXPORT = process.argv[2] || exportPath();
 const OLD = await import(path.join(HERE, '_lib.before.js'));
 const PROD = await import(path.join(HERE, '_lib.e93f1fb.js'));
+const LIVE = await import(path.join(HERE, '_lib.9c8f7f9.js'));
+import fs from 'node:fs';
+const MIG4 = fs.readFileSync(path.join(REPO, 'manager/migrations/0004_channels.sql'), 'utf8');
 const NEW = await import(path.join(REPO, 'functions/_lib.js'));
 const { check, fails } = makeChecker();
 
@@ -206,29 +219,57 @@ function extraRules(db) {
   return db;
 }
 const xmasOn = liveF.some(f => /christmas/i.test(f.name) && f.active);
+// Part 2 is about periods without the new settings: clear them on every copy (no-op on older exports)
+const plain = (db) => { if (addSwitchColumns(db)) db.exec('UPDATE features SET pace=NULL, gap_min=NULL'); return db; };
 check('part 2: the export carries the live Christmas period (on)', xmasOn, JSON.stringify(liveF));
 for (const seed of [1, 1225, 424242]) {
-  const dbRef = fromExport(EXPORT);
+  const dbRef = plain(fromExport(EXPORT));
   const ref = await run(PROD, dbRef, T0, seed);
   check(`seed ${seed}: e93f1fb engine timeline valid with Christmas on (${ref.steps} steps)`, checkTimeline(dbRef, { allowIdleGaps: true }).length === 0);
-  compare(`seed ${seed}: E real Christmas period, no new columns`, ref, await run(NEW, fromExport(EXPORT), T0, seed));
-  { const d = fromExport(EXPORT); addSwitchColumns(d); compare(`seed ${seed}: F real Christmas period, new columns NULL`, ref, await run(NEW, d, T0, seed)); d.close(); }
+  { const d = fromExport(EXPORT); if (addSwitchColumns(d)) d.exec('ALTER TABLE features DROP COLUMN pace; ALTER TABLE features DROP COLUMN gap_min');
+    compare(`seed ${seed}: E real Christmas period, no new columns`, ref, await run(NEW, d, T0, seed)); d.close(); }
+  { const d = plain(fromExport(EXPORT)); compare(`seed ${seed}: F real Christmas period, new columns NULL`, ref, await run(NEW, d, T0, seed)); d.close(); }
   {
-    const dRef = extraRules(fromExport(EXPORT));
+    const dRef = extraRules(plain(fromExport(EXPORT)));
     const ref2 = await run(PROD, dRef, T0, seed);
-    const d = extraRules(fromExport(EXPORT)); addSwitchColumns(d);
+    const d = extraRules(plain(fromExport(EXPORT)));
     compare(`seed ${seed}: G Christmas + active 'more' + active 'only', new columns NULL`, ref2, await run(NEW, d, T0, seed));
     dRef.close(); d.close();
   }
   // negative control: setting the new pace on the Christmas period DOES change things
   {
-    const d = fromExport(EXPORT); addSwitchColumns(d);
+    const d = plain(fromExport(EXPORT));
     d.prepare("UPDATE features SET pace=3, gap_min=120 WHERE name LIKE '%Christmas%'").run();
     const got = await run(NEW, d, T0, seed);
     check(`seed ${seed}: negative control: 'mixed in' on the Christmas period DOES change the schedule`, got.snaps.some((s, i) => s !== ref.snaps[i]));
     check(`seed ${seed}: negative control timeline still valid`, checkTimeline(d, { allowIdleGaps: true }).length === 0, checkTimeline(d, { allowIdleGaps: true }).join('; '));
     d.close();
   }
+  dbRef.close();
+}
+// ---------- Part 3: the Christmas channels == today's prod engine 9c8f7f9 on the live export ----------
+function busyChannels(db) {
+  db.exec(MIG4);
+  const xs = db.prepare("SELECT value FROM feature_tracks WHERE feature_id=1 AND kind='track' ORDER BY value").all().map(r => r.value);
+  const rs = db.prepare('SELECT id, dur_ms FROM tracks WHERE enabled=1 ORDER BY id LIMIT 30').all();
+  const ins = db.prepare("INSERT INTO ch_schedule(channel, seq, track_id, start_ms, dur_ms, request_id, created_ms, writer) VALUES (?,?,?,?,?,NULL,?,'w')");
+  const pl = db.prepare('INSERT INTO ch_plays(channel, track_id, last_played_ms, plays) VALUES (?,?,?,1) ON CONFLICT(channel, track_id) DO UPDATE SET last_played_ms=excluded.last_played_ms, plays=plays+1');
+  let t = T0 - 3 * 3600e3;
+  for (let i = 0; i < 40; i++) { const id = xs[i % xs.length]; ins.run('christmas', i + 1, id, t, 180000, T0 - 4 * 3600e3); pl.run('christmas', id, t); t += 180000; }
+  t = T0 - 3 * 3600e3;
+  rs.forEach((r, i) => { ins.run('classic', i + 1, r.id, t, r.dur_ms, T0 - 4 * 3600e3); pl.run('classic', r.id, t); t += r.dur_ms; });
+  db.prepare("INSERT INTO ch_requests(channel, track_id, ip_hash, created_ms, status) VALUES ('christmas', ?, 'x', ?, 'pending'), ('classic', ?, 'x', ?, 'pending')").run(xs[3], T0, rs[5].id, T0);
+  db.prepare("INSERT INTO listen_sessions(sid, platform, last_seen_ms, ch) VALUES ('abcdefghijklmnop1', 'ios', ?, 'christmas')").run(T0);
+  return db;
+}
+check('part 3: the export carries the live Christmas period in Mixed in (pace 3, gap 120)', (() => { const d = fromExport(EXPORT); const r = d.prepare('SELECT pace, gap_min, active FROM features WHERE id=1').get(); d.close(); return r && r.pace === 3 && r.gap_min === 120 && r.active === 1; })());
+for (const seed of [1, 1225, 20261121]) {
+  const dbRef = fromExport(EXPORT);
+  const ref = await run(LIVE, dbRef, T0, seed);
+  check(`seed ${seed}: 9c8f7f9 engine timeline valid with Christmas Mixed in (${ref.steps} steps)`, checkTimeline(dbRef, { allowIdleGaps: true }).length === 0);
+  { const d = fromExport(EXPORT); compare(`seed ${seed}: H live export, no channel tables`, ref, await run(NEW, d, T0, seed)); d.close(); }
+  { const d = fromExport(EXPORT); d.exec(MIG4); compare(`seed ${seed}: I live export + channel tables (empty)`, ref, await run(NEW, d, T0, seed)); d.close(); }
+  { const d = busyChannels(fromExport(EXPORT)); compare(`seed ${seed}: J live export + channels with history, plays, pending requests`, ref, await run(NEW, d, T0, seed)); d.close(); }
   dbRef.close();
 }
 console.log(fails.length ? 'SOME FAILED: ' + fails.join(' | ') : 'ALL PASS');

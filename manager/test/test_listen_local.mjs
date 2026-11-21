@@ -20,7 +20,8 @@ async function listen(body, { ip, origin, raw } = {}) {
   return { status: r.status, j };
 }
 function d1(sql) {
-  const out = execFileSync(REPO + '/node_modules/.bin/wrangler', ['d1', 'execute', 'bcradio', '--local', '--json', '--command', sql],
+  // PERSIST: the --persist-to folder the local `wrangler pages dev` uses (default: wrangler's own)
+  const out = execFileSync(REPO + '/node_modules/.bin/wrangler', ['d1', 'execute', 'bcradio', '--local', ...(process.env.PERSIST ? ['--persist-to', process.env.PERSIST] : []), '--json', '--command', sql],
     { cwd: REPO, env: { ...process.env, CLOUDFLARE_API_TOKEN: '', CLOUDFLARE_ACCOUNT_ID: '' }, encoding: 'utf8' });
   return JSON.parse(out)[0].results;
 }
@@ -98,7 +99,8 @@ r = await listen({ sid: web[2], platform: 'web', playing: true }, { ip: '10.9.9.
 ok(r.status === 200, 'other IP still fine while one is limited');
 // 6. nothing but sid/platform/last_seen in the table; hits buckets hold no raw IP
 const cols = d1("SELECT name FROM pragma_table_info('listen_sessions')").map(c => c.name);
-ok(JSON.stringify(cols) === '["sid","platform","last_seen_ms"]', 'listen_sessions columns are only sid, platform, last_seen_ms', JSON.stringify(cols));
+// 2026-11-21: + ch (which Christmas channel the player is on; NULL = the main one). Still nothing about the person.
+ok(JSON.stringify(cols) === '["sid","platform","last_seen_ms","ch"]', 'listen_sessions columns are only sid, platform, last_seen_ms, ch', JSON.stringify(cols));
 const hits = d1("SELECT bucket FROM hits WHERE bucket LIKE 'listen:%'");
 ok(hits.length > 0 && hits.every(h => /^listen:[0-9a-f]{16}:60:\d+$/.test(h.bucket) && !h.bucket.includes('10.')), 'rate-limit buckets carry only a per-minute hash', hits.slice(0, 2).map(h => h.bucket).join(' '));
 // 7. listen_minutes snapshots: wait into the next minute, ping, expect a row for the previous minute

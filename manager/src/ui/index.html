@@ -40,9 +40,9 @@
         <span class="pill" id="xmas-pill"></span>
       </div>
       <div class="xmas-seg" id="xmas-seg" role="radiogroup" aria-label="Christmas">
-        <button type="button" class="xopt" role="radio" aria-checked="false" data-set="off"><b>Off</b><small>No Christmas songs. The app and website go back to normal.</small></button>
-        <button type="button" class="xopt" role="radio" aria-checked="false" data-set="mixed"><b>Mixed in</b><small>About 1 in 3 songs is a Christmas song.</small></button>
-        <button type="button" class="xopt" role="radio" aria-checked="false" data-set="only"><b>Christmas only</b><small id="xmas-only-txt">Only the Christmas songs, on repeat.</small></button>
+        <button type="button" class="xopt" role="radio" aria-checked="false" data-set="off"><b>Off</b><small>No Christmas songs. One station for everyone. The app and website look normal.</small></button>
+        <button type="button" class="xopt" role="radio" aria-checked="false" data-set="mixed"><b>On</b><small>Listeners pick a channel: <i>Mixed</i> (about 1 in 3 is a Christmas song; everyone starts here), <i>Christmas only</i> or <i>No Christmas</i>.</small></button>
+        <button type="button" class="xopt" role="radio" aria-checked="false" data-set="only"><b>Christmas for everyone</b><small id="xmas-only-txt">One station, only the Christmas songs, on repeat. No choice.</small></button>
       </div>
       <p class="xmas-note" id="xmas-note"></p>
     </div>
@@ -52,11 +52,19 @@
       <button class="btn" type="button" id="xmas-make">Go to Featured times</button>
     </div>
     <div id="feat-banner"></div>
+    <div class="card pad chan-card" id="chan-card" hidden>
+      <div class="chan-h"><h2>Channel</h2><p class="muted small">Listeners pick one of three channels. Each is its own station: what you see and do below is for the channel picked here.</p></div>
+      <div class="chan-seg" id="chan-seg" role="radiogroup" aria-label="Channel">
+        <button type="button" class="copt" role="radio" aria-checked="true" data-ch="mixed"><b>Mixed</b><small>Everyone starts here</small><em class="cnt" data-cnt="mixed"></em></button>
+        <button type="button" class="copt" role="radio" aria-checked="false" data-ch="christmas"><b>Christmas only</b><small>Only the Christmas songs</small><em class="cnt" data-cnt="christmas"></em></button>
+        <button type="button" class="copt" role="radio" aria-checked="false" data-ch="classic"><b>No Christmas</b><small>The usual songs, no Christmas</small><em class="cnt" data-cnt="classic"></em></button>
+      </div>
+    </div>
     <div class="booth">
       <div class="card now-card" id="now-card">
         <div class="now-art-wrap"><img id="now-art" class="now-art" alt=""></div>
         <div class="now-info">
-          <div class="eyebrow"><span class="live-dot" aria-hidden="true"></span> Playing now on bcradio.net</div>
+          <div class="eyebrow"><span class="live-dot" aria-hidden="true"></span> <span id="now-where">Playing now on bcradio.net</span></div>
           <h1 id="now-title">Loading…</h1>
           <p class="now-sub" id="now-sub"></p>
           <div class="prog" aria-hidden="true"><div class="prog-bar" id="now-bar"></div></div>
@@ -226,8 +234,8 @@
     </fieldset>
     <fieldset class="modes" id="fd-xmas" hidden><legend>Christmas (same switch as on the On the air tab)</legend>
       <label class="mode"><input type="radio" name="xset" value="off"><span><b>Off</b><small>No Christmas songs. The app and website go back to normal.</small></span></label>
-      <label class="mode"><input type="radio" name="xset" value="mixed"><span><b>Mixed in</b><small>About 1 in 3 songs is a Christmas song, spread out, never two in a row.</small></span></label>
-      <label class="mode"><input type="radio" name="xset" value="only"><span><b>Christmas only</b><small>Only these songs, shuffled, every one before any repeats.</small></span></label>
+      <label class="mode"><input type="radio" name="xset" value="mixed"><span><b>On</b><small>Listeners pick a channel: Mixed (about 1 in 3 is one of these songs, spread out; everyone starts here), Christmas only, or No Christmas.</small></span></label>
+      <label class="mode"><input type="radio" name="xset" value="only"><span><b>Christmas for everyone</b><small>One station, only these songs, shuffled, every one before any repeats. No choice.</small></span></label>
       <p class="muted small" id="fd-xmas-custom" hidden></p>
     </fieldset>
     <div class="weights" id="fd-weights"><span class="lbl">How much more often</span>

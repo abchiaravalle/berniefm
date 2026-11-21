@@ -1,4 +1,5 @@
 import { json, ipHash, limited, djPlace, DJ_LEAD_MS } from '../../_lib.js';
+import { extraCh, djPlaceChannel } from '../../_channels.js';
 
 // Owner-only DJ controls. The secret tap sequence on the site only opens the
 // panel; every action here needs a device token from /api/dj/unlock, which needs
@@ -7,6 +8,7 @@ import { json, ipHash, limited, djPlace, DJ_LEAD_MS } from '../../_lib.js';
 //   POST /api/dj/check   {token}                     -> {ok}
 //   POST /api/dj/play    {token, id, mode:'now'|'next'} -> {ok, at, state}
 //   POST /api/dj/skip    {token}                     -> {ok, at, state}
+// play / skip take an optional ch:'christmas'|'classic' (a Christmas channel's timeline; default the main one).
 
 const enc = new TextEncoder();
 const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -54,11 +56,13 @@ export async function onRequestPost({ request, env, params }) {
     const id = typeof body.id === 'string' ? body.id.slice(0, 32) : '';
     if (!/^[0-9a-z]{6,32}$/.test(id)) return json({ ok: false, message: 'Unknown song.' }, 400);
     const mode = body.mode === 'next' ? 'next' : 'now';
-    const r = await djPlace(env, id, mode);
+    const ch = extraCh(body.ch);
+    const r = ch ? await djPlaceChannel(env, ch, id, mode) : await djPlace(env, id, mode);
     return json(r, r.ok ? 200 : 400);
   }
   if (action === 'skip') {
-    const r = await djPlace(env, null, 'now');
+    const ch = extraCh(body.ch);
+    const r = ch ? await djPlaceChannel(env, ch, null, 'now') : await djPlace(env, null, 'now');
     return json(r, r.ok ? 200 : 400);
   }
   return json({ ok: false, message: 'Not found.' }, 404);

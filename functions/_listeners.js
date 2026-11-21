@@ -13,17 +13,22 @@ export const PLATFORMS = ['web', 'ios', 'android'];
 export const LIVE_WINDOW_MS = 150000;   // counted if seen in the last 150 s (players ping every 60 s, so one late ping is fine)
 export const DROP_AFTER_MS = 180000;    // rows older than this are deleted
 export const SID_RE = /^[A-Za-z0-9_-]{16,64}$/;
+// Christmas channels (2026-11-21): a playing session may say which channel it is on. Stored as NULL for
+// the main timeline ('mixed'), so rows from players that don't send it count as mixed.
+export const CHS = ['mixed', 'christmas', 'classic'];
 
 export function countStatement(env, now = Date.now()) {
   return env.DB.prepare(
-    'SELECT platform, COUNT(*) AS n FROM listen_sessions WHERE last_seen_ms >= ?1 GROUP BY platform'
+    'SELECT platform, ch, COUNT(*) AS n FROM listen_sessions WHERE last_seen_ms >= ?1 GROUP BY platform, ch'
   ).bind(now - LIVE_WINDOW_MS);
 }
 
 export function countsFrom(rows) {
-  const out = { total: 0, web: 0, ios: 0, android: 0 };
+  const out = { total: 0, web: 0, ios: 0, android: 0, channels: { mixed: 0, christmas: 0, classic: 0 } };
   for (const r of rows || []) {
-    if (PLATFORMS.includes(r.platform)) { out[r.platform] = r.n; out.total += r.n; }
+    if (!PLATFORMS.includes(r.platform)) continue;
+    out[r.platform] += r.n; out.total += r.n;
+    out.channels[CHS.includes(r.ch) ? r.ch : 'mixed'] += r.n;
   }
   return out;
 }

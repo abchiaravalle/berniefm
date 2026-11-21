@@ -1,7 +1,8 @@
 import { json } from '../_lib.js';
 import { countStatement, countsFrom, cleanupStatements, minuteSnapshot } from '../_listeners.js';
 
-// GET /api/listeners -> {now, total, web, ios, android}: players seen in the last 150 s.
+// GET /api/listeners -> {now, total, web, ios, android, channels:{mixed, christmas, classic}}: players seen in
+// the last 150 s (channels = which Christmas channel they are on; players that don't say count as mixed).
 // Cached at the edge for 15 s, so however many pages poll, D1 sees about one read per
 // data center every 15 s. A cache miss also does the housekeeping (stale sessions, the
 // per-minute totals) so it happens even when no player is pinging.

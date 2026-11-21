@@ -1,7 +1,7 @@
 import { json, limited } from '../_lib.js';
-import { PLATFORMS, SID_RE, countStatement, countsFrom, cleanupStatements, minuteSnapshot } from '../_listeners.js';
+import { PLATFORMS, SID_RE, CHS, countStatement, countsFrom, cleanupStatements, minuteSnapshot } from '../_listeners.js';
 
-// POST /api/listen  {sid, platform: "web"|"ios"|"android", playing: true|false}
+// POST /api/listen  {sid, platform: "web"|"ios"|"android", playing: true|false, ch?: "mixed"|"christmas"|"classic"}
 // A playing player calls this about once a minute; playing:false (stop, page closed) removes
 // its session right away. Only (sid, platform, last_seen_ms) is stored, see ../_listeners.js.
 // The answer carries the live totals so the player can show them without a second call.
@@ -39,6 +39,8 @@ export async function onRequestPost({ request, env }) {
   if (typeof sid !== 'string' || !SID_RE.test(sid)) return json({ ok: false, message: 'Bad sid.' }, 400);
   if (typeof platform !== 'string' || !PLATFORMS.includes(platform)) return json({ ok: false, message: 'Bad platform.' }, 400);
   if (typeof playing !== 'boolean') return json({ ok: false, message: 'Bad playing.' }, 400);
+  const ch = body.ch == null ? 'mixed' : body.ch;
+  if (typeof ch !== 'string' || !CHS.includes(ch)) return json({ ok: false, message: 'Bad ch.' }, 400);
 
   const now = Date.now();
   if (await limited(env, 'listen', await minuteKey(request, env, now), 60, 30)) {
@@ -50,8 +52,8 @@ export async function onRequestPost({ request, env }) {
   if (snap) stmts.push(snap);
   stmts.push(playing
     ? env.DB.prepare(
-        'INSERT INTO listen_sessions(sid, platform, last_seen_ms) VALUES (?1, ?2, ?3) ON CONFLICT(sid) DO UPDATE SET platform=excluded.platform, last_seen_ms=excluded.last_seen_ms'
-      ).bind(sid, platform, now)
+        'INSERT INTO listen_sessions(sid, platform, last_seen_ms, ch) VALUES (?1, ?2, ?3, ?4) ON CONFLICT(sid) DO UPDATE SET platform=excluded.platform, last_seen_ms=excluded.last_seen_ms, ch=excluded.ch'
+      ).bind(sid, platform, now, ch === 'mixed' ? null : ch)
     : env.DB.prepare('DELETE FROM listen_sessions WHERE sid=?1').bind(sid));
   if (Math.random() < 0.1) stmts.push(...cleanupStatements(env, now));
   stmts.push(countStatement(env, now));

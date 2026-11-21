@@ -3,6 +3,8 @@
 // Every listener asks "what is playing at server time T and at what offset",
 // so all browsers play the same track at the same position.
 
+// The Christmas channels (christmas / classic, 2026-11-21) live in ./_channels.js and reuse the pick
+// functions exported here; nothing in this file changed for them except the `export` keywords.
 export const MEDIA = 'https://media.bcradio.net/';
 export const HORIZON_MS = 2 * 3600 * 1000;    // keep >= 2 h scheduled ahead (published to R2 as a static file)
 export const STATE_KEY = 'state/now.json';
@@ -73,7 +75,7 @@ export async function verifyTurnstile(env, token, request, expectHost, expectAct
 // skip anything already on the upcoming schedule, avoid the album/collection of
 // the last few slots, and pick randomly among the stalest few so the order never
 // feels mechanical. `pool` is sorted stalest first.
-function pickRotation(pool, exclude, recentGroups) {
+export function pickRotation(pool, exclude, recentGroups) {
   let cand = pool.filter(t => !exclude.has(t.id));
   if (!cand.length) cand = pool.slice();
   for (let k = recentGroups.length; k > 0; k--) {
@@ -147,7 +149,7 @@ export function featureWindows(f, from, to) {
 //             (the Control Room's "Mixed in").
 const F_SQL = 'SELECT id, mode, weight, start_ms, end_ms, yearly, tz, start_local, end_local FROM features WHERE active=1 AND (yearly=1 OR (start_ms < ?2 AND end_ms > ?1))';
 const F_SQL2 = 'SELECT id, mode, weight, start_ms, end_ms, yearly, tz, start_local, end_local, gap_min, pace, updated_ms FROM features WHERE active=1 AND (yearly=1 OR (start_ms < ?2 AND end_ms > ?1))';
-async function loadFeatures(env, from, to) {
+export async function loadFeatures(env, from, to) {
   try {
     let rows;
     try { ({ results: rows } = await env.DB.prepare(F_SQL2).bind(from, to).all()); }
@@ -180,7 +182,7 @@ async function loadFeatures(env, from, to) {
 // What the rules active at slot time `at` ask for, or null when none is active.
 const isCycle = f => f.mode === 'only' && f.gap_min != null;
 const isPaced = f => f.mode !== 'only' && f.pace != null && Number(f.pace) >= 2;
-function featurePlan(F, at) {
+export function featurePlan(F, at) {
   const act = F.wins.filter(w => w.a <= at && at < w.b);
   if (!act.length) return null;
   const key = act.map(w => w.f.id + ':' + w.a).join(',');
@@ -238,7 +240,7 @@ async function loadHist(env, F, tailSeq) {
   }
   return H;
 }
-function histPush(H, id, start) {
+export function histPush(H, id, start) {
   if (!H) return;
   H.hist.push(id);
   if (H.last.has(id)) H.last.set(id, start);
@@ -278,7 +280,7 @@ function pickPaced(pool, exclude, recentGroups, fx, at, H) {
 // across cycles) and, when possible, anything inside its own gap. Never falls back to normal
 // rotation while the set has songs; listener requests and DJ picks still go first (they are
 // slotted before rotation).
-function pickCycle(pool, exclude, recentGroups, fx, at, H) {
+export function pickCycle(pool, exclude, recentGroups, fx, at, H) {
   const C = fx.cyc, N = C.songs.length;
   const byRecent = C.songs.slice().sort((x, y) => (H.last.get(y.id) || 0) - (H.last.get(x.id) || 0));
   const cnt = H.cyc.find(c => c.fid === C.fid);
@@ -301,7 +303,7 @@ function staleSort(rows, weight, at) {
     return { t, e: w > 1 ? at - (at - t.last_played_ms) * w : t.last_played_ms };
   }).sort((x, y) => (x.e - y.e) || (x.t.plays - y.t.plays)).map(x => x.t);
 }
-function pickFeatured(pool, exclude, recentGroups, fx, at) {
+export function pickFeatured(pool, exclude, recentGroups, fx, at) {
   if (fx.only.length) {
     const left = fx.only.filter(t => !exclude.has(t.id));
     if (left.length) return pickRotation(staleSort(left, fx.weight, at), exclude, recentGroups);

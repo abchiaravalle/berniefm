@@ -11,9 +11,10 @@ import { readToken, verifiedEmail } from './auth.js';
 import { parseMp3 } from './mp3.js';
 import { APP_NAME, APP_TAGLINE, DEFAULT_TZ, SECTIONS, FF_VERSION, PART_SIZE, MAX_SONG_BYTES } from './config.js';
 import {
-  ensureSchedule, buildState, publishState, djPlace, replanFuture, featureWindows, zonedToUtc,
+  ensureSchedule, buildState, publishState, djPlace, replanFuture as replanMain, featureWindows, zonedToUtc,
   HORIZON_MS, DJ_LEAD_MS, REPLAN_LOCK_MS,
 } from '../../functions/_lib.js';
+import { CHANNELS, extraCh, xmasNow, ensureChannel, buildChannelState, djPlaceChannel, channelsChanged } from '../../functions/_channels.js';
 import INDEX_HTML from './ui/index.html';
 import APP_JS from './ui/app.js.txt';
 import APP_CSS from './ui/app.css.txt';
@@ -44,6 +45,23 @@ async function whoIs(request, env) {
 }
 
 // ---------- helpers ----------
+// Re-plan the not-yet-started part of the main timeline, then bring the Christmas channels in line
+// (switched off -> their files point players back to the main timeline; still on -> re-planned).
+// A channel nobody is listening to is left alone (one read).
+async function replanFuture(env, now) {
+  const r = await replanMain(env, now);
+  try { r.channels = await channelsChanged(env, now); } catch { /* channel tables missing: nothing to do */ }
+  return r;
+}
+const CH_LABEL = Object.fromEntries(CHANNELS.map((c) => [c.id, c.label]));
+async function channelCounts(env, now) {
+  const out = { mixed: 0, christmas: 0, classic: 0 };
+  try {
+    const { results } = await env.DB.prepare('SELECT ch, COUNT(*) n FROM listen_sessions WHERE last_seen_ms >= ?1 GROUP BY ch').bind(now - 150000).all();
+    for (const r of results) out[extraCh(r.ch) || 'mixed'] += r.n;
+  } catch { /* column missing */ }
+  return out;
+}
 async function body(request, max = 65536) {
   const t = await request.text();
   if (t.length > max) throw new HttpError(413, 'Too large');
@@ -148,6 +166,11 @@ async function afterSongChange(env, before, now) {
     const still = await env.DB.prepare(`SELECT id FROM tracks WHERE enabled=0 AND id IN (${offIds.map((_, i) => '?' + (i + 1)).join(',')})`).bind(...offIds).all();
     if (still.results.length) { await replanFuture(env, now); replanned = true; }
   }
+  // the No Christmas channel may have it coming up even when the main timeline doesn't
+  if (!replanned && offIds.length) {
+    const up = await env.DB.prepare(`SELECT 1 FROM ch_schedule WHERE channel='classic' AND start_ms >= ?1 AND track_id IN (${offIds.map((_, i) => '?' + (i + 2)).join(',')}) LIMIT 1`).bind(now + REPLAN_LOCK_MS, ...offIds).first().catch(() => null);
+    if (up) { try { await channelsChanged(env, now); } catch { /* ignore */ } }
+  }
   const visual = ids.filter((id) => ['cat_title', 'cat_album', 'cat_artist', 'art', 'title', 'artist', 'album'].some((c) => c in before[id]));
   if (!replanned && visual.length && await onTimeline(env, visual, now)) await publishState(env, now);
   return { replanned };
@@ -203,14 +226,17 @@ function featureOut(f, items, songs, now) {
 // ---------- the Christmas switch (On the air tab + the Featured times editor) ----------
 // Drives the featured period named like /christmas|holiday/i (the same rule /api/season uses
 // for the app + website look). Three settings, each a plain row of that period:
-//   off   - paused (active=0): no switched-off Christmas songs, /api/season says theme null
-//   mixed - unlock + pace 3 + gap_min 120: about 1 in 3 songs, spread out, never two in a row
-//   only  - only + gap_min 30: only the period's songs, shuffled, all before any repeats
+//   off   - paused (active=0): no switched-off Christmas songs, /api/season says theme null, one station
+//   mixed - "On": unlock + pace 3 + gap_min 120 on the main timeline (about 1 in 3 songs, spread out),
+//           AND listeners can pick a channel (2026-11-21, ../../functions/_channels.js): Mixed (= the
+//           main timeline, the default), Christmas only, No Christmas
+//   only  - "Christmas for everyone": only + gap_min 30: the main timeline plays only the period's songs,
+//           shuffled, all before any repeats; no channels (nothing to choose)
 const XMAS_NAME = /christmas|holiday/i;
 const XMAS = {
   off: { label: 'Off', row: { active: 0 } },
-  mixed: { label: 'Mixed in', row: { active: 1, mode: 'unlock', weight: 3, pace: 3, gap_min: 120 } },
-  only: { label: 'Christmas only', row: { active: 1, mode: 'only', weight: 1, pace: null, gap_min: 30 } },
+  mixed: { label: 'On', row: { active: 1, mode: 'unlock', weight: 3, pace: 3, gap_min: 120 } },
+  only: { label: 'Christmas for everyone', row: { active: 1, mode: 'only', weight: 1, pace: null, gap_min: 30 } },
 };
 function xmasSetting(f) {
   if (!f) return null;
@@ -220,7 +246,7 @@ function xmasSetting(f) {
   return 'custom';                 // set some other way in Featured times (e.g. the original 3x unlock)
 }
 function xmasWhat(s, n) {
-  return { off: 'no Christmas songs; the app and website look normal', mixed: 'about 1 in 3 songs is a Christmas song', only: `only the ${n} Christmas songs, on repeat`, custom: 'a custom setting from Featured times' }[s] || '';
+  return { off: 'no Christmas songs; one station; the app and website look normal', mixed: 'listeners pick Mixed (about 1 in 3 is a Christmas song), Christmas only or No Christmas', only: `everyone hears only the ${n} Christmas songs, on repeat; no choice`, custom: 'a custom setting from Featured times; listeners can pick a channel' }[s] || '';
 }
 async function christmasFeature(env) {
   let rows;
@@ -264,7 +290,7 @@ function cleanFeature(b) {
   if (items.length > 600) bad('Too many picks');
   // The Christmas period's editor sends one of the three switch settings instead of a mode.
   if (b.setting != null) {
-    const s = XMAS[b.setting] || bad('Choose Off, Mixed in or Christmas only');
+    const s = XMAS[b.setting] || bad('Choose Off, On or Christmas for everyone');
     if (!XMAS_NAME.test(name)) bad('Only a Christmas period has these three settings');
     const r = { mode: 'unlock', weight: 3, pace: null, gap_min: null, ...s.row };
     if (b.setting === 'off') { r.mode = MODES[b.mode] ? b.mode : 'unlock'; r.weight = Math.max(1, Math.min(10, Number(b.weight) || 3)); }
@@ -541,21 +567,32 @@ async function api(request, env, url, who, ctx) {
 
   // ----- live booth -----
   if (p === '/booth' && m === 'GET') {
-    await ensureSchedule(env, now);
-    const st = await buildState(env, now);
-    const items = st.items;
+    // ?ch=christmas|classic: that Christmas channel's timeline (only while the channels are on)
+    const P = await xmasNow(env, now).catch(() => null);
+    const ch = P ? extraCh(url.searchParams.get('ch')) : null;
+    let items, djSeq;
+    if (ch) {
+      await ensureChannel(env, ch, now, { P });
+      const st = await buildChannelState(env, ch, now);
+      items = st.items; djSeq = st._dj;
+    } else {
+      await ensureSchedule(env, now);
+      const st = await buildState(env, now);
+      items = st.items;
+      const seqs = items.map((i) => i.seq);
+      const { results: w } = seqs.length ? await env.DB.prepare(`SELECT seq, writer FROM schedule WHERE seq IN (${seqs.map((_, i) => '?' + (i + 1)).join(',')})`).bind(...seqs).all() : { results: [] };
+      djSeq = new Set(w.filter((x) => x.writer === 'dj').map((x) => x.seq));
+    }
     let cur = items.findIndex((i) => i.start_ms <= now && now < i.end_ms);
     if (cur < 0) cur = items.findIndex((i) => i.start_ms > now);
-    const seqs = items.map((i) => i.seq);
-    const { results: w } = seqs.length ? await env.DB.prepare(`SELECT seq, writer FROM schedule WHERE seq IN (${seqs.map((_, i) => '?' + (i + 1)).join(',')})`).bind(...seqs).all() : { results: [] };
-    const djSeq = new Set(w.filter((x) => x.writer === 'dj').map((x) => x.seq));
     const out = (i) => i && { seq: i.seq, start_ms: i.start_ms, end_ms: i.end_ms, is_request: i.is_request, is_dj: djSeq.has(i.seq), track: i.track };
     const feats = await featuresList(env, now);
     return json({
-      now, current: out(items[cur]), next: cur >= 0 ? items.slice(cur + 1, cur + 11).map(out) : [],
+      now, ch: ch || 'mixed', current: out(items[cur]), next: cur >= 0 ? items.slice(cur + 1, cur + 11).map(out) : [],
       history: cur > 0 ? items.slice(Math.max(0, cur - 5), cur).reverse().map(out) : [],
       features_now: feats.filter((f) => f.on_now).map((f) => ({ id: f.id, name: f.name, mode: f.mode, weight: f.weight, song_count: f.song_count, christmas: f.christmas, setting: f.setting })),
       christmas: christmasFrom(feats),
+      channels: P ? { on: true, list: CHANNELS, listening: await channelCounts(env, now), songs: P.songs.map((s) => s.id) } : { on: false, list: [], listening: null, songs: [] },
       lead_ms: DJ_LEAD_MS, lock_ms: REPLAN_LOCK_MS,
     });
   }
@@ -565,7 +602,7 @@ async function api(request, env, url, who, ctx) {
   }
   if (p === '/christmas' && m === 'POST') {
     const b = await body(request);
-    const set = XMAS[b.setting] ? b.setting : bad('Choose Off, Mixed in or Christmas only');
+    const set = XMAS[b.setting] ? b.setting : bad('Choose Off, On or Christmas for everyone');
     const cur = await christmasFeature(env);
     if (!cur) return err(404, 'There is no Christmas period yet. Make one in Featured times and name it "Christmas".');
     const curItems = await itemsOf(env, cur.id);
@@ -578,7 +615,7 @@ async function api(request, env, url, who, ctx) {
     if (touchesPlan([cur, target], now)) { const r = await replanFuture(env, now); replanned = true; from = r.from_ms; }
     const lbl = (s) => (XMAS[s] ? XMAS[s].label : 'a custom setting');
     await logActivity(env, who, 'christmas', String(cur.id),
-      `Christmas switched from ${lbl(was)} to ${lbl(set)}${replanned ? ` (the songs coming up were re-planned; heard from ${from ? fmtWhen(from) + ' PT' : 'the next song'})` : ''}`,
+      `Christmas switched from ${lbl(was)} to ${lbl(set)}${set === 'mixed' ? ' (listeners can pick a channel)' : ''}${replanned ? ` (the songs coming up were re-planned; heard from ${from ? fmtWhen(from) + ' PT' : 'the next song'})` : ''}`,
       { type: 'feature', id: cur.id, before: cur, items: curItems });
     return json({ ok: true, changed: true, from: was, to: set, replanned, from_ms: from, christmas: christmasFrom(await featuresList(env, now)) });
   }
@@ -589,6 +626,17 @@ async function api(request, env, url, who, ctx) {
     const mode = b.mode === 'next' ? 'next' : 'now';
     const row = await getSong(env, id);
     if (!row) return err(404, 'Unknown song');
+    const ch = extraCh(b.ch);
+    if (ch) {
+      // a Christmas channel: christmas plays only the Christmas songs, classic none of them
+      const r = await djPlaceChannel(env, ch, id, mode, now);
+      if (!r.ok) return err(400, r.message || 'Could not do that');
+      const t = row.cat_title || row.title;
+      await logActivity(env, who, mode === 'now' ? 'play_now' : 'play_next', id, mode === 'now'
+        ? `Played "${t}" now on ${CH_LABEL[ch]} (its listeners switched at ${fmtWhen(r.at)} PT)`
+        : `Put "${t}" next on ${CH_LABEL[ch]} (starts ${fmtWhen(r.at)} PT)`);
+      return json({ ok: true, at: r.at, mode, ch });
+    }
     let allowDisabled = false;
     if (!row.enabled) {
       // a switched-off song may only be played while a featured period lets it in
@@ -605,6 +653,15 @@ async function api(request, env, url, who, ctx) {
     return json({ ok: true, at: r.at, mode });
   }
   if (p === '/booth/skip' && m === 'POST') {
+    const b = await body(request);
+    const ch = extraCh(b.ch);
+    if (ch) {
+      const c = await env.DB.prepare('SELECT s.track_id, t.cat_title, t.title FROM ch_schedule s JOIN tracks t ON t.id=s.track_id WHERE s.channel=?2 AND s.start_ms <= ?1 AND s.start_ms + s.dur_ms > ?1 ORDER BY s.seq DESC LIMIT 1').bind(now, ch).first();
+      const r = await djPlaceChannel(env, ch, null, 'now', now);
+      if (!r.ok) return err(400, r.message || 'Could not skip');
+      await logActivity(env, who, 'skip', c ? c.track_id : null, `Skipped "${c ? (c.cat_title || c.title) : 'the song on air'}" on ${CH_LABEL[ch]} (next song at ${fmtWhen(r.at)} PT)`);
+      return json({ ok: true, at: r.at, message: r.message || null, ch });
+    }
     const cur = await env.DB.prepare('SELECT s.track_id, t.cat_title, t.title FROM schedule s JOIN tracks t ON t.id=s.track_id WHERE s.start_ms <= ?1 AND s.start_ms + s.dur_ms > ?1 ORDER BY s.seq DESC LIMIT 1').bind(now).first();
     const r = await djPlace(env, null, 'now', now);
     if (!r.ok) return err(400, r.message || 'Could not skip');

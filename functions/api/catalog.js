@@ -1,4 +1,5 @@
 import { json, MEDIA } from '../_lib.js';
+import { extraCh, xmasNow } from '../_channels.js';
 
 // Big cover for the iPhone app (art/hd/<file>); same file name as the regular cover.
 const hd = url => url && url.startsWith(MEDIA + 'art/') && !url.endsWith('/default.jpg') ? url.replace(MEDIA + 'art/', MEDIA + 'art/hd/') : null;
@@ -6,17 +7,28 @@ const hd = url => url && url.startsWith(MEDIA + 'art/') && !url.endsWith('/defau
 // Every song, organized: sections > albums > tracks (track order, cover art).
 // Built from the catalog columns on `tracks` (written by publish_catalog.py).
 // Public data (same songs as the request list). Edge-cached 60 s.
+// ?ch=christmas|classic (2026-11-21): only the songs on that Christmas channel (christmas: the Christmas
+// songs, switched off or not; classic: switched-on songs without them). Channels off / no ch: as before.
 const ORDER = ['Albums', 'Singles', 'Silent Partner', 'Collaborations', 'Rarities & demos'];
 
 export async function onRequestGet({ request, env, waitUntil }) {
   const url = new URL(request.url);
-  const cacheKey = new Request(`${url.origin}/api/catalog?b=${Math.floor(Date.now() / 60000)}`, { method: 'GET' });
+  const ch = extraCh(url.searchParams.get('ch'));
+  const cacheKey = new Request(`${url.origin}/api/catalog?b=${Math.floor(Date.now() / 60000)}${ch ? '&ch=' + ch : ''}`, { method: 'GET' });
   const hit = await caches.default.match(cacheKey);
   if (hit) return hit;
-  const { results } = await env.DB.prepare(
-    `SELECT id, title, artist, album, art, dur_ms, cat_section, cat_album, cat_no, cat_title, cat_artist, cat_year
+  const P = ch ? await xmasNow(env) : null;
+  const COLS = 'id, title, artist, album, art, dur_ms, cat_section, cat_album, cat_no, cat_title, cat_artist, cat_year';
+  let results;
+  if (P) {
+    const ids = [...P.ids], mk = ids.map((_, i) => '?' + (i + 1)).join(',');
+    ({ results } = await env.DB.prepare(`SELECT ${COLS} FROM tracks WHERE ${ch === 'christmas' ? `id IN (${mk})` : `enabled=1 AND id NOT IN (${mk})`}`).bind(...ids).all());
+  } else {
+    ({ results } = await env.DB.prepare(
+      `SELECT id, title, artist, album, art, dur_ms, cat_section, cat_album, cat_no, cat_title, cat_artist, cat_year
        FROM tracks WHERE enabled=1`
-  ).all();
+    ).all());
+  }
   const albums = new Map();
   for (const t of results) {
     const sec = t.cat_section || 'Rarities & demos';
@@ -45,7 +57,7 @@ export async function onRequestGet({ request, env, waitUntil }) {
       ? (Number(y.year || 0) - Number(x.year || 0)) || x.name.localeCompare(y.name)
       : x.name.localeCompare(y.name));
   }
-  const res = json({ count: results.length, sections: sections.filter(s => s.albums.length) }, 200,
+  const res = json({ ...(P ? { ch } : {}), count: results.length, sections: sections.filter(s => s.albums.length) }, 200,
     { 'cache-control': 'public, max-age=60' });
   waitUntil(caches.default.put(cacheKey, res.clone()));
   return res;

@@ -28,7 +28,7 @@ function rule(db, { name, start_local, end_local, tz = 'America/New_York', yearl
 const NOW = lib.zonedToUtc(2026, 11, 20, 22, 30, 'America/New_York');
 const XMAS = { name: 'Christmas', start_local: '2026-11-20T00:00', end_local: '2026-12-26T23:59', yearly: 1 };
 
-{ const { env } = fresh(); check('no periods -> theme null', JSON.stringify(await season.seasonNow(env, NOW)) === '{"theme":null}'); }
+{ const { env } = fresh(); check('no periods -> theme null (channels [] since 2026-11-21)', JSON.stringify(await season.seasonNow(env, NOW)) === '{"theme":null,"channels":[]}'); }
 { const { db, env } = fresh(); const { e } = rule(db, XMAS);
   const r = await season.seasonNow(env, NOW);
   check('Christmas on now -> christmas + window end', r.theme === 'christmas' && r.until_ms === e, JSON.stringify(r));

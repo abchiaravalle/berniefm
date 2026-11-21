@@ -3,7 +3,7 @@
   'use strict';
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return [].slice.call((r || document).querySelectorAll(s)); };
-  var S = { me: null, songs: [], byId: {}, features: [], sel: {}, filter: { q: '', show: '', section: '', sort: 'az' }, edit: null, booth: null, skew: 0, tab: 'booth' };
+  var S = { me: null, songs: [], byId: {}, features: [], sel: {}, filter: { q: '', show: '', section: '', sort: 'az' }, edit: null, booth: null, skew: 0, tab: 'booth', ch: 'mixed' };
 
   // ---------- basics ----------
   function api(path, opts) {
@@ -307,15 +307,26 @@
       .then(function () { return api('/art?name=' + c.name + '&v=hd', { method: 'POST', body: c.hd, type: 'image/jpeg' }); })
       .then(function () { return 'art/' + c.name + '.jpg'; });
   }
-  function playSong(s, mode) {
-    var title = mode === 'now' ? 'Play "' + s.title + '" now?' : 'Play "' + s.title + '" next?';
+  // The booth acts on one channel at a time (Christmas channels, 2026-11-21). Outside the Christmas
+  // channels there is only the main station ('mixed').
+  var CH = { mixed: 'Mixed', christmas: 'Christmas only', classic: 'No Christmas' };
+  function chOn() { return !!(S.booth && S.booth.channels && S.booth.channels.on); }
+  function curCh() { return chOn() ? S.ch : 'mixed'; }
+  function who() { return chOn() ? 'everyone on ' + CH[curCh()] : 'everyone'; }
+  function playSong(s, mode, opts) {
+    var ch = (opts && opts.ch) || curCh();
+    if (!chOn()) ch = 'mixed';
+    var aud = chOn() ? 'everyone on ' + CH[ch] : 'everyone';
+    var title = mode === 'now' ? 'Play "' + s.title + '" now' + (chOn() ? ' on ' + CH[ch] : '') + '?' : 'Play "' + s.title + '" next' + (chOn() ? ' on ' + CH[ch] : '') + '?';
     var text = mode === 'now'
-      ? 'Everyone listening hears it in about 10 seconds. The song playing now stops early.'
-      : 'It plays for everyone right after the song that is playing now.';
+      ? (chOn() ? 'Everyone listening to ' + CH[ch] + ' hears it in about 10 seconds. The song playing there now stops early. The other channels don\'t change.' : 'Everyone listening hears it in about 10 seconds. The song playing now stops early.')
+      : (chOn() ? 'It plays on ' + CH[ch] + ' right after the song playing there now. The other channels don\'t change.' : 'It plays for everyone right after the song that is playing now.');
     return confirmBox(title, text, mode === 'now' ? 'Play it now' : 'Play it next').then(function (ok) {
       if (!ok) return false;
-      return api('/booth/play', { method: 'POST', body: { id: s.id, mode: mode } }).then(function (j) {
-        toast(mode === 'now' ? '"' + s.title + '" starts for everyone at ' + clock(j.at) : '"' + s.title + '" plays next, at ' + clock(j.at));
+      var body = { id: s.id, mode: mode };
+      if (ch !== 'mixed') body.ch = ch;
+      return api('/booth/play', { method: 'POST', body: body }).then(function (j) {
+        toast(mode === 'now' ? '"' + s.title + '" starts for ' + aud + ' at ' + clock(j.at) : '"' + s.title + '" plays next' + (chOn() ? ' on ' + CH[ch] : '') + ', at ' + clock(j.at));
         loadBooth();
         return true;
       }).catch(function (e) { toast(e.message); return false; });
@@ -327,7 +338,13 @@
   // ---------- on the air ----------
   var boothT = null;
   function loadBooth() {
-    return api('/booth').then(function (j) { S.skew = j.now - Date.now(); S.booth = j; renderBooth(); }).catch(function (e) { $('#now-title').textContent = e.message; });
+    var want = S.ch;
+    return api('/booth' + (want !== 'mixed' ? '?ch=' + want : '')).then(function (j) {
+      if (want !== S.ch) return;                       // switched channel while this was loading
+      S.skew = j.now - Date.now(); S.booth = j;
+      if (!(j.channels && j.channels.on)) S.ch = 'mixed';
+      renderBooth();
+    }).catch(function (e) { $('#now-title').textContent = e.message; });
   }
   function tags(i) {
     return el('span', { class: 'tags' }, [i.is_dj ? el('span', { class: 'pill live', text: 'Your pick' }) : null, i.is_request ? el('span', { class: 'pill new', text: 'Request' }) : null]);
@@ -340,7 +357,10 @@
   }
   function renderBooth() {
     var b = S.booth; if (!b) return;
+    renderChannels(b);
     var c = b.current;
+    $('#now-where').textContent = chOn() ? 'Playing now on the ' + CH[curCh()] + ' channel' : 'Playing now on bcradio.net';
+    $('#btn-skip').textContent = chOn() ? 'Skip this song on ' + CH[curCh()] : 'Skip this song';
     if (c) {
       $('#now-art').src = c.track.art_hd || c.track.art;
       $('#now-title').textContent = c.track.title;
@@ -362,11 +382,37 @@
     renderXmas(b.christmas);
     tick();
   }
+  // ---------- channel picker (which Christmas channel the booth shows and acts on) ----------
+  function renderChannels(b) {
+    var on = !!(b.channels && b.channels.on);
+    $('#chan-card').hidden = !on;
+    if (!on) return;
+    var n = b.channels.listening || {};
+    $$('#chan-seg .copt').forEach(function (btn) {
+      var id = btn.getAttribute('data-ch'), sel = id === S.ch;
+      btn.classList.toggle('on', sel); btn.setAttribute('aria-checked', sel ? 'true' : 'false');
+      var k = n[id] || 0;
+      btn.querySelector('.cnt').textContent = k ? k + ' listening' : '';
+    });
+  }
+  $$('#chan-seg .copt').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var id = btn.getAttribute('data-ch');
+      if (id === S.ch) return;
+      S.ch = id;
+      try { sessionStorage.setItem('cr-ch', id); } catch (e) { /* ignore */ }
+      if (S.booth) renderChannels(S.booth);
+      $('#pick-q').dispatchEvent(new Event('input'));
+      loadBooth();
+    });
+  });
+  try { var savedCh = sessionStorage.getItem('cr-ch'); if (CH[savedCh]) S.ch = savedCh; } catch (e) { /* ignore */ }
+
   // ---------- the Christmas switch ----------
   var XMAS = {
-    off: { label: 'Off', title: 'Turn Christmas off?', text: 'The Christmas songs stop. The two regular songs (On This Night, Winnie\'s Song) play as usual. The app and website drop their Christmas look within about 5 minutes.', yes: 'Turn it off' },
-    mixed: { label: 'Mixed in', title: 'Mix Christmas songs in?', text: 'About 1 in 3 songs will be a Christmas song, spread out, never two in a row. The app and website show their Christmas look.', yes: 'Mix them in' },
-    only: { label: 'Christmas only', title: 'Play only Christmas songs?', text: 'Only the Christmas songs play, shuffled, every one before any repeats, until you switch it back. Listener requests still play in their turn.', yes: 'Christmas only' },
+    off: { label: 'Off', title: 'Turn Christmas off?', text: 'The Christmas songs stop and there is one station again: the channel picker goes away in the app and on the website, and everyone hears the normal station. The two regular songs (On This Night, Winnie\'s Song) play as usual. The Christmas look goes away within about 5 minutes.', yes: 'Turn it off' },
+    mixed: { label: 'On', title: 'Turn Christmas on?', text: 'Listeners get a choice of three channels: Mixed (about 1 in 3 songs is a Christmas song; everyone starts here), Christmas only, and No Christmas. The app and website show their Christmas look.', yes: 'Turn it on' },
+    only: { label: 'Christmas for everyone', title: 'Christmas songs for everyone?', text: 'One station again, with only the Christmas songs, shuffled, every one before any repeats, until you switch it back. Listeners get no choice (the channel picker goes away). Listener requests still play in their turn.', yes: 'Christmas for everyone' },
   };
   function xmasWhen(x) {
     if (x.in_window) {
@@ -385,7 +431,7 @@
     pill.textContent = x.on_now ? 'On now: ' + heard : x.setting === 'off' ? 'Off' : 'Not on now';
     pill.className = 'pill ' + (x.on_now ? 'live' : 'off');
     $('#xmas-sub').textContent = xmasWhen(x);
-    $('#xmas-only-txt').textContent = 'Only the ' + x.song_count + ' Christmas songs, on repeat.';
+    $('#xmas-only-txt').textContent = 'One station, only the ' + x.song_count + ' Christmas songs, on repeat. No choice.';
     $$('#xmas-seg .xopt').forEach(function (btn) {
       var on = btn.getAttribute('data-set') === x.setting;
       btn.classList.toggle('on', on); btn.setAttribute('aria-checked', on ? 'true' : 'false');
@@ -424,10 +470,10 @@
   setInterval(function () { if (S.tab === 'booth' && !document.hidden) tick(); }, 500);
   setInterval(function () { if (S.tab === 'booth' && !document.hidden) loadBooth(); }, 20000);
   $('#btn-skip').addEventListener('click', function () {
-    var c = S.booth && S.booth.current;
-    confirmBox('Skip "' + (c ? c.track.title : 'this song') + '"?', 'Everyone listening moves on to the next song in about 10 seconds.', 'Skip it').then(function (ok) {
+    var c = S.booth && S.booth.current, ch = curCh();
+    confirmBox('Skip "' + (c ? c.track.title : 'this song') + '"' + (chOn() ? ' on ' + CH[ch] : '') + '?', (chOn() ? 'Everyone listening to ' + CH[ch] + ' moves on to the next song in about 10 seconds. The other channels don\'t change.' : 'Everyone listening moves on to the next song in about 10 seconds.'), 'Skip it').then(function (ok) {
       if (!ok) return;
-      api('/booth/skip', { method: 'POST' }).then(function (j) { toast(j.message || ('Skipped. The next song starts at ' + clock(j.at))); loadBooth(); }).catch(function (e) { toast(e.message); });
+      api('/booth/skip', { method: 'POST', body: ch !== 'mixed' ? { ch: ch } : {} }).then(function (j) { toast(j.message || ('Skipped. The next song starts at ' + clock(j.at))); loadBooth(); }).catch(function (e) { toast(e.message); });
     });
   });
   $('#pick-q').addEventListener('input', function () {
@@ -436,12 +482,16 @@
     var words = q.split(/\s+/);
     var unlocked = {};
     S.features.forEach(function (f) { if (f.on_now && f.mode !== 'more') f.song_ids.forEach(function (id) { unlocked[id] = 1; }); });
+    var ch = curCh(), xs = {};
+    ((S.booth && S.booth.channels && S.booth.channels.songs) || []).forEach(function (id) { xs[id] = 1; });
     var hits = S.songs.filter(function (s) {
-      if (!s.enabled && !unlocked[s.id]) return false;
+      if (ch === 'christmas' && !xs[s.id]) return false;          // Christmas only: just the Christmas songs
+      if (ch === 'classic' && (xs[s.id] || !s.enabled)) return false;   // No Christmas: none of them
+      if (ch === 'mixed' && !s.enabled && !unlocked[s.id]) return false;
       var hay = (s.title + ' ' + s.album + ' ' + s.artist).toLowerCase();
       return words.every(function (w) { return hay.indexOf(w) > -1; });
     }).sort(function (a, b) { return natural(a.title, b.title); }).slice(0, 30);
-    if (!hits.length) box.appendChild(el('p', { class: 'muted small', text: 'No song on the air matches. (Switched-off songs have to be switched on first.)' }));
+    if (!hits.length) box.appendChild(el('p', { class: 'muted small', text: ch === 'christmas' ? 'No Christmas song matches. This channel plays only the Christmas songs.' : ch === 'classic' ? 'No song matches. This channel plays no Christmas songs.' : 'No song on the air matches. (Switched-off songs have to be switched on first.)' }));
     hits.forEach(function (s) {
       box.appendChild(el('div', { class: 'pick-row' }, [el('img', { src: s.art, alt: '', loading: 'lazy' }),
         el('div', { style: 'min-width:0' }, [el('div', { class: 't', text: s.title }), el('div', { class: 's', text: [s.album, mmss(s.dur_ms)].filter(Boolean).join(' · ') })]),
@@ -598,7 +648,7 @@
       var status = f.on_now ? el('span', { class: 'pill live', text: 'On now' }) : !f.active ? el('span', { class: 'pill off', text: 'Paused' }) : f.finished ? el('span', { class: 'pill off', text: 'Finished' }) : el('span', { class: 'pill feat', text: f.windows[0] ? 'Starts ' + fullWhen(f.windows[0][0]) : 'Scheduled' });
       var what = f.mode === 'more' ? f.weight + '× as often' : f.mode === 'only' ? 'Only these songs play' : 'Switched-off songs join the mix' + (f.weight > 1 ? ', ' + f.weight + '× as often' : '');
       var whatEl = f.christmas && f.setting !== 'custom'
-        ? el('div', { class: 'what' }, [el('b', { text: 'Christmas: ' + XMAS[f.setting].label + '. ' }), { off: 'No Christmas songs; the app and website look normal.', mixed: 'About 1 in 3 songs is a Christmas song.', only: 'Only these songs, on repeat.' }[f.setting] + ' · ' + plural(f.song_count, 'song') + (f.off_count ? ' (' + f.off_count + ' normally off)' : '')])
+        ? el('div', { class: 'what' }, [el('b', { text: 'Christmas: ' + XMAS[f.setting].label + '. ' }), { off: 'No Christmas songs; one station; the app and website look normal.', mixed: 'Listeners pick Mixed (about 1 in 3 is one of these), Christmas only or No Christmas.', only: 'One station, only these songs, on repeat.' }[f.setting] + ' · ' + plural(f.song_count, 'song') + (f.off_count ? ' (' + f.off_count + ' normally off)' : '')])
         : el('div', { class: 'what' }, [el('b', { text: MODE_TXT[f.mode] + ': ' }), what + ' · ' + plural(f.song_count, 'song') + (f.off_count ? ' (' + f.off_count + ' normally off)' : '')]);
       var chips = el('div', { class: 'chips' }, f.items.slice(0, 12).map(function (it) { return el('span', { class: 'chip', style: 'padding-right:11px', text: itemLabel(it) }); }).concat(f.items.length > 12 ? [el('span', { class: 'chip', style: 'padding-right:11px', text: '+' + (f.items.length - 12) + ' more' })] : []));
       var card = el('div', { class: 'card fcard' + (f.active ? '' : ' paused'), 'data-fid': String(f.id) }, [
